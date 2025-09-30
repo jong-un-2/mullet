@@ -5,6 +5,9 @@ anchor_version = "0.31.1"
 resolution = true
 skip-lint = false
 
+[build]
+cargo_args = ["--release"]
+
 [programs.localnet]
 mars = "6EGqEe3iCFT9grTj1iRHtGwmCLbmAk4AiorBSYv2YEKz"
 

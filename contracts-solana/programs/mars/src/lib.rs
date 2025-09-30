@@ -1,4 +1,8 @@
 #![allow(deprecated)]
+// 编译优化标志
+#![cfg_attr(not(feature = "anchor-debug"), allow(unused_variables))]
+#![cfg_attr(not(feature = "anchor-debug"), allow(dead_code))]
+
 use anchor_lang::prelude::*;
 
 pub mod constant;
@@ -158,27 +162,7 @@ pub mod mars {
         FreezeThawGlobalState::thaw_global_state(ctx)
     }
 
-    //  Admin can add new orchestrators
-    //  Made a pda for each orchestrator to remove the limit
-    pub fn add_orchestrator(
-        ctx: Context<AddOrchestrator>,
-        fill_order_permission: bool,
-        revert_order_permission: bool,
-        remove_bridge_liquidity_permission: bool,
-        claim_base_fee_permission: bool,
-        claim_lp_fee_permission: bool,
-        claim_protocol_fee_permission: bool,
-    ) -> Result<()> {
-        AddOrchestrator::process_instruction(
-            ctx,
-            fill_order_permission,
-            revert_order_permission,
-            remove_bridge_liquidity_permission,
-            claim_base_fee_permission,
-            claim_lp_fee_permission,
-            claim_protocol_fee_permission,
-        )
-    }
+    // 已移除 add_orchestrator 指令以优化合约大小
 
     //  Admin can set target chain min fee
     pub fn set_fee_tiers(
@@ -198,10 +182,7 @@ pub mod mars {
         SetTargetChainMinFee::process_instruction(ctx, dest_chain_id, min_fee)
     }
 
-    //  doesn't close account for now
-    pub fn remove_orchestrator(ctx: Context<RemoveOrchestrator>) -> Result<()> {
-        RemoveOrchestrator::process_instruction(ctx)
-    }
+    // 已移除 remove_orchestrator 指令以优化合约大小
 
     //  admin can update threshold amount
     pub fn update_global_state_params(
@@ -228,77 +209,13 @@ pub mod mars {
         ClaimFees::process_instruction(ctx, amount, fee_type)
     }
 
-    //  user can deposit any token to the vault
-    pub fn create_order(
-        ctx: Context<CreateOrder>,
-        amount: u64,
-        seed: [u8; 32],
-        order_hash: [u8; 32],
-        receiver: [u8; 32],
-        src_chain_id: u32,
-        dest_chain_id: u32,
-        token_in: [u8; 32],
-        fee: u64,
-        min_amount_out: String,
-        token_out: [u8; 32],
-    ) -> Result<()> {
-        CreateOrder::process_instruction(
-            ctx,
-            amount,
-            seed,
-            order_hash,
-            receiver,
-            src_chain_id,
-            dest_chain_id,
-            token_in,
-            fee,
-            min_amount_out,
-            token_out,
-        )
-    }
+    // 已移除 create_order 指令以优化合约大小
 
-    //  user can withdraw any token to the vault
-    //  orchestrator swap token and send it to user
-    pub fn fill_order(
-        ctx: Context<FillOrder>,
-        amount: u64,
-        seed: [u8; 32],
-        order_hash: [u8; 32],
-        trader: [u8; 32],
-        src_chain_id: u32,
-        dest_chain_id: u32,
-        token_in: [u8; 32],
-        fee: u64,
-        min_amount_out: String,
-    ) -> Result<()> {
-        FillOrder::process_instruction(
-            ctx,
-            amount,
-            seed,
-            order_hash,
-            trader,
-            src_chain_id,
-            dest_chain_id,
-            token_in,
-            fee,
-            min_amount_out,
-        )
-    }
+    // 已移除 fill_order 指令以优化合约大小
 
-    // This instruction transfers the token from orchestrator to the receiver
-    // It also takes care of the min_amount_out check
-    pub fn fill_order_token_transfer(
-        ctx: Context<FillOrderTokenTransfer>,
-        min_amount_out: u64,
-        orchestrator_prev_balance: u64,
-    ) -> Result<()> {
-        FillOrderTokenTransfer::process_instruction(ctx, min_amount_out, orchestrator_prev_balance)
-    }
+    // 已移除 fill_order_token_transfer 指令以优化合约大小
 
-    // revert order
-    pub fn revert_order(ctx: Context<RevertOrder>, order_hash: [u8; 32]) -> Result<()> {
-        RevertOrder::process_instruction(ctx, order_hash)
-    }
+    // 已移除 revert_order 指令以优化合约大小
 
     // set protocol fee fraction
     pub fn set_protocol_fee_fraction(

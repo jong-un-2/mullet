@@ -5,9 +5,14 @@ members = [
 resolver = "2"
 
 [profile.release]
-overflow-checks = true
-lto = "fat"
-codegen-units = 1
+# 优化合约大小的关键配置
+opt-level = "z"          # 优化大小而非速度
+lto = "fat"              # 启用完整链接时优化
+codegen-units = 1        # 使用单个代码生成单元
+panic = "abort"          # 减少 panic 处理代码
+strip = true             # 移除调试符号
+overflow-checks = false  # 禁用溢出检查以减少代码
+
 [profile.release.build-override]
 opt-level = 3
 incremental = false
