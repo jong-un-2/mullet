@@ -117,9 +117,8 @@ pub fn kamino_deposit_cpi(
         ctx.accounts.token_program.to_account_info(),
     ];
 
-    // 构建Kamino存款指令数据
-    // 注意: 这里的指令数据格式需要根据实际的Kamino程序接口来调整
-    let deposit_instruction_data = kamino_deposit_instruction_data(amount);
+    // 构建Kamino存款指令数据 - Kamino Vault deposit 指令格式
+    let deposit_instruction_data = build_kamino_deposit_instruction_data(amount)?;
 
     // 创建指令
     let deposit_instruction = anchor_lang::solana_program::instruction::Instruction {
@@ -177,7 +176,7 @@ pub fn kamino_withdraw_cpi(
     ];
 
     // 构建Kamino提取指令数据
-    let withdraw_instruction_data = kamino_withdraw_instruction_data(shares_amount);
+    let withdraw_instruction_data = build_kamino_withdraw_instruction_data(shares_amount)?;
 
     // 创建指令
     let withdraw_instruction = anchor_lang::solana_program::instruction::Instruction {
@@ -202,33 +201,35 @@ pub fn kamino_withdraw_cpi(
     Ok(())
 }
 
-/// 构建Kamino存款指令数据
-/// 注意: 这个函数需要根据实际的Kamino程序接口来实现
-fn kamino_deposit_instruction_data(amount: u64) -> Vec<u8> {
-    // 这里是示例格式，实际需要查看Kamino程序的IDL
+/// 构建 Kamino 存款指令数据
+/// 基于 Kamino Vaults 程序的实际 IDL 实现
+fn build_kamino_deposit_instruction_data(amount: u64) -> Result<Vec<u8>> {
+    use crate::kamino_constants::kamino::DEPOSIT_INSTRUCTION_DISCRIMINATOR;
+    
     let mut data = Vec::new();
     
-    // 指令选择器 (例如: deposit指令的discriminator)
-    data.extend_from_slice(&[0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    // Kamino deposit 指令识别码
+    data.extend_from_slice(&DEPOSIT_INSTRUCTION_DISCRIMINATOR);
     
-    // 存款金额参数
+    // 存款金额 (u64, little endian)
     data.extend_from_slice(&amount.to_le_bytes());
     
-    data
+    Ok(data)
 }
 
-/// 构建Kamino提取指令数据
-fn kamino_withdraw_instruction_data(shares_amount: u64) -> Vec<u8> {
-    // 这里是示例格式，实际需要查看Kamino程序的IDL
+/// 构建 Kamino 提取指令数据
+fn build_kamino_withdraw_instruction_data(shares_amount: u64) -> Result<Vec<u8>> {
+    use crate::kamino_constants::kamino::WITHDRAW_INSTRUCTION_DISCRIMINATOR;
+    
     let mut data = Vec::new();
     
-    // 指令选择器 (例如: withdraw指令的discriminator)
-    data.extend_from_slice(&[0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    // Kamino withdraw 指令识别码
+    data.extend_from_slice(&WITHDRAW_INSTRUCTION_DISCRIMINATOR);
     
-    // 提取份额数量参数
+    // 提取份额数量 (u64, little endian)
     data.extend_from_slice(&shares_amount.to_le_bytes());
     
-    data
+    Ok(data)
 }
 
 /// 带有PDA签名的Kamino存款CPI调用
@@ -288,7 +289,7 @@ pub fn kamino_deposit_cpi_with_pda(
         ctx.accounts.token_program.to_account_info(),
     ];
 
-    let deposit_instruction_data = kamino_deposit_instruction_data(amount);
+    let deposit_instruction_data = build_kamino_deposit_instruction_data(amount)?;
 
     let deposit_instruction = anchor_lang::solana_program::instruction::Instruction {
         program_id: ctx.accounts.kamino_vault_program.key(),

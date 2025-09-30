@@ -24,6 +24,23 @@ pub const PROTOCOL_LIDO: u8 = 2;
 pub const PROTOCOL_MARINADE: u8 = 3;
 pub const PROTOCOL_JITO: u8 = 4;
 
+// === Kamino 指令识别码 ===
+
+/// Deposit 指令的识别码 (基于 Kamino IDL)
+pub const DEPOSIT_INSTRUCTION_DISCRIMINATOR: [u8; 8] = [242, 35, 198, 137, 82, 225, 242, 182];
+
+/// Withdraw 指令的识别码
+pub const WITHDRAW_INSTRUCTION_DISCRIMINATOR: [u8; 8] = [183, 18, 70, 156, 148, 109, 161, 34];
+
+/// Redeem 指令的识别码
+pub const REDEEM_INSTRUCTION_DISCRIMINATOR: [u8; 8] = [184, 12, 86, 149, 70, 196, 97, 225];
+
+/// Borrow 指令的识别码
+pub const BORROW_INSTRUCTION_DISCRIMINATOR: [u8; 8] = [228, 253, 131, 202, 207, 116, 89, 18];
+
+/// Repay 指令的识别码
+pub const REPAY_INSTRUCTION_DISCRIMINATOR: [u8; 8] = [234, 103, 67, 82, 208, 234, 219, 166];
+
 /// Default fee configurations (in basis points)
 pub const DEFAULT_DEPOSIT_FEE_BPS: u16 = 0;      // 0% deposit fee
 pub const DEFAULT_WITHDRAW_FEE_BPS: u16 = 50;    // 0.5% withdraw fee
