@@ -1,0 +1,31 @@
+{
+  "name": "mars-contracts-solana",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+    "script": "ts-node ./cli/command.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.95.5",
+    "axios": "^1.12.2",
+    "commander": "^14.0.1",
+    "fastestsmallesttextencoderdecoder": "^1.0.22",
+    "jito-ts": "^4.2.1"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.1",
+    "@types/chai": "^5.2.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.9.3",
+    "chai": "^6.2.0",
+    "mocha": "^11.7.2",
+    "prettier": "^3.6.2",
+    "ts-mocha": "^11.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}

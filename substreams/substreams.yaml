@@ -1,0 +1,65 @@
+specVersion: 0.1.0
+package:
+  name: mars_vaults_substreams
+  version: v1.0.0
+  doc: |
+    Mars Vaults Substreams for indexing multi-protocol yield aggregator events on Solana
+    
+    Supported protocols:
+    - Kamino (Program ID: Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE)
+    - Mars Vault (Program ID: 5Yxrh62n36maX6u8nePs2ztWfKTWA9pJLXCNd1tzo1kP)
+    - Jupiter (Program ID: JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4)
+
+protobuf:
+  files:
+    - vault_events.proto
+    - mars_events.proto
+    - kamino_events.proto
+    - jupiter_events.proto
+  importPaths:
+    - ./proto
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ./target/wasm32-unknown-unknown/release/mars_vaults_substreams.wasm
+
+modules:
+  - name: map_blocks
+    kind: map
+    inputs:
+      - source: sf.solana.type.v1.Block
+    output:
+      type: proto:mars.vaults.v1.Events
+
+  - name: map_vault_events
+    kind: map
+    inputs:
+      - map: map_blocks
+    output:
+      type: proto:mars.vaults.v1.Events
+    
+  - name: store_vault_states
+    kind: store
+    inputs:
+      - map: map_vault_events
+    valueType: proto:mars.vaults.v1.VaultSnapshot
+    updatePolicy: set
+    
+  - name: graph_out
+    kind: map
+    inputs:
+      - map: map_vault_events
+      - store: store_vault_states
+    output:
+      type: proto:sf.substreams.entity.v1.EntityChanges
+
+network: solana-mainnet
+
+sink:
+  module: graph_out
+  type: sf.substreams.sink.subgraph.v1.Service
+  config:
+    schema: ./schema.graphql
+    network: solana
+    deployment: mars-vaults-v1

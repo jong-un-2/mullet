@@ -1,0 +1,34 @@
+{
+  "production": {
+    "VITE_API_ENDPOINT": "https://mars.jongun2038.win",
+    "VITE_API_KEY": "test-key",
+    "VITE_PRIVY_APP_ID": "cmfw7skmh00lfjx0cg4zompxp",
+    "VITE_PRIVY_CLIENT_ID": "client-WY6QkdiKEsy279udGtAua3iZpfeTyfWwcUdsZMGpuGFS9",
+    "VITE_PRIVY_APP_SECRET": "4vHpFatGkatR4vGPTfGrNTAz6B4u9cC1mBZRm2MxbcY2ujqQUjasS3aDkLUxz8WjkBmugn96mo4bfCGXpVU18XVu",
+    "VITE_WALLETCONNECT_PROJECT_ID": "09c1182f7b2cb58c98f0b8ed1f223d91",
+    "VITE_SOLANA_MAINNET_RPC": "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "VITE_SOLANA_MAINNET_WS": "wss://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "VITE_SOLANA_DEVNET_RPC": "https://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "VITE_SOLANA_DEVNET_WS": "wss://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "VITE_BSC_CHAIN_ID": "56",
+    "VITE_BSC_MAINNET_RPC": "https://bsc-mainnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75",
+    "VITE_BSC_TESTNET_RPC": "https://bsc-testnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75",
+    "VITE_INFURA_API_KEY": "your_infura_api_key_here"
+  },
+  "preview": {
+    "VITE_API_ENDPOINT": "https://mars.jongun2038.win",
+    "VITE_API_KEY": "test-key",
+    "VITE_PRIVY_APP_ID": "cmfw7skmh00lfjx0cg4zompxp",
+    "VITE_PRIVY_CLIENT_ID": "client-WY6QkdiKEsy279udGtAua3iZpfeTyfWwcUdsZMGpuGFS9",
+    "VITE_PRIVY_APP_SECRET": "4vHpFatGkatR4vGPTfGrNTAz6B4u9cC1mBZRm2MxbcY2ujqQUjasS3aDkLUxz8WjkBmugn96mo4bfCGXpVU18XVu",
+    "VITE_WALLETCONNECT_PROJECT_ID": "09c1182f7b2cb58c98f0b8ed1f223d91",
+    "VITE_SOLANA_MAINNET_RPC": "https://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "VITE_SOLANA_MAINNET_WS": "wss://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "VITE_SOLANA_DEVNET_RPC": "https://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "VITE_SOLANA_DEVNET_WS": "wss://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "VITE_BSC_CHAIN_ID": "97",
+    "VITE_BSC_MAINNET_RPC": "https://bsc-testnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75",
+    "VITE_BSC_TESTNET_RPC": "https://bsc-testnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75",
+    "VITE_INFURA_API_KEY": "your_infura_api_key_here"
+  }
+}

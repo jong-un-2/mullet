@@ -1,0 +1,80 @@
+# ==================== 
+# Anchor & Solana Specific
+# ====================
+.anchor/
+target/
+test-ledger/
+**/*.rs.bk
+*.so
+
+# Program binaries
+programs/**/target/
+programs/**/*.so
+
+# ==================== 
+# Solana CLI & Keys
+# ====================
+# Keypairs (IMPORTANT: Never commit private keys!)
+*-keypair.json
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!Anchor.toml
+
+# Solana validator logs
+validator.log
+ledger/
+
+# ==================== 
+# Node.js
+# ====================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+.npm/
+
+# ==================== 
+# Build & Cache
+# ====================
+dist/
+build/
+*.tsbuildinfo
+.cache/
+
+# ==================== 
+# Environment & Config
+# ====================
+.env
+.env.local
+.env.production
+.env.development
+
+# ==================== 
+# IDL & Generated
+# ====================
+target/idl/
+target/types/
+
+# ==================== 
+# System Files
+# ====================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# ==================== 
+# Testing & Coverage
+# ====================
+coverage/
+.nyc_output
+test-results/
+
+# ==================== 
+# Rust specific
+# ====================
+Cargo.lock
+!programs/*/Cargo.lock

@@ -1,0 +1,225 @@
+type VaultDeposit @entity {
+  id: ID!
+  signature: String!
+  user: Bytes!
+  vault: Bytes!
+  amount: BigInt!
+  sharesReceived: BigInt!
+  protocolId: Int!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+type VaultWithdraw @entity {
+  id: ID!
+  signature: String!
+  user: Bytes!
+  vault: Bytes!
+  sharesBurned: BigInt!
+  amountReceived: BigInt!
+  protocolId: Int!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+type SwapAndDeposit @entity {
+  id: ID!
+  signature: String!
+  user: Bytes!
+  vault: Bytes!
+  fromToken: String!
+  toToken: String!
+  amountIn: BigInt!
+  amountOut: BigInt!
+  sharesReceived: BigInt!
+  protocolId: Int!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+type WithdrawWithSwap @entity {
+  id: ID!
+  signature: String!
+  user: Bytes!
+  vault: Bytes!
+  sharesBurned: BigInt!
+  targetToken: String!
+  amountReceived: BigInt!
+  slippageBps: Int!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+type RebalanceEvent @entity {
+  id: ID!
+  signature: String!
+  vault: Bytes!
+  protocolFrom: Int!
+  protocolTo: Int!
+  amountIn: BigInt!
+  amountOut: BigInt!
+  executor: Bytes!
+  reason: String!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+type SwapCostEstimate @entity {
+  id: ID!
+  fromToken: String!
+  toToken: String!
+  inputAmount: BigInt!
+  estimatedOutput: BigInt!
+  priceImpactBps: Int!
+  totalFees: BigInt!
+  route: [String!]!
+  timestamp: BigInt!
+}
+
+type Vault @entity {
+  id: ID! # vault address
+  admin: Bytes!
+  baseTokenMint: String!
+  sharesMint: String!
+  totalDeposits: BigInt!
+  totalShares: BigInt!
+  apy: BigInt!
+  status: VaultStatus!
+  protocols: [ProtocolAllocation!]!
+  feeConfig: FeeConfig!
+  createdAt: BigInt!
+  lastUpdated: BigInt!
+  
+  # Aggregated metrics
+  totalVolume24h: BigInt!
+  totalVolume7d: BigInt!
+  totalVolume30d: BigInt!
+  totalFeesCollected: BigInt!
+  uniqueUsers24h: Int!
+  uniqueUsers7d: Int!
+  uniqueUsersTotal: Int!
+}
+
+type ProtocolAllocation @entity {
+  id: ID! # vault_address + protocol_id
+  vault: Vault!
+  protocolId: Int!
+  programId: String!
+  enabled: Boolean!
+  allocationWeightBps: Int!
+  currentAllocation: BigInt!
+  targetAllocationBps: Int!
+}
+
+type FeeConfig @entity {
+  id: ID! # vault address
+  vault: Vault!
+  depositFeeBps: Int!
+  withdrawFeeBps: Int!
+  managementFeeBps: Int!
+  performanceFeeBps: Int!
+  feeRecipient: Bytes!
+}
+
+enum VaultStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+  EMERGENCY
+}
+
+type UserPosition @entity {
+  id: ID! # user + vault address
+  user: Bytes!
+  vault: Vault!
+  amount: BigInt!
+  shares: BigInt!
+  timestamp: BigInt!
+  totalRewards: BigInt!
+  
+  # Historical metrics
+  totalDeposited: BigInt!
+  totalWithdrawn: BigInt!
+  realizedPnl: BigInt!
+  firstDepositTime: BigInt!
+  lastActivityTime: BigInt!
+}
+
+type ProtocolPerformance @entity {
+  id: ID! # vault_address + protocol_id + date
+  vault: Vault!
+  protocolId: Int!
+  totalDeposits: BigInt!
+  totalWithdrawals: BigInt!
+  currentApy: BigInt!
+  averageApy7d: BigInt!
+  totalRewardsGenerated: BigInt!
+  date: Int! # Unix timestamp at start of day
+}
+
+type VaultAnalytics @entity {
+  id: ID! # vault_address + date
+  vault: Vault!
+  totalVolume24h: BigInt!
+  totalVolume7d: BigInt!
+  totalVolume30d: BigInt!
+  totalFeesCollected: BigInt!
+  uniqueUsers24h: Int!
+  uniqueUsers7d: Int!
+  uniqueUsersTotal: Int!
+  protocolPerformance: [ProtocolPerformance!]!
+  timestamp: BigInt!
+}
+
+type VaultDailySnapshot @entity {
+  id: ID! # vault_address + date
+  vault: Vault!
+  date: Int! # Unix timestamp at start of day
+  totalDeposits: BigInt!
+  totalShares: BigInt!
+  apy: BigInt!
+  dailyVolume: BigInt!
+  dailyFees: BigInt!
+  uniqueUsers: Int!
+  protocolAllocations: [BigInt!]! # Array of allocations per protocol
+}
+
+type UserDailySnapshot @entity {
+  id: ID! # user + vault_address + date  
+  user: Bytes!
+  vault: Vault!
+  date: Int! # Unix timestamp at start of day
+  sharesBalance: BigInt!
+  tokenBalance: BigInt!
+  dailyPnl: BigInt!
+  totalRewards: BigInt!
+}
+
+type GlobalStats @entity {
+  id: ID! # "global"
+  totalVaults: Int!
+  totalUsers: Int!
+  totalValueLocked: BigInt!
+  totalVolume: BigInt!
+  averageApy: BigInt!
+  totalFeesCollected: BigInt!
+  lastUpdateTime: BigInt!
+}
+
+type EmergencyEvent @entity {
+  id: ID!
+  signature: String!
+  vault: Vault!
+  eventType: EmergencyEventType!
+  reason: String!
+  executor: Bytes!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+enum EmergencyEventType {
+  PAUSE
+  RESUME
+  EMERGENCY_WITHDRAW
+  FORCE_REBALANCE
+}
