@@ -87,17 +87,16 @@ database_name = "mars-liquid-database"
 database_id = "db7389fb-ea41-46d3-87aa-5d283618d113"
 migrations_dir = "drizzle"
 
-# 🔧 Production R2 storage binding - Disabled for initial deployment
-[[r2_buckets]]
-binding = "R2"
-bucket_name = "dex-storage"
-# preview_bucket_name = "dex-storage-preview"  # Optional
-
 # ✅ KV Namespaces for caching
 [[kv_namespaces]]
 binding = "KV"
 id = "f68574afd1684065b575ca4635be1050"
 preview_id = "df3f475a32684aaf9843e876628171ca"
+
+# ✅ Hyperdrive configuration for Neon PostgreSQL
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "598eb138eef849c9a5682f494f20e753"  # mars-neon-db
 
 [durable_objects]
 bindings = [
@@ -154,10 +153,6 @@ database_name = "mars-liquid-database"
 database_id = "db7389fb-ea41-46d3-87aa-5d283618d113"
 migrations_dir = "drizzle"
 
-[[env.development.r2_buckets]]
-binding = "R2"
-bucket_name = "dex-storage"
-
 [[env.development.kv_namespaces]]
 binding = "KV"
 id = "df3f475a32684aaf9843e876628171ca"
@@ -194,10 +189,6 @@ BSC_TESTNET_RPC_URL = "https://bsc-testnet.infura.io/v3/402b910bd7e24d2a866ac48a
 
 [env.production.ai]
 binding = "AI"
-
-[[env.production.r2_buckets]]
-binding = "R2"
-bucket_name = "dex-storage"
 
 [[env.production.kv_namespaces]]
 binding = "KV"
