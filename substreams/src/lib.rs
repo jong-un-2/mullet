@@ -828,3 +828,214 @@ fn parse_kamino_deposit_and_stake(
         )),
     })
 }
+
+// ============================================================
+// The Graph Protocol Output Handler  
+// ============================================================
+
+use substreams_entity_change::pb::entity::EntityChanges;
+
+#[substreams::handlers::map]
+pub fn graph_out(
+    events: Events,
+    vault_states_deltas: substreams::store::Deltas<substreams::store::DeltaProto<pb::mars::vaults::v1::VaultSnapshot>>
+) -> Result<EntityChanges, substreams::errors::Error> {
+    let mut entity_changes = EntityChanges::default();
+
+    // Process all vault events into Graph entities
+    for event in events.events {
+        match &event.event {
+            // 1. Vault Deposit Event
+            Some(pb::mars::vaults::v1::vault_event::Event::VaultDeposit(deposit)) => {
+                let deposit_id = format!("{}:{}", event.signature, bs58::encode(&deposit.vault_id).into_string());
+                entity_changes.push_change(
+                    "VaultDeposit",
+                    &deposit_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &deposit_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("user", &deposit.user)
+                .change("vault", bs58::encode(&deposit.vault_id).into_string())
+                .change("amount", deposit.amount.to_string())
+                .change("sharesReceived", deposit.shares_received.to_string())
+                .change("protocolId", deposit.protocol_id.to_string());
+            }
+
+            // 2. Vault Withdrawal Event
+            Some(pb::mars::vaults::v1::vault_event::Event::VaultWithdraw(withdrawal)) => {
+                let withdrawal_id = format!("{}:{}", event.signature, bs58::encode(&withdrawal.vault_id).into_string());
+                entity_changes.push_change(
+                    "VaultWithdrawal",
+                    &withdrawal_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &withdrawal_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("user", &withdrawal.user)
+                .change("vault", bs58::encode(&withdrawal.vault_id).into_string())
+                .change("amountReceived", withdrawal.amount_received.to_string())
+                .change("sharesBurned", withdrawal.shares_burned.to_string())
+                .change("protocolId", withdrawal.protocol_id.to_string());
+            }
+
+            // 3. Swap and Deposit Event
+            Some(pb::mars::vaults::v1::vault_event::Event::SwapAndDeposit(swap)) => {
+                let swap_id = format!("{}:{}", event.signature, bs58::encode(&swap.vault_id).into_string());
+                entity_changes.push_change(
+                    "SwapAndDeposit",
+                    &swap_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &swap_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("user", &swap.user)
+                .change("vault", bs58::encode(&swap.vault_id).into_string())
+                .change("fromToken", &swap.from_token)
+                .change("toToken", &swap.to_token)
+                .change("amountIn", swap.amount_in.to_string())
+                .change("amountOut", swap.amount_out.to_string())
+                .change("sharesReceived", swap.shares_received.to_string())
+                .change("protocolId", swap.protocol_id.to_string());
+            }
+
+            // 4. Withdraw with Swap Event
+            Some(pb::mars::vaults::v1::vault_event::Event::WithdrawWithSwap(swap)) => {
+                let swap_id = format!("{}:{}", event.signature, bs58::encode(&swap.vault_id).into_string());
+                entity_changes.push_change(
+                    "WithdrawWithSwap",
+                    &swap_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &swap_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("user", &swap.user)
+                .change("vault", bs58::encode(&swap.vault_id).into_string())
+                .change("sharesBurned", swap.shares_burned.to_string())
+                .change("targetToken", &swap.target_token)
+                .change("amountReceived", swap.amount_received.to_string())
+                .change("slippageBps", swap.slippage_bps.to_string());
+            }
+
+            // 5. Rebalance Event
+            Some(pb::mars::vaults::v1::vault_event::Event::Rebalance(rebalance)) => {
+                let rebalance_id = format!("{}:{}", event.signature, bs58::encode(&rebalance.vault_id).into_string());
+                entity_changes.push_change(
+                    "VaultRebalance",
+                    &rebalance_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &rebalance_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("vault", bs58::encode(&rebalance.vault_id).into_string())
+                .change("protocolFrom", rebalance.protocol_from.to_string())
+                .change("protocolTo", rebalance.protocol_to.to_string())
+                .change("amountIn", rebalance.amount_in.to_string())
+                .change("amountOut", rebalance.amount_out.to_string())
+                .change("executor", &rebalance.executor)
+                .change("reason", &rebalance.reason);
+            }
+
+            // 6. Kamino Deposit Event
+            Some(pb::mars::vaults::v1::vault_event::Event::KaminoDeposit(kamino)) => {
+                let kamino_id = format!("{}:{}", event.signature, bs58::encode(&kamino.vault_id).into_string());
+                entity_changes.push_change(
+                    "KaminoDeposit",
+                    &kamino_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &kamino_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("user", &kamino.user)
+                .change("vault", bs58::encode(&kamino.vault_id).into_string())
+                .change("amount", kamino.amount.to_string())
+                .change("sharesReceived", kamino.shares_received.to_string())
+                .change("kaminoVault", &kamino.kamino_vault);
+            }
+
+            // 7. Kamino Withdrawal Event
+            Some(pb::mars::vaults::v1::vault_event::Event::KaminoWithdraw(kamino)) => {
+                let kamino_id = format!("{}:{}", event.signature, bs58::encode(&kamino.vault_id).into_string());
+                entity_changes.push_change(
+                    "KaminoWithdrawal",
+                    &kamino_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &kamino_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("user", &kamino.user)
+                .change("vault", bs58::encode(&kamino.vault_id).into_string())
+                .change("sharesBurned", kamino.shares_burned.to_string())
+                .change("amountReceived", kamino.amount_received.to_string())
+                .change("kaminoVault", &kamino.kamino_vault);
+            }
+
+            // 8. Vault State Updated Event
+            Some(pb::mars::vaults::v1::vault_event::Event::VaultStateUpdated(state)) => {
+                let state_id = format!("{}:{}", event.signature, bs58::encode(&state.vault_id).into_string());
+                entity_changes.push_change(
+                    "VaultStateUpdate",
+                    &state_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &state_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("vault", bs58::encode(&state.vault_id).into_string())
+                .change("totalDeposits", state.total_deposits.to_string())
+                .change("totalShares", state.total_shares.to_string())
+                .change("apy", state.apy.to_string())
+                .change("activeProtocols", state.active_protocols.to_string())
+                .change("totalUsers", state.total_users.to_string());
+            }
+
+            _ => {} // Skip other event types
+        }
+    }
+
+    // Process vault state changes from store deltas
+    for delta in vault_states_deltas.deltas {
+        let vault_key = bs58::encode(&delta.key).into_string();
+        
+        // Use new_value directly (not Option wrapped)
+        let vault_snapshot = &delta.new_value;
+        
+        entity_changes.push_change(
+            "VaultState",
+            &vault_key,
+            delta.ordinal,
+            substreams_entity_change::pb::entity::entity_change::Operation::Update,
+        )
+        .change("id", &vault_key)
+        .change("vault", &vault_key)
+        .change("totalDeposits", vault_snapshot.total_deposits.to_string())
+        .change("totalShares", vault_snapshot.total_shares.to_string())
+        .change("apy", vault_snapshot.apy.to_string())
+        .change("lastUpdated", vault_snapshot.last_updated.to_string());
+    }
+
+    Ok(entity_changes)
+}

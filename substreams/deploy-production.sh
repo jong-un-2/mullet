@@ -400,10 +400,11 @@ main() {
             echo "用法: $0 [postgres|graph|docker|systemd]"
             echo ""
             echo "部署类型:"
-            echo "  postgres - PostgreSQL Sink (推荐)"
-            echo "  graph    - The Graph Protocol"
+            echo "  postgres - PostgreSQL Sink"
+            echo "  graph    - The Graph Protocol (推荐)"
             echo "  docker   - Docker 部署"
             echo "  systemd  - systemd 服务"
+            echo "  cloudflare - Cloudflare Container"
             exit 1
             ;;
     esac
