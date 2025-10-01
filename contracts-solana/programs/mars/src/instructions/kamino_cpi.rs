@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
+use crate::kamino_constants::kamino::KAMINO_PROGRAM_ID;
 
-// Kamino Vaults Program ID
-// Program ID: Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE
+// Kamino Vaults Program ID: Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE
 // Multisig: 8ksXVE6SMSjQ9sPbj2XQ4Uxx6b7aXh9kHeq4nXMD2tDn
 // IDL: https://explorer.solana.com/address/6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc/anchor-program
-declare_id!("Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE");
+// 注意：不要在这里使用 declare_id!，只能在 lib.rs 中使用
 
 #[derive(Accounts)]
 pub struct KaminoDepositCPI<'info> {
@@ -95,7 +95,7 @@ pub fn kamino_deposit_cpi(
     // 验证Kamino程序ID
     require_eq!(
         ctx.accounts.kamino_vault_program.key(),
-        ID,
+        KAMINO_PROGRAM_ID,
         ErrorCode::InvalidKaminoProgram
     );
 
@@ -153,7 +153,7 @@ pub fn kamino_withdraw_cpi(
     // 验证Kamino程序ID
     require_eq!(
         ctx.accounts.kamino_vault_program.key(),
-        ID,
+        KAMINO_PROGRAM_ID,
         ErrorCode::InvalidKaminoProgram
     );
 
