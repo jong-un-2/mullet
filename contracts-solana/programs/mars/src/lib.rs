@@ -19,7 +19,7 @@ use instructions::*;
 use state::*;
 use util::*;
 
-declare_id!("AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8");
+declare_id!("9A2JwsP3yrP4TPAoRa2kqmBWwtfKfT73syPqSaSCLPXJ");
 
 #[program]
 pub mod mars {
@@ -252,10 +252,42 @@ pub mod mars {
     }
 
     // Kamino CPI调用: 从Kamino Vault提取（完整实现，匹配Kamino IDL）
-    pub fn kamino_withdraw(
-        ctx: Context<KaminoWithdrawCPIComplete>,
+    pub fn kamino_withdraw<'info>(
+        ctx: Context<'_, '_, '_, 'info, KaminoWithdrawCPIComplete<'info>>,
         max_amount: u64,
     ) -> Result<()> {
         kamino_withdraw_cpi_complete(ctx, max_amount)
+    }
+
+    // Kamino Farm质押: 将vault shares质押到farm赚取奖励
+    pub fn kamino_stake_in_farm(
+        ctx: Context<KaminoStakeInFarm>,
+        shares_amount: u64,
+    ) -> Result<()> {
+        handler_kamino_stake_in_farm(ctx, shares_amount)
+    }
+
+    // Kamino Farm发起取消质押: 第一步，发起unstake请求
+    pub fn kamino_start_unstake_from_farm(
+        ctx: Context<KaminoStartUnstakeFromFarm>,
+        shares_amount: u64,
+        current_slot: u64,
+    ) -> Result<()> {
+        handler_kamino_start_unstake_from_farm(ctx, shares_amount, current_slot)
+    }
+
+    // Kamino Farm取消质押: 第二步，从farm取回已unstake的shares到钱包
+    pub fn kamino_unstake_from_farm(
+        ctx: Context<KaminoUnstakeFromFarm>,
+    ) -> Result<()> {
+        handler_kamino_unstake_from_farm(ctx)
+    }
+
+    // Kamino存款并自动质押: 一步完成存款+质押，像官方一样
+    pub fn kamino_deposit_and_stake<'info>(
+        ctx: Context<'_, '_, '_, 'info, KaminoDepositAndStake<'info>>,
+        max_amount: u64,
+    ) -> Result<()> {
+        handler_kamino_deposit_and_stake(ctx, max_amount)
     }
 }

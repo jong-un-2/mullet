@@ -10,6 +10,7 @@ import {
     Connection, 
     Keypair, 
     PublicKey,
+    AccountMeta,
 } from "@solana/web3.js";
 import * as fs from "fs";
 import { HELIUS_RPC, MARS_PROGRAM_ID, KAMINO_V2_PROGRAM, KLEND_PROGRAM, PYUSD_MINT } from "./constants";
@@ -118,6 +119,58 @@ async function test() {
     console.log("  PYUSD Token:", PYUSD_ACCOUNT.toString());
     console.log("  Shares ATA:", userSharesAta.toString());
     
+    // 🔍 获取 Vault Reserves (remaining_accounts)
+    console.log("\n🔍 获取 Vault Reserves...");
+    
+    // VaultAllocationStrategy 从 offset 320 开始，固定数组 [VaultAllocation; 25]
+    let reserveOffset = 320;
+    const allocationCount = 25;
+    const reserves: PublicKey[] = [];
+    
+    for (let i = 0; i < allocationCount; i++) {
+        // VaultAllocation: reserve(32) + ctokenVault(32) + targetAllocationWeight(8) + tokenAllocationCap(8) = 80 bytes
+        const reserve = new PublicKey(data.slice(reserveOffset, reserveOffset + 32));
+        
+        if (!reserve.equals(PublicKey.default)) {
+            reserves.push(reserve);
+        }
+        
+        reserveOffset += 80;
+    }
+    
+    console.log(`  找到 ${reserves.length} 个 reserves`);
+    
+  // 构造 remaining accounts (SDK 格式: 先所有 reserves，再所有 lending markets)
+  const remainingAccounts: AccountMeta[] = [];
+  const reserveAccounts = await connection.getMultipleAccountsInfo(reserves);
+  
+  const lendingMarkets: PublicKey[] = [];
+  
+  // Step 1: 添加所有 reserves (writable)
+  for (let i = 0; i < reserves.length; i++) {
+    const reserveAccount = reserveAccounts[i];
+    if (reserveAccount) {
+      remainingAccounts.push({
+        pubkey: reserves[i],
+        isSigner: false,
+        isWritable: true
+      });
+      
+      // 从 reserve 数据中提取 lending market (offset 16: discriminator 8 + version 8)
+      const lendingMarket = new PublicKey(reserveAccount.data.slice(16, 48));
+      lendingMarkets.push(lendingMarket);
+    }
+  }
+  
+  // Step 2: 添加所有 lending markets (readonly)
+  for (const lendingMarket of lendingMarkets) {
+    remainingAccounts.push({
+      pubkey: lendingMarket,
+      isSigner: false,
+      isWritable: false
+    });
+  }    console.log(`\n✅ 准备 ${remainingAccounts.length} 个 remaining accounts`);
+    
     // 设置 Anchor
     const provider = new anchor.AnchorProvider(
         connection,
@@ -129,9 +182,7 @@ async function test() {
     const idl = JSON.parse(fs.readFileSync('./target/idl/mars.json', 'utf8'));
     const program = new Program(idl, provider) as Program<Mars>;
     
-    // 不预先创建 shares ATA，让 Kamino deposit 自动处理
-    // （sharesMint 可能不存在或是特殊配置）
-    console.log("⚠️  注意: Shares ATA 可能需要由 Kamino 自动创建\n");
+    console.log("⚠️  注意: Shares ATA 已创建\n");
     
     // 存款金额: 5 PYUSD = 5,000,000 micro-units (6 decimals)
     const depositAmount = new anchor.BN(5_000_000);
@@ -156,6 +207,7 @@ async function test() {
                 eventAuthority: eventAuthority,
                 kaminoVaultProgram: KAMINO_V2_PROGRAM,
             })
+            .remainingAccounts(remainingAccounts)  // ✨ 添加 vault reserves 和 lending markets
             .rpc();
         
         console.log("✅ 交易成功!");

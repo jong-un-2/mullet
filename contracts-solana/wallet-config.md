@@ -81,18 +81,22 @@ solana-keygen pubkey user.json
 
 ## Mars 程序信息
 
-### 主网部署 (当前版本 V2)
-- **程序ID**: `BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9`
+### 主网部署 (当前版本 V3)
+- **程序ID**: `AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8`
 - **网络**: Solana Mainnet Beta
-- **部署时间**: 2025-10-01 20:30
+- **部署时间**: 2025-10-01 21:45
 - **升级权限**: 4AiFD35M6ZmddV9BbG6mKxvABMq8aeqz4usJSsT7c17w (user.json)
 - **程序大小**: 494KB (506,000 bytes)
 - **租金余额**: ~3.5 SOL
-- **部署签名**: 3tBfPwCQ4ogELemCQp3XBfqqDWcyu4YLnikWhGnUNfymdNPKFtXDgqHTc9io1qiv51mDjvWsxjWqUw8pmTsSTcN1
-- **浏览器**: https://explorer.solana.com/address/BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9?cluster=mainnet
-- **新特性**: ✨ 支持 Token-2022 (可处理 PYUSD 等新型代币)
+- **部署签名**: 5W8YtdP4bkcwbu5LhXh36jik2A8MG4jvnn1r2gCDmPPSiSbvkpJNySH62cw2Ut342J6wuyYie5UiVFWX1hUEr8Mf
+- **浏览器**: https://explorer.solana.com/address/AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8?cluster=mainnet
+- **新特性**: 
+  - ✨ 支持 Token-2022 (可处理 PYUSD 等新型代币)
+  - ✨ 支持 Kamino Vault remaining_accounts (reserves + lending markets)
+  - ✨ 重命名为 KaminoDepositCPI（更简洁的命名）
 
 ### 旧程序ID (已关闭/废弃)
+- ~~BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9~~ (V2, 已关闭，租金已回收 3.52 SOL)
 - ~~FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY~~ (V1, 已关闭，租金已回收 3.53 SOL)
 - ~~5j75RWGLHdj8UL3rtrinkBt4iHz5pE7rqo5hp4gvmWF~~ (V0, 已关闭，租金已回收)
 - ~~6668zv314yKTUWEo3EygNaeEkQRPbczvaMiubksH67V~~ (本地测试使用)
@@ -109,7 +113,14 @@ solana-keygen pubkey user.json
 
 ## 更新记录
 
-- **2025-10-01 20:30**: ✅ 成功部署 Mars V2 到主网！程序ID: BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9
+- **2025-10-01 21:45**: ✅ 成功部署 Mars V3 到主网！程序ID: AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+  - 🎉 **新特性**: 支持 Kamino Vault remaining_accounts
+  - 修改 kamino_deposit_cpi_complete 支持动态 remaining_accounts
+  - 可传入 vault reserves 和对应的 lending markets
+  - 重命名 KaminoDepositCPIComplete → KaminoDepositCPI
+  - 关闭旧程序 BFw4j...，回收租金 3.52 SOL
+  - 合约大小: 494KB
+- **2025-10-01 20:30**: ✅ 成功部署 Mars V2 到主网 (已关闭) 程序ID: BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9
   - 🎉 **新特性**: 支持 Token-2022 程序 (可处理 PYUSD 等新型代币)
   - 修改 kamino_cpi.rs，使用 AccountInfo 替代 Account<TokenAccount>
   - 灵活支持标准 Token 和 Token-2022 两种程序

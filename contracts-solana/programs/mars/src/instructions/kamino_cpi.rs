@@ -243,8 +243,23 @@ pub fn kamino_deposit_cpi_complete<'info>(
 }
 
 /// CPI调用Kamino进行提取（完整实现）
-pub fn kamino_withdraw_cpi_complete(
-    ctx: Context<KaminoWithdrawCPIComplete>,
+/// 
+/// remaining_accounts 应该包含复杂的 vault 相关账户:
+/// - vault_state (writable)
+/// - reserve_0 (writable)
+/// - reserve_1 (writable)
+/// - lending_market_0 (readonly)
+/// - lending_market_1 (readonly)
+/// - reserve_liquidity_supply_0 (writable)
+/// - reserve_liquidity_supply_1 (writable)
+/// - token_program (readonly)
+/// - sysvar_instructions (readonly)
+/// - event_authority (readonly)
+/// - kamino_vault_program (readonly)
+/// - reserve_0 (writable, duplicate)
+/// - lending_market_0 (readonly, duplicate)
+pub fn kamino_withdraw_cpi_complete<'info>(
+    ctx: Context<'_, '_, '_, 'info, KaminoWithdrawCPIComplete<'info>>,
     max_amount: u64,
 ) -> Result<()> {
     msg!("🚀 开始Kamino提取CPI调用，最大金额: {}", max_amount);
@@ -257,7 +272,7 @@ pub fn kamino_withdraw_cpi_complete(
     );
 
     // withdrawFromAvailable 账户
-    let account_metas = vec![
+    let mut account_metas = vec![
         // 1. user
         AccountMeta::new(ctx.accounts.user.key(), true),
         // 2. vaultState
@@ -286,6 +301,55 @@ pub fn kamino_withdraw_cpi_complete(
         AccountMeta::new_readonly(ctx.accounts.kamino_vault_program.key(), false),
     ];
 
+    // 添加 remaining_accounts
+    // Withdraw 需要更复杂的账户结构，直接按照 SDK 返回的账户添加
+    msg!("📋 添加 {} 个 remaining accounts", ctx.remaining_accounts.len());
+    for (i, account) in ctx.remaining_accounts.iter().enumerate() {
+        // SDK 返回的账户已经标明了 writable/readonly，我们需要根据索引判断
+        // 基于 SDK 的输出，按照既定模式添加
+        match i {
+            0 => {
+                // Account 13: vault_state (writable, duplicate)
+                account_metas.push(AccountMeta::new(account.key(), false));
+                msg!("  [{}] Vault State (dup): {} (writable)", i, account.key());
+            }
+            1 | 2 => {
+                // Accounts 14-15: reserves (writable)
+                account_metas.push(AccountMeta::new(account.key(), false));
+                msg!("  [{}] Reserve: {} (writable)", i, account.key());
+            }
+            3 | 4 => {
+                // Accounts 16-17: lending markets (readonly)
+                account_metas.push(AccountMeta::new_readonly(account.key(), false));
+                msg!("  [{}] Lending Market: {} (readonly)", i, account.key());
+            }
+            5 | 6 => {
+                // Accounts 18-19: reserve liquidity supplies (writable)
+                account_metas.push(AccountMeta::new(account.key(), false));
+                msg!("  [{}] Reserve Liquidity Supply: {} (writable)", i, account.key());
+            }
+            7 | 8 | 9 | 10 => {
+                // Accounts 20-23: token program, sysvar, event authority, kamino program (readonly)
+                account_metas.push(AccountMeta::new_readonly(account.key(), false));
+                msg!("  [{}] System/Program Account: {} (readonly)", i, account.key());
+            }
+            11 => {
+                // Account 24: reserve (writable, duplicate)
+                account_metas.push(AccountMeta::new(account.key(), false));
+                msg!("  [{}] Reserve (dup): {} (writable)", i, account.key());
+            }
+            12 => {
+                // Account 25: lending market (readonly, duplicate)
+                account_metas.push(AccountMeta::new_readonly(account.key(), false));
+                msg!("  [{}] Lending Market (dup): {} (readonly)", i, account.key());
+            }
+            _ => {
+                msg!("  [{}] Extra Account: {}", i, account.key());
+                account_metas.push(AccountMeta::new_readonly(account.key(), false));
+            }
+        }
+    }
+
     // 构建指令数据
     let mut data = Vec::with_capacity(16);
     // Kamino withdraw指令的discriminator
@@ -298,7 +362,8 @@ pub fn kamino_withdraw_cpi_complete(
         data,
     };
 
-    let account_infos = vec![
+    // 构建 account_infos (包含 remaining_accounts)
+    let mut account_infos = vec![
         ctx.accounts.user.to_account_info(),
         ctx.accounts.vault_state.to_account_info(),
         ctx.accounts.token_vault.to_account_info(),
@@ -313,6 +378,11 @@ pub fn kamino_withdraw_cpi_complete(
         ctx.accounts.event_authority.to_account_info(),
         ctx.accounts.kamino_vault_program.to_account_info(),
     ];
+    
+    // 添加 remaining_accounts 到 account_infos
+    for account in ctx.remaining_accounts.iter() {
+        account_infos.push(account.to_account_info());
+    }
 
     anchor_lang::solana_program::program::invoke(
         &ix,

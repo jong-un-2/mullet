@@ -1,10 +1,10 @@
 // Mars 项目主网常量配置
-// 最后更新: 2025-10-01
+// 最后更新: 2025-10-01 21:45
 
 import { PublicKey } from "@solana/web3.js";
 
-// Mars 程序 (最新部署 - 支持 Token-2022)
-export const MARS_PROGRAM_ID = new PublicKey("BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9");
+// Mars 程序 V4 (最新部署 - 支持 Token-2022 + Kamino remaining_accounts + Withdraw)
+export const MARS_PROGRAM_ID = new PublicKey("9A2JwsP3yrP4TPAoRa2kqmBWwtfKfT73syPqSaSCLPXJ");
 
 // Kamino 集成
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");

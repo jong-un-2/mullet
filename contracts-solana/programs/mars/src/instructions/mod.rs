@@ -44,3 +44,5 @@ pub mod set_insurance_fee_tiers;
 pub use set_insurance_fee_tiers::*;
 pub mod kamino_cpi;
 pub use kamino_cpi::*;
+pub mod kamino_farm;
+pub use kamino_farm::*;
