@@ -95,16 +95,16 @@ async function main() {
   anchor.setProvider(provider);
   const program = anchor.workspace.Mars as Program<Mars>;
 
+  // 增加 Compute Units
+  const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 300_000
+  });
+
   console.log("\n" + "=".repeat(60));
   console.log("第一步：发起 Farm 取消质押请求 (StartUnstake)");
   console.log("=".repeat(60));
 
   try {
-    // 增加 Compute Units
-    const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({
-      units: 300_000
-    });
-
     // 获取当前 slot
     const currentSlot = await connection.getSlot();
     console.log(`📍 当前 Slot: ${currentSlot}`);
@@ -130,11 +130,19 @@ async function main() {
 
     // 等待确认
     await new Promise((resolve) => setTimeout(resolve, 3000));
+  } catch (error: any) {
+    if (error.message?.includes("NothingToUnstake")) {
+      console.log("⏭️  跳过 StartUnstake - 已经执行过了");
+    } else {
+      throw error;
+    }
+  }
 
-    console.log("\n" + "=".repeat(60));
-    console.log("第二步：从 Farm 提取已取消质押的 shares");
-    console.log("=".repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("第二步：从 Farm 提取已取消质押的 shares");
+  console.log("=".repeat(60));
 
+  try {
     // 第二步：从 Farm 取消质押（提取到钱包）
     const unstakeTx = await program.methods
       .kaminoUnstakeFromFarm()
@@ -157,19 +165,28 @@ async function main() {
 
     // 等待确认
     await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    // 检查取消质押后的 shares
-    const sharesAfterUnstake = await connection.getTokenAccountBalance(sharesAta);
-    console.log(`💎 取消质押后的 Shares: ${sharesAfterUnstake.value.uiAmount} shares`);
-
-    if (Number(sharesAfterUnstake.value.amount) === 0) {
-      console.log("⚠️  钱包中没有 shares，无法继续取款");
-      return;
+  } catch (error: any) {
+    if (error.message?.includes("NothingToWithdraw")) {
+      console.log("⏭️  跳过 WithdrawUnstakedDeposits - 已经执行过了");
+    } else {
+      throw error;
     }
+  }
 
-    console.log("\n" + "=".repeat(60));
-    console.log("第三步：从 Vault 取款");
-    console.log("=".repeat(60));
+  // 检查取消质押后的 shares
+  const sharesAfterUnstake = await connection.getTokenAccountBalance(sharesAta);
+  console.log(`💎 取消质押后的 Shares: ${sharesAfterUnstake.value.uiAmount} shares`);
+
+  if (Number(sharesAfterUnstake.value.amount) === 0) {
+    console.log("⚠️  钱包中没有 shares，无法继续取款");
+    return;
+  }
+
+  console.log("\n" + "=".repeat(60));
+  console.log("第三步：从 Vault 取款");
+  console.log("=".repeat(60));
+
+  try {
 
     // Withdraw remaining accounts
     const remainingAccounts: AccountMeta[] = [
