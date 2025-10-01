@@ -7,7 +7,7 @@ use crate::kamino_constants::kamino::KAMINO_PROGRAM_ID;
 
 /// Kamino存款CPI调用所需的账户（完整版本，匹配IDL）
 #[derive(Accounts)]
-pub struct KaminoDepositCPIComplete<'info> {
+pub struct KaminoDepositCPI<'info> {
     /// 1. user - 用户账户
     #[account(mut)]
     pub user: Signer<'info>,
@@ -130,8 +130,15 @@ pub struct KaminoWithdrawCPIComplete<'info> {
 }
 
 /// CPI调用Kamino进行存款（完整实现）
-pub fn kamino_deposit_cpi_complete(
-    ctx: Context<KaminoDepositCPIComplete>,
+/// 
+/// remaining_accounts 应该包含 vault 的 reserves 和对应的 lending markets:
+/// - reserve_0 (writable)
+/// - lending_market_0 (readonly)
+/// - reserve_1 (writable)
+/// - lending_market_1 (readonly)
+/// - ...
+pub fn kamino_deposit_cpi_complete<'info>(
+    ctx: Context<'_, '_, '_, 'info, KaminoDepositCPI<'info>>,
     max_amount: u64,
 ) -> Result<()> {
     msg!("🚀 开始Kamino存款CPI调用，金额: {}", max_amount);
@@ -144,7 +151,7 @@ pub fn kamino_deposit_cpi_complete(
     );
 
     // 构建账户数组（严格按照Kamino IDL顺序）
-    let account_metas = vec![
+    let mut account_metas = vec![
         // 1. user
         AccountMeta::new(ctx.accounts.user.key(), true),
         // 2. vaultState
@@ -173,6 +180,21 @@ pub fn kamino_deposit_cpi_complete(
         AccountMeta::new_readonly(ctx.accounts.kamino_vault_program.key(), false),
     ];
 
+    // 添加 remaining_accounts (reserves + lending markets)
+    // 格式: [reserve (writable), lending_market (readonly), ...]
+    msg!("📋 添加 {} 个 remaining accounts", ctx.remaining_accounts.len());
+    for (i, account) in ctx.remaining_accounts.iter().enumerate() {
+        // 偶数索引是 reserves (writable)，奇数索引是 lending markets (readonly)
+        let is_writable = i % 2 == 0;
+        if is_writable {
+            account_metas.push(AccountMeta::new(account.key(), false));
+            msg!("  - Reserve {}: {} (writable)", i / 2, account.key());
+        } else {
+            account_metas.push(AccountMeta::new_readonly(account.key(), false));
+            msg!("  - Lending Market {}: {} (readonly)", i / 2, account.key());
+        }
+    }
+
     // 构建指令数据：discriminator (8 bytes) + max_amount (8 bytes)
     let mut data = Vec::with_capacity(16);
     // Kamino deposit指令的discriminator
@@ -188,8 +210,8 @@ pub fn kamino_deposit_cpi_complete(
         data,
     };
 
-    // 构建account_infos
-    let account_infos = vec![
+    // 构建account_infos (包含 remaining_accounts)
+    let mut account_infos = vec![
         ctx.accounts.user.to_account_info(),
         ctx.accounts.vault_state.to_account_info(),
         ctx.accounts.token_vault.to_account_info(),
@@ -204,6 +226,11 @@ pub fn kamino_deposit_cpi_complete(
         ctx.accounts.event_authority.to_account_info(),
         ctx.accounts.kamino_vault_program.to_account_info(),
     ];
+    
+    // 添加 remaining_accounts 到 account_infos
+    for account in ctx.remaining_accounts.iter() {
+        account_infos.push(account.to_account_info());
+    }
 
     // 执行CPI调用
     anchor_lang::solana_program::program::invoke(

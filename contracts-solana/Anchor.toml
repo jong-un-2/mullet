@@ -9,7 +9,7 @@ skip-lint = false
 cargo_args = ["--release"]
 
 [programs.localnet]
-mars = "FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY"
+mars = "AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8"
 
 [registry]
 url = "https://api.apr.dev"

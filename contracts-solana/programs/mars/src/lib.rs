@@ -19,7 +19,7 @@ use instructions::*;
 use state::*;
 use util::*;
 
-declare_id!("FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY");
+declare_id!("AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8");
 
 #[program]
 pub mod mars {
@@ -244,8 +244,8 @@ pub mod mars {
     }
 
     // Kamino CPI调用: 存款到Kamino Vault（完整实现，匹配Kamino IDL）
-    pub fn kamino_deposit(
-        ctx: Context<KaminoDepositCPIComplete>,
+    pub fn kamino_deposit<'info>(
+        ctx: Context<'_, '_, '_, 'info, KaminoDepositCPI<'info>>,
         max_amount: u64,
     ) -> Result<()> {
         kamino_deposit_cpi_complete(ctx, max_amount)

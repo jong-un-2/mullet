@@ -3,6 +3,7 @@ import { Program } from "@coral-xyz/anchor";
 import { Mars } from "./target/types/mars";
 import { 
     TOKEN_PROGRAM_ID,
+    TOKEN_2022_PROGRAM_ID,
     getAssociatedTokenAddress,
 } from "@solana/spl-token";
 import { 
@@ -13,8 +14,11 @@ import {
 import * as fs from "fs";
 import { HELIUS_RPC, MARS_PROGRAM_ID, KAMINO_V2_PROGRAM, KLEND_PROGRAM, PYUSD_MINT } from "./constants";
 
-// 实际的 PYUSD 账户地址（从交易中获取）
+// 实际的 PYUSD 账户地址（从交易中获取 - Token-2022）
 const PYUSD_ACCOUNT = new PublicKey("DhxxxG3fouc2j9f5AUVqM9M3GHCQydnSeUxXkwJWb3y6");
+
+// Token-2022 Program ID
+const TOKEN_2022_PROGRAM = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
 
 // Kamino Vault 地址（SDK 例子中使用的）
 const VAULT_ADDRESS = new PublicKey("A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK");
@@ -61,20 +65,42 @@ async function test() {
         throw new Error("❌ 不是有效的 Kamino V2 Vault");
     }
     
-    // 解析 vault state
+    // ✨ 按照 VaultState IDL 正确解析（从 Kamino SDK IDL 确认）
     const data = vaultInfo.data;
-    let offset = 8;
-    const tokenVault = new PublicKey(data.slice(offset, offset + 32));
+    let offset = 8; // 跳过 discriminator
+    
+    // vaultAdminAuthority
     offset += 32;
-    const sharesMint = new PublicKey(data.slice(offset, offset + 32));
+    
+    // baseVaultAuthority (offset 40)
+    const baseVaultAuthority = new PublicKey(data.slice(offset, offset + 32));
     offset += 32;
+    
+    // baseVaultAuthorityBump (8 bytes)
+    offset += 8;
+    
+    // tokenMint (offset 80)
     const tokenMint = new PublicKey(data.slice(offset, offset + 32));
     offset += 32;
-    const baseVaultAuthority = new PublicKey(data.slice(offset, offset + 32));
+    
+    // tokenMintDecimals (8 bytes)
+    offset += 8;
+    
+    // tokenVault (offset 120)
+    const tokenVault = new PublicKey(data.slice(offset, offset + 32));
+    offset += 32;
+    
+    // tokenProgram (offset 152)
+    const tokenProgram = new PublicKey(data.slice(offset, offset + 32));
+    offset += 32;
+    
+    // sharesMint (offset 184)
+    const sharesMint = new PublicKey(data.slice(offset, offset + 32));
     
     console.log("📋 Vault 信息:");
+    console.log("  Token Mint (PYUSD):", tokenMint.toString());
     console.log("  Token Vault:", tokenVault.toString());
-    console.log("  Token Mint:", tokenMint.toString());
+    console.log("  Token Program:", tokenProgram.toString(), "(Token-2022 ✨)");
     console.log("  Shares Mint:", sharesMint.toString());
     console.log("  Base Authority:", baseVaultAuthority.toString());
     
@@ -85,7 +111,7 @@ async function test() {
     );
     console.log("  Event Authority:", eventAuthority.toString());
     
-    // 获取 shares ATA
+    // 获取 shares ATA (标准 Token program)
     const userSharesAta = await getAssociatedTokenAddress(sharesMint, walletKeypair.publicKey);
     
     console.log("\n📋 用户账户:");
@@ -103,9 +129,13 @@ async function test() {
     const idl = JSON.parse(fs.readFileSync('./target/idl/mars.json', 'utf8'));
     const program = new Program(idl, provider) as Program<Mars>;
     
+    // 不预先创建 shares ATA，让 Kamino deposit 自动处理
+    // （sharesMint 可能不存在或是特殊配置）
+    console.log("⚠️  注意: Shares ATA 可能需要由 Kamino 自动创建\n");
+    
     // 存款金额: 5 PYUSD = 5,000,000 micro-units (6 decimals)
     const depositAmount = new anchor.BN(5_000_000);
-    console.log("\n💰 存款金额:", depositAmount.toString(), "micro-units (5 PYUSD)");
+    console.log("💰 存款金额:", depositAmount.toString(), "micro-units (5 PYUSD)");
     console.log("\n🚀 调用 Mars 合约的 kamino_deposit...\n");
     
     try {
@@ -118,11 +148,11 @@ async function test() {
                 tokenMint: tokenMint,
                 baseVaultAuthority: baseVaultAuthority,
                 sharesMint: sharesMint,
-                userTokenAta: PYUSD_ACCOUNT,  // 使用实际的 PYUSD 账户
+                userTokenAta: PYUSD_ACCOUNT,  // 使用实际的 PYUSD 账户 (Token-2022)
                 userSharesAta: userSharesAta,
                 klendProgram: KLEND_PROGRAM,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                sharesTokenProgram: TOKEN_PROGRAM_ID,
+                tokenProgram: tokenProgram,  // ✨ 从 vault 读取（Token-2022）
+                sharesTokenProgram: TOKEN_PROGRAM_ID,  // Shares 使用标准 Token program
                 eventAuthority: eventAuthority,
                 kaminoVaultProgram: KAMINO_V2_PROGRAM,
             })

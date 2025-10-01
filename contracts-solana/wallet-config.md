@@ -81,18 +81,20 @@ solana-keygen pubkey user.json
 
 ## Mars 程序信息
 
-### 主网部署 (当前版本)
-- **程序ID**: `FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY`
+### 主网部署 (当前版本 V2)
+- **程序ID**: `BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9`
 - **网络**: Solana Mainnet Beta
-- **部署时间**: 2025-10-01
+- **部署时间**: 2025-10-01 20:30
 - **升级权限**: 4AiFD35M6ZmddV9BbG6mKxvABMq8aeqz4usJSsT7c17w (user.json)
-- **程序大小**: 495KB (506880 bytes)
-- **租金余额**: ~3.6 SOL
-- **部署签名**: 3vLpjHusT5qbh6jnFvDJVSTQ6kmAuDCMZv2pTDCmtcqP5u7tvy7LJXnXUWshMgHm1ak7JPiBrK7nZZcAL8LFK6GP
-- **浏览器**: https://explorer.solana.com/address/FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY?cluster=mainnet
+- **程序大小**: 494KB (506,000 bytes)
+- **租金余额**: ~3.5 SOL
+- **部署签名**: 3tBfPwCQ4ogELemCQp3XBfqqDWcyu4YLnikWhGnUNfymdNPKFtXDgqHTc9io1qiv51mDjvWsxjWqUw8pmTsSTcN1
+- **浏览器**: https://explorer.solana.com/address/BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9?cluster=mainnet
+- **新特性**: ✨ 支持 Token-2022 (可处理 PYUSD 等新型代币)
 
 ### 旧程序ID (已关闭/废弃)
-- ~~5j75RWGLHdj8UL3rtrinkBt4iHz5pE7rqo5hp4gvmWF~~ (已关闭，租金已回收)
+- ~~FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY~~ (V1, 已关闭，租金已回收 3.53 SOL)
+- ~~5j75RWGLHdj8UL3rtrinkBt4iHz5pE7rqo5hp4gvmWF~~ (V0, 已关闭，租金已回收)
 - ~~6668zv314yKTUWEo3EygNaeEkQRPbczvaMiubksH67V~~ (本地测试使用)
 
 ### Kamino 集成
@@ -102,15 +104,22 @@ solana-keygen pubkey user.json
   - ✅ kamino_deposit - 存款到任意Kamino Vault (完整实现，匹配SDK)
   - ✅ kamino_withdraw - 从任意Kamino Vault取款 (完整实现，匹配SDK)
   - ✅ 支持所有Kamino V2 vaults (USDC, PYUSD, SOL等)
-- **示例Vault**: `A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK` (可用于测试)
+  - ✅ 支持 Token-2022 程序 (TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb)
+- **示例Vault**: `A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK` (PYUSD vault，可用于测试)
 
 ## 更新记录
 
-- **2025-10-01 19:50**: ✅ 成功部署新版本到主网！程序ID: FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY
+- **2025-10-01 20:30**: ✅ 成功部署 Mars V2 到主网！程序ID: BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9
+  - 🎉 **新特性**: 支持 Token-2022 程序 (可处理 PYUSD 等新型代币)
+  - 修改 kamino_cpi.rs，使用 AccountInfo 替代 Account<TokenAccount>
+  - 灵活支持标准 Token 和 Token-2022 两种程序
+  - 关闭旧程序 FA11b...，回收租金 3.53 SOL
+  - 合约大小: 494KB
+- **2025-10-01 19:50**: ✅ 成功部署 Mars V1 到主网 (已关闭) 程序ID: FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY
   - 更新为Kamino V2程序ID (KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd)
   - 修复deposit discriminator，与SDK 100%一致
   - 合约大小: 495KB
-- **2025-10-01 18:00**: 部署到主网 (旧版本，已关闭) 程序ID: 5j75RWGLHdj8UL3rtrinkBt4iHz5pE7rqo5hp4gvmWF
+- **2025-10-01 18:00**: 部署到主网 (V0，已关闭) 程序ID: 5j75RWGLHdj8UL3rtrinkBt4iHz5pE7rqo5hp4gvmWF
 - **2025-10-01 17:30**: 回收之前失败部署的租金 3.58 SOL
 - **2025-10-01 17:00**: 重新生成所有钱包文件，替换旧的 recover 系列钱包
 - **注意**: 旧钱包已删除，如果有重要资产请及时转移
