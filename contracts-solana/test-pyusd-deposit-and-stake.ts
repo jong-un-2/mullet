@@ -8,12 +8,12 @@ import {
     Connection, 
     Keypair, 
     PublicKey,
-    AccountMeta,
     ComputeBudgetProgram,
-    Transaction,
 } from "@solana/web3.js";
 import * as fs from "fs";
+import Decimal from "decimal.js/decimal";
 import { HELIUS_RPC, MARS_PROGRAM_ID, KAMINO_V2_PROGRAM, KLEND_PROGRAM, PYUSD_MINT } from "./constants";
+import { KaminoSDKHelper } from "./sdk-helper";
 
 // 实际的 PYUSD 账户地址（Token-2022）
 const PYUSD_ACCOUNT = new PublicKey("DhxxxG3fouc2j9f5AUVqM9M3GHCQydnSeUxXkwJWb3y6");
@@ -27,14 +27,6 @@ const VAULT_ADDRESS = new PublicKey("A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5B
 // Event Authority
 const EVENT_AUTHORITY = new PublicKey("24tHwQyJJ9akVXxnvkekGfAoeUJXXS7mE6kQNioNySsK");
 
-// Kamino Farms Program
-const FARMS_PROGRAM = new PublicKey("FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr");
-
-// Farm 相关账户（从 SDK 获取）
-const FARM_STATE = new PublicKey("HtN9eg6qmjPdoRAWXAdMhGe6BJNDDTynGBPvBj2mzEW7");
-const USER_FARM = new PublicKey("8hznHD38esVyPps3hUcFahynwekYUfjn43PRz9n5PDZN");
-const DELEGATED_STAKE = new PublicKey("HkUp6TWz3joUECDZgAiJWkK9D9WAuHsRzVuuSqJpptrF");
-
 async function main() {
   console.log("🚀 Mars合约 PYUSD 存款并自动质押到Farm测试\n");
 
@@ -45,6 +37,12 @@ async function main() {
   const walletPath = "/Users/joung-un/mars-projects/klend-sdk/examples/phantom-wallet.json";
   const walletData = JSON.parse(fs.readFileSync(walletPath, "utf-8"));
   const wallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
+
+  // 🎯 初始化 SDK Helper
+  console.log("⏳ 初始化 Kamino SDK...");
+  const sdkHelper = new KaminoSDKHelper(walletPath);
+  await sdkHelper.initialize();
+  console.log("✅ SDK 初始化完成\n");
 
   console.log("📋 钱包地址:", wallet.publicKey.toBase58());
   console.log("📋 Mars程序ID:", MARS_PROGRAM_ID);
@@ -58,52 +56,23 @@ async function main() {
   const pyusdBalance = await connection.getTokenAccountBalance(PYUSD_ACCOUNT);
   console.log(`💰 PYUSD 余额: ${pyusdBalance.value.uiAmount} PYUSD`);
 
-  // 🎯 Vault 相关账户（从 SDK 获取）
-  console.log("\n📋 Vault 账户 (来自SDK):");
-  const tokenVault = new PublicKey('88ErUYiVu1nmf2VSptraaBewFeBqgXmN9n9xp2U5z1A2');
-  const tokenMint = new PublicKey('2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo');
-  const baseAuthority = new PublicKey('A8dytfD3E8niG872SJYhwuXV5xmTyozzFKYzhn3zL2wG');
-  const sharesMint = new PublicKey('DCqyVY1SFCwq8unnexv9pjujVAC7jsmjfoUWBrNLvbY');
-  const sharesAta = new PublicKey('6rJuqfyCBEms6BTBtN6W1M3NB44k6YhmAY8TAqnpYtKq');
-  
-  console.log("  Vault State:", VAULT_ADDRESS.toBase58());
-  console.log("  Token Vault:", tokenVault.toBase58());
-  console.log("  Token Mint:", tokenMint.toBase58());
-  console.log("  Base Authority:", baseAuthority.toBase58());
-  console.log("  Shares Mint:", sharesMint.toBase58());
-  console.log("  User Token ATA:", PYUSD_ACCOUNT.toBase58());
-  console.log("  User Shares ATA:", sharesAta.toBase58());
-  console.log("  Event Authority:", EVENT_AUTHORITY.toBase58());
-
-  console.log("\n📋 Farm 账户 (来自SDK):");
-  console.log("  Farms Program:", FARMS_PROGRAM.toBase58());
-  console.log("  Farm State:", FARM_STATE.toBase58());
-  console.log("  User Farm:", USER_FARM.toBase58());
-  console.log("  Delegated Stake:", DELEGATED_STAKE.toBase58());
-
-  // 🎯 Remaining accounts (reserves + lending markets)
-  const remainingAccounts: AccountMeta[] = [
-    {
-      pubkey: new PublicKey('2gc9Dm1eB6UgVYFBUN9bWks6Kes9PbWSaPaa9DqyvEiN'), // reserve
-      isSigner: false,
-      isWritable: true
-    },
-    {
-      pubkey: new PublicKey('7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'), // lending market
-      isSigner: false,
-      isWritable: false
-    }
-  ];
-  
-  console.log("\n📋 Remaining Accounts (reserves + lending markets):");
-  remainingAccounts.forEach((acc, i) => {
-    const role = acc.isWritable ? 'writable' : 'readonly';
-    console.log(`   ${i}: ${acc.pubkey.toBase58()} [${role}]`);
-  });
-
   // 存款金额
   const depositAmountLamports = 1_000_000; // 1 PYUSD (6 decimals)
   console.log(`\n💰 存款金额: ${depositAmountLamports / 1_000_000} PYUSD`);
+
+  // 🎯 从 SDK 动态获取所有账户信息
+  console.log("\n⏳ 从 Kamino SDK 获取账户信息...");
+  const depositAndStakeInfo = await sdkHelper.getDepositAndStakeInfo(
+    VAULT_ADDRESS.toBase58(),
+    new Decimal(depositAmountLamports / 1_000_000) // 转换为 PYUSD 单位
+  );
+
+  // 打印账户信息
+  KaminoSDKHelper.printAccountsInfo(depositAndStakeInfo);
+
+  // 提取账户信息
+  const { vaultAccounts, remainingAccounts } = depositAndStakeInfo.deposit;
+  const { farmAccounts } = depositAndStakeInfo.stake;
 
   // 设置 Anchor
   const provider = new anchor.AnchorProvider(
@@ -129,21 +98,21 @@ async function main() {
       .accounts({
         user: wallet.publicKey,
         vaultState: VAULT_ADDRESS,
-        tokenVault: tokenVault,
-        tokenMint: tokenMint,
-        baseVaultAuthority: baseAuthority,
-        sharesMint: sharesMint,
+        tokenVault: vaultAccounts.tokenVault,
+        tokenMint: vaultAccounts.tokenMint,
+        baseVaultAuthority: vaultAccounts.baseAuthority,
+        sharesMint: vaultAccounts.sharesMint,
         userTokenAta: PYUSD_ACCOUNT,
-        userSharesAta: sharesAta,
+        userSharesAta: vaultAccounts.userSharesAta,
         klendProgram: new PublicKey(KLEND_PROGRAM),
         tokenProgram: TOKEN_2022_PROGRAM,  // PYUSD 是 Token-2022
         sharesTokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         eventAuthority: EVENT_AUTHORITY,
         kaminoVaultProgram: new PublicKey(KAMINO_V2_PROGRAM),
-        farmState: FARM_STATE,
-        userFarm: USER_FARM,
-        delegatedStake: DELEGATED_STAKE,
-        farmsProgram: FARMS_PROGRAM,
+        farmState: farmAccounts.farmState,
+        userFarm: farmAccounts.userFarm,
+        delegatedStake: farmAccounts.delegatedStake,
+        farmsProgram: farmAccounts.farmsProgram,
         farmTokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,  // Farm 需要普通 Token Program
       })
       .remainingAccounts(remainingAccounts)
@@ -159,7 +128,7 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const pyusdBalanceAfter = await connection.getTokenAccountBalance(PYUSD_ACCOUNT);
-    const sharesBalance = await connection.getTokenAccountBalance(sharesAta);
+    const sharesBalance = await connection.getTokenAccountBalance(vaultAccounts.userSharesAta);
 
     console.log("\n💰 交易后余额:");
     console.log(`  PYUSD: ${pyusdBalanceAfter.value.uiAmount}`);
@@ -168,8 +137,8 @@ async function main() {
     console.log("\n🌐 查看你的存款:");
     console.log(`  Kamino Vault: https://kamino.finance/earn/${VAULT_ADDRESS.toBase58()}`);
     console.log(`  Kamino Farm (应该能看到了!): https://app.kamino.finance/liquidity/farms`);
-    console.log(`  你的 Shares ATA: https://solscan.io/account/${sharesAta.toBase58()}`);
-    console.log(`  User Farm Account: https://solscan.io/account/${USER_FARM.toBase58()}`);
+    console.log(`  你的 Shares ATA: https://solscan.io/account/${vaultAccounts.userSharesAta.toBase58()}`);
+    console.log(`  User Farm Account: https://solscan.io/account/${farmAccounts.userFarm.toBase58()}`);
     
     console.log("\n💡 提示:");
     console.log("  ✅ Shares 已经自动质押到 Farm");
