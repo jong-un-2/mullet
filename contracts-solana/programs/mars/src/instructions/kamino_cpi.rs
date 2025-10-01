@@ -1,329 +1,324 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
+use anchor_lang::solana_program::instruction::AccountMeta;
 use crate::kamino_constants::kamino::KAMINO_PROGRAM_ID;
 
-// Kamino Vaults Program ID: Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE
-// Multisig: 8ksXVE6SMSjQ9sPbj2XQ4Uxx6b7aXh9kHeq4nXMD2tDn
-// IDL: https://explorer.solana.com/address/6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc/anchor-program
-// 注意：不要在这里使用 declare_id!，只能在 lib.rs 中使用
+// Kamino Vaults Program ID (V2): KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd
+// Klend Program ID: KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD
 
+/// Kamino存款CPI调用所需的账户（完整版本，匹配IDL）
 #[derive(Accounts)]
-pub struct KaminoDepositCPI<'info> {
+pub struct KaminoDepositCPIComplete<'info> {
+    /// 1. user - 用户账户
     #[account(mut)]
     pub user: Signer<'info>,
     
-    /// 用户的代币账户
-    #[account(mut)]
-    pub user_token_account: Account<'info, TokenAccount>,
-    
-    /// 用户的份额账户
-    #[account(mut)]
-    pub user_shares_account: Account<'info, TokenAccount>,
-    
-    /// Kamino Vault状态账户
-    /// CHECK: 这是Kamino程序管理的账户
-    #[account(mut)]
-    pub kamino_vault_state: AccountInfo<'info>,
-    
-    /// Kamino Vault的代币金库
+    /// 2. vaultState - Kamino Vault状态账户
     /// CHECK: 由Kamino程序验证
     #[account(mut)]
-    pub kamino_vault_token_account: AccountInfo<'info>,
+    pub vault_state: AccountInfo<'info>,
     
-    /// Kamino Vault的份额铸造账户
+    /// 3. tokenVault - Vault的代币金库
     /// CHECK: 由Kamino程序验证
     #[account(mut)]
-    pub kamino_shares_mint: AccountInfo<'info>,
+    pub token_vault: AccountInfo<'info>,
     
-    /// Kamino Vault Program
-    /// CHECK: 这是已知的Kamino程序ID
+    /// 4. tokenMint - 代币铸造账户（如USDC）
+    /// CHECK: 由Kamino程序验证
+    pub token_mint: AccountInfo<'info>,
+    
+    /// 5. baseVaultAuthority - Vault权限PDA
+    /// CHECK: 由Kamino程序验证，从vault_state派生
+    pub base_vault_authority: AccountInfo<'info>,
+    
+    /// 6. sharesMint - 份额铸造账户
+    /// CHECK: 由Kamino程序验证
+    #[account(mut)]
+    pub shares_mint: AccountInfo<'info>,
+    
+    /// 7. userTokenAta - 用户的代币ATA（源）
+    /// CHECK: 支持 Token 和 Token-2022，由 Kamino 验证
+    #[account(mut)]
+    pub user_token_ata: AccountInfo<'info>,
+    
+    /// 8. userSharesAta - 用户的份额ATA（接收份额）
+    /// CHECK: 支持 Token 和 Token-2022，由 Kamino 验证
+    #[account(mut)]
+    pub user_shares_ata: AccountInfo<'info>,
+    
+    /// 9. klendProgram - Klend程序
+    /// CHECK: 这是已知的Klend程序ID
+    pub klend_program: AccountInfo<'info>,
+    
+    /// 10. tokenProgram - Token程序（支持 Token 或 Token-2022）
+    /// CHECK: Token 或 Token-2022 程序
+    pub token_program: AccountInfo<'info>,
+    
+    /// 11. sharesTokenProgram - 份额Token程序（通常与tokenProgram相同）
+    /// CHECK: Token 或 Token-2022 程序
+    pub shares_token_program: AccountInfo<'info>,
+    
+    /// 12. eventAuthority - 事件权限PDA
+    /// CHECK: 由Kamino程序验证
+    pub event_authority: AccountInfo<'info>,
+    
+    /// 13. program - Kamino Vault程序自身
+    /// CHECK: 这是Kamino Vault程序ID
     pub kamino_vault_program: AccountInfo<'info>,
-    
-    /// 代币程序
-    pub token_program: Program<'info, Token>,
-    
-    /// 系统程序
-    pub system_program: Program<'info, System>,
-    
-    /// 租金系统变量
-    pub rent: Sysvar<'info, Rent>,
 }
 
+/// Kamino提取CPI调用所需的账户（简化版本 - withdrawFromAvailable）
 #[derive(Accounts)]
-pub struct KaminoWithdrawCPI<'info> {
+pub struct KaminoWithdrawCPIComplete<'info> {
+    /// withdrawFromAvailable 部分
+    /// 1. user
     #[account(mut)]
     pub user: Signer<'info>,
     
-    /// 用户的代币账户 (接收提取的代币)
-    #[account(mut)]
-    pub user_token_account: Account<'info, TokenAccount>,
-    
-    /// 用户的份额账户 (提供要销毁的份额)
-    #[account(mut)]
-    pub user_shares_account: Account<'info, TokenAccount>,
-    
-    /// Kamino Vault状态账户
-    /// CHECK: 这是Kamino程序管理的账户
-    #[account(mut)]
-    pub kamino_vault_state: AccountInfo<'info>,
-    
-    /// Kamino Vault的代币金库
+    /// 2. vaultState
     /// CHECK: 由Kamino程序验证
     #[account(mut)]
-    pub kamino_vault_token_account: AccountInfo<'info>,
+    pub vault_state: AccountInfo<'info>,
     
-    /// Kamino Vault的份额铸造账户
+    /// 3. tokenVault
     /// CHECK: 由Kamino程序验证
     #[account(mut)]
-    pub kamino_shares_mint: AccountInfo<'info>,
+    pub token_vault: AccountInfo<'info>,
     
-    /// Kamino Vault Program
-    /// CHECK: 这是已知的Kamino程序ID
+    /// 4. baseVaultAuthority
+    /// CHECK: 由Kamino程序验证
+    pub base_vault_authority: AccountInfo<'info>,
+    
+    /// 5. userTokenAta - 用户接收代币的ATA
+    /// CHECK: 支持 Token 和 Token-2022，由 Kamino 验证
+    #[account(mut)]
+    pub user_token_ata: AccountInfo<'info>,
+    
+    /// 6. tokenMint
+    /// CHECK: 由Kamino程序验证
+    #[account(mut)]
+    pub token_mint: AccountInfo<'info>,
+    
+    /// 7. userSharesAta - 用户销毁份额的ATA
+    /// CHECK: 支持 Token 和 Token-2022，由 Kamino 验证
+    #[account(mut)]
+    pub user_shares_ata: AccountInfo<'info>,
+    
+    /// 8. sharesMint
+    /// CHECK: 由Kamino程序验证
+    #[account(mut)]
+    pub shares_mint: AccountInfo<'info>,
+    
+    /// 9. tokenProgram - Token程序（支持 Token 或 Token-2022）
+    /// CHECK: Token 或 Token-2022 程序
+    pub token_program: AccountInfo<'info>,
+    
+    /// 10. sharesTokenProgram
+    /// CHECK: Token 或 Token-2022 程序
+    pub shares_token_program: AccountInfo<'info>,
+    
+    /// 11. klendProgram
+    /// CHECK: Klend程序
+    pub klend_program: AccountInfo<'info>,
+    
+    /// 12. eventAuthority
+    /// CHECK: 由Kamino程序验证
+    pub event_authority: AccountInfo<'info>,
+    
+    /// 13. program
+    /// CHECK: Kamino Vault程序
     pub kamino_vault_program: AccountInfo<'info>,
-    
-    /// 代币程序
-    pub token_program: Program<'info, Token>,
 }
 
-/// CPI调用Kamino进行存款
-pub fn kamino_deposit_cpi(
-    ctx: Context<KaminoDepositCPI>,
-    amount: u64,
+/// CPI调用Kamino进行存款（完整实现）
+pub fn kamino_deposit_cpi_complete(
+    ctx: Context<KaminoDepositCPIComplete>,
+    max_amount: u64,
 ) -> Result<()> {
-    msg!("开始CPI调用Kamino存款，金额: {}", amount);
+    msg!("🚀 开始Kamino存款CPI调用，金额: {}", max_amount);
 
     // 验证Kamino程序ID
     require_eq!(
         ctx.accounts.kamino_vault_program.key(),
         KAMINO_PROGRAM_ID,
-        ErrorCode::InvalidKaminoProgram
+        KaminoCPIError::InvalidKaminoProgram
     );
 
-    // 构建Kamino存款指令的账户
-    let kamino_accounts = vec![
-        // 用户签名者
-        ctx.accounts.user.to_account_info(),
-        // Kamino Vault状态
-        ctx.accounts.kamino_vault_state.to_account_info(),
-        // 用户代币账户 (源)
-        ctx.accounts.user_token_account.to_account_info(),
-        // Kamino金库代币账户 (目标)
-        ctx.accounts.kamino_vault_token_account.to_account_info(),
-        // 用户份额账户 (接收份额)
-        ctx.accounts.user_shares_account.to_account_info(),
-        // 份额铸造账户
-        ctx.accounts.kamino_shares_mint.to_account_info(),
-        // 代币程序
-        ctx.accounts.token_program.to_account_info(),
+    // 构建账户数组（严格按照Kamino IDL顺序）
+    let account_metas = vec![
+        // 1. user
+        AccountMeta::new(ctx.accounts.user.key(), true),
+        // 2. vaultState
+        AccountMeta::new(ctx.accounts.vault_state.key(), false),
+        // 3. tokenVault
+        AccountMeta::new(ctx.accounts.token_vault.key(), false),
+        // 4. tokenMint
+        AccountMeta::new_readonly(ctx.accounts.token_mint.key(), false),
+        // 5. baseVaultAuthority
+        AccountMeta::new_readonly(ctx.accounts.base_vault_authority.key(), false),
+        // 6. sharesMint
+        AccountMeta::new(ctx.accounts.shares_mint.key(), false),
+        // 7. userTokenAta
+        AccountMeta::new(ctx.accounts.user_token_ata.key(), false),
+        // 8. userSharesAta
+        AccountMeta::new(ctx.accounts.user_shares_ata.key(), false),
+        // 9. klendProgram
+        AccountMeta::new_readonly(ctx.accounts.klend_program.key(), false),
+        // 10. tokenProgram
+        AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),
+        // 11. sharesTokenProgram
+        AccountMeta::new_readonly(ctx.accounts.shares_token_program.key(), false),
+        // 12. eventAuthority
+        AccountMeta::new_readonly(ctx.accounts.event_authority.key(), false),
+        // 13. program
+        AccountMeta::new_readonly(ctx.accounts.kamino_vault_program.key(), false),
     ];
 
-    // 构建Kamino存款指令数据 - Kamino Vault deposit 指令格式
-    let deposit_instruction_data = build_kamino_deposit_instruction_data(amount)?;
+    // 构建指令数据：discriminator (8 bytes) + max_amount (8 bytes)
+    let mut data = Vec::with_capacity(16);
+    // Kamino deposit指令的discriminator
+    // 使用anchor的方法: sighash("global", "deposit")
+    // 正确的discriminator: sha256("global:deposit")[0..8]
+    data.extend_from_slice(&[0xf2, 0x23, 0xc6, 0x89, 0x52, 0xe1, 0xf2, 0xb6]); // deposit discriminator
+    data.extend_from_slice(&max_amount.to_le_bytes());
 
     // 创建指令
-    let deposit_instruction = anchor_lang::solana_program::instruction::Instruction {
-        program_id: ctx.accounts.kamino_vault_program.key(),
-        accounts: kamino_accounts.iter().map(|acc| {
-            anchor_lang::solana_program::instruction::AccountMeta {
-                pubkey: acc.key(),
-                is_signer: acc.is_signer,
-                is_writable: acc.is_writable,
-            }
-        }).collect(),
-        data: deposit_instruction_data,
+    let ix = anchor_lang::solana_program::instruction::Instruction {
+        program_id: KAMINO_PROGRAM_ID,
+        accounts: account_metas,
+        data,
     };
+
+    // 构建account_infos
+    let account_infos = vec![
+        ctx.accounts.user.to_account_info(),
+        ctx.accounts.vault_state.to_account_info(),
+        ctx.accounts.token_vault.to_account_info(),
+        ctx.accounts.token_mint.to_account_info(),
+        ctx.accounts.base_vault_authority.to_account_info(),
+        ctx.accounts.shares_mint.to_account_info(),
+        ctx.accounts.user_token_ata.to_account_info(),
+        ctx.accounts.user_shares_ata.to_account_info(),
+        ctx.accounts.klend_program.to_account_info(),
+        ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.shares_token_program.to_account_info(),
+        ctx.accounts.event_authority.to_account_info(),
+        ctx.accounts.kamino_vault_program.to_account_info(),
+    ];
 
     // 执行CPI调用
     anchor_lang::solana_program::program::invoke(
-        &deposit_instruction,
-        &kamino_accounts,
+        &ix,
+        &account_infos,
     )?;
 
-    msg!("Kamino存款CPI调用成功完成");
+    msg!("✅ Kamino存款CPI调用成功");
     Ok(())
 }
 
-/// CPI调用Kamino进行提取
-pub fn kamino_withdraw_cpi(
-    ctx: Context<KaminoWithdrawCPI>,
-    shares_amount: u64,
+/// CPI调用Kamino进行提取（完整实现）
+pub fn kamino_withdraw_cpi_complete(
+    ctx: Context<KaminoWithdrawCPIComplete>,
+    max_amount: u64,
 ) -> Result<()> {
-    msg!("开始CPI调用Kamino提取，份额数量: {}", shares_amount);
+    msg!("🚀 开始Kamino提取CPI调用，最大金额: {}", max_amount);
 
     // 验证Kamino程序ID
     require_eq!(
         ctx.accounts.kamino_vault_program.key(),
         KAMINO_PROGRAM_ID,
-        ErrorCode::InvalidKaminoProgram
+        KaminoCPIError::InvalidKaminoProgram
     );
 
-    // 构建Kamino提取指令的账户
-    let kamino_accounts = vec![
-        // 用户签名者
+    // withdrawFromAvailable 账户
+    let account_metas = vec![
+        // 1. user
+        AccountMeta::new(ctx.accounts.user.key(), true),
+        // 2. vaultState
+        AccountMeta::new(ctx.accounts.vault_state.key(), false),
+        // 3. tokenVault
+        AccountMeta::new(ctx.accounts.token_vault.key(), false),
+        // 4. baseVaultAuthority
+        AccountMeta::new_readonly(ctx.accounts.base_vault_authority.key(), false),
+        // 5. userTokenAta
+        AccountMeta::new(ctx.accounts.user_token_ata.key(), false),
+        // 6. tokenMint
+        AccountMeta::new(ctx.accounts.token_mint.key(), false),
+        // 7. userSharesAta
+        AccountMeta::new(ctx.accounts.user_shares_ata.key(), false),
+        // 8. sharesMint
+        AccountMeta::new(ctx.accounts.shares_mint.key(), false),
+        // 9. tokenProgram
+        AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),
+        // 10. sharesTokenProgram
+        AccountMeta::new_readonly(ctx.accounts.shares_token_program.key(), false),
+        // 11. klendProgram
+        AccountMeta::new_readonly(ctx.accounts.klend_program.key(), false),
+        // 12. eventAuthority
+        AccountMeta::new_readonly(ctx.accounts.event_authority.key(), false),
+        // 13. program
+        AccountMeta::new_readonly(ctx.accounts.kamino_vault_program.key(), false),
+    ];
+
+    // 构建指令数据
+    let mut data = Vec::with_capacity(16);
+    // Kamino withdraw指令的discriminator
+    data.extend_from_slice(&[0xb7, 0x12, 0x46, 0x9c, 0x94, 0x6d, 0xa1, 0x22]); // withdraw discriminator
+    data.extend_from_slice(&max_amount.to_le_bytes());
+
+    let ix = anchor_lang::solana_program::instruction::Instruction {
+        program_id: KAMINO_PROGRAM_ID,
+        accounts: account_metas,
+        data,
+    };
+
+    let account_infos = vec![
         ctx.accounts.user.to_account_info(),
-        // Kamino Vault状态
-        ctx.accounts.kamino_vault_state.to_account_info(),
-        // 用户份额账户 (源，提供份额)
-        ctx.accounts.user_shares_account.to_account_info(),
-        // 用户代币账户 (目标，接收代币)
-        ctx.accounts.user_token_account.to_account_info(),
-        // Kamino金库代币账户
-        ctx.accounts.kamino_vault_token_account.to_account_info(),
-        // 份额铸造账户
-        ctx.accounts.kamino_shares_mint.to_account_info(),
-        // 代币程序
+        ctx.accounts.vault_state.to_account_info(),
+        ctx.accounts.token_vault.to_account_info(),
+        ctx.accounts.base_vault_authority.to_account_info(),
+        ctx.accounts.user_token_ata.to_account_info(),
+        ctx.accounts.token_mint.to_account_info(),
+        ctx.accounts.user_shares_ata.to_account_info(),
+        ctx.accounts.shares_mint.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
+        ctx.accounts.shares_token_program.to_account_info(),
+        ctx.accounts.klend_program.to_account_info(),
+        ctx.accounts.event_authority.to_account_info(),
+        ctx.accounts.kamino_vault_program.to_account_info(),
     ];
 
-    // 构建Kamino提取指令数据
-    let withdraw_instruction_data = build_kamino_withdraw_instruction_data(shares_amount)?;
-
-    // 创建指令
-    let withdraw_instruction = anchor_lang::solana_program::instruction::Instruction {
-        program_id: ctx.accounts.kamino_vault_program.key(),
-        accounts: kamino_accounts.iter().map(|acc| {
-            anchor_lang::solana_program::instruction::AccountMeta {
-                pubkey: acc.key(),
-                is_signer: acc.is_signer,
-                is_writable: acc.is_writable,
-            }
-        }).collect(),
-        data: withdraw_instruction_data,
-    };
-
-    // 执行CPI调用
     anchor_lang::solana_program::program::invoke(
-        &withdraw_instruction,
-        &kamino_accounts,
+        &ix,
+        &account_infos,
     )?;
 
-    msg!("Kamino提取CPI调用成功完成");
+    msg!("✅ Kamino提取CPI调用成功");
     Ok(())
 }
 
-/// 构建 Kamino 存款指令数据
-/// 基于 Kamino Vaults 程序的实际 IDL 实现
-fn build_kamino_deposit_instruction_data(amount: u64) -> Result<Vec<u8>> {
-    use crate::kamino_constants::kamino::DEPOSIT_INSTRUCTION_DISCRIMINATOR;
-    
-    let mut data = Vec::new();
-    
-    // Kamino deposit 指令识别码
-    data.extend_from_slice(&DEPOSIT_INSTRUCTION_DISCRIMINATOR);
-    
-    // 存款金额 (u64, little endian)
-    data.extend_from_slice(&amount.to_le_bytes());
-    
-    Ok(data)
+/// 辅助函数：计算baseVaultAuthority PDA
+pub fn get_base_vault_authority(vault_state: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[b"base_vault_authority", vault_state.as_ref()],
+        &KAMINO_PROGRAM_ID,
+    )
 }
 
-/// 构建 Kamino 提取指令数据
-fn build_kamino_withdraw_instruction_data(shares_amount: u64) -> Result<Vec<u8>> {
-    use crate::kamino_constants::kamino::WITHDRAW_INSTRUCTION_DISCRIMINATOR;
-    
-    let mut data = Vec::new();
-    
-    // Kamino withdraw 指令识别码
-    data.extend_from_slice(&WITHDRAW_INSTRUCTION_DISCRIMINATOR);
-    
-    // 提取份额数量 (u64, little endian)
-    data.extend_from_slice(&shares_amount.to_le_bytes());
-    
-    Ok(data)
-}
-
-/// 带有PDA签名的Kamino存款CPI调用
-#[derive(Accounts)]
-pub struct KaminoDepositCPIWithPDA<'info> {
-    /// 程序的PDA权限
-    /// CHECK: 这是程序派生的权限账户
-    #[account(
-        seeds = [b"vault_authority"],
-        bump,
-    )]
-    pub vault_authority: AccountInfo<'info>,
-    
-    /// 其他账户与KaminoDepositCPI相同
-    #[account(mut)]
-    pub user_token_account: Account<'info, TokenAccount>,
-    
-    #[account(mut)]
-    pub user_shares_account: Account<'info, TokenAccount>,
-    
-    /// CHECK: Kamino Vault状态
-    #[account(mut)]
-    pub kamino_vault_state: AccountInfo<'info>,
-    
-    /// CHECK: Kamino金库
-    #[account(mut)]
-    pub kamino_vault_token_account: AccountInfo<'info>,
-    
-    /// CHECK: 份额铸造
-    #[account(mut)]
-    pub kamino_shares_mint: AccountInfo<'info>,
-    
-    /// CHECK: Kamino程序
-    pub kamino_vault_program: AccountInfo<'info>,
-    
-    pub token_program: Program<'info, Token>,
-}
-
-/// 使用PDA权限进行Kamino存款的CPI调用
-pub fn kamino_deposit_cpi_with_pda(
-    ctx: Context<KaminoDepositCPIWithPDA>,
-    amount: u64,
-) -> Result<()> {
-    msg!("使用PDA权限进行Kamino存款CPI调用");
-
-    let seeds = &[b"vault_authority".as_ref(), &[ctx.bumps.vault_authority]];
-    let signer_seeds = &[&seeds[..]];
-
-    // 构建账户列表
-    let kamino_accounts = vec![
-        ctx.accounts.vault_authority.to_account_info(),
-        ctx.accounts.kamino_vault_state.to_account_info(),
-        ctx.accounts.user_token_account.to_account_info(),
-        ctx.accounts.kamino_vault_token_account.to_account_info(),
-        ctx.accounts.user_shares_account.to_account_info(),
-        ctx.accounts.kamino_shares_mint.to_account_info(),
-        ctx.accounts.token_program.to_account_info(),
-    ];
-
-    let deposit_instruction_data = build_kamino_deposit_instruction_data(amount)?;
-
-    let deposit_instruction = anchor_lang::solana_program::instruction::Instruction {
-        program_id: ctx.accounts.kamino_vault_program.key(),
-        accounts: kamino_accounts.iter().map(|acc| {
-            anchor_lang::solana_program::instruction::AccountMeta {
-                pubkey: acc.key(),
-                is_signer: acc.key() == ctx.accounts.vault_authority.key(),
-                is_writable: acc.is_writable,
-            }
-        }).collect(),
-        data: deposit_instruction_data,
-    };
-
-    // 使用PDA签名执行CPI
-    anchor_lang::solana_program::program::invoke_signed(
-        &deposit_instruction,
-        &kamino_accounts,
-        signer_seeds,
-    )?;
-
-    msg!("PDA权限Kamino存款CPI调用成功");
-    Ok(())
+/// 辅助函数：计算eventAuthority PDA
+pub fn get_event_authority() -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[b"__event_authority"],
+        &KAMINO_PROGRAM_ID,
+    )
 }
 
 #[error_code]
-pub enum ErrorCode {
+pub enum KaminoCPIError {
     #[msg("无效的Kamino程序ID")]
     InvalidKaminoProgram,
     
-    #[msg("存款金额必须大于0")]
-    InvalidDepositAmount,
-    
-    #[msg("提取份额数量必须大于0")]
-    InvalidWithdrawAmount,
+    #[msg("金额必须大于0")]
+    InvalidAmount,
     
     #[msg("账户余额不足")]
     InsufficientBalance,

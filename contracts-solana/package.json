@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
+    "@kamino-finance/klend-sdk": "^7.1.6",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.95.5",
     "axios": "^1.12.2",
@@ -20,7 +21,7 @@
     "@types/bn.js": "^5.1.1",
     "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^22.9.3",
+    "@types/node": "^22.18.8",
     "chai": "^6.2.0",
     "mocha": "^11.7.2",
     "prettier": "^3.6.2",

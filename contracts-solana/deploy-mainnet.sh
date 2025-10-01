@@ -6,7 +6,7 @@ set -e
 echo "🚀 Mars Vault 主网部署开始..."
 
 # 检查钱包文件
-WALLET_PATH="./phantom-wallet.json"
+WALLET_PATH="./user.json"
 if [ ! -f "$WALLET_PATH" ]; then
     echo "❌ 钱包文件不存在: $WALLET_PATH"
     exit 1
@@ -21,7 +21,7 @@ solana config set --keypair "$WALLET_PATH"
 
 # 显示钱包地址
 echo "📋 钱包地址信息:"
-WALLET_ADDRESS=$(solana-keygen pubkey phantom-wallet.json)
+WALLET_ADDRESS=$(solana-keygen pubkey user.json)
 echo "地址: $WALLET_ADDRESS"
 
 # 检查余额

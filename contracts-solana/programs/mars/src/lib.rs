@@ -19,7 +19,7 @@ use instructions::*;
 use state::*;
 use util::*;
 
-declare_id!("6668zv314yKTUWEo3EygNaeEkQRPbczvaMiubksH67V");
+declare_id!("FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY");
 
 #[program]
 pub mod mars {
@@ -243,27 +243,19 @@ pub mod mars {
         )
     }
 
-    // Kamino CPI调用: 存款到Kamino Vault
+    // Kamino CPI调用: 存款到Kamino Vault（完整实现，匹配Kamino IDL）
     pub fn kamino_deposit(
-        ctx: Context<KaminoDepositCPI>,
-        amount: u64,
+        ctx: Context<KaminoDepositCPIComplete>,
+        max_amount: u64,
     ) -> Result<()> {
-        kamino_deposit_cpi(ctx, amount)
+        kamino_deposit_cpi_complete(ctx, max_amount)
     }
 
-    // Kamino CPI调用: 从Kamino Vault提取
+    // Kamino CPI调用: 从Kamino Vault提取（完整实现，匹配Kamino IDL）
     pub fn kamino_withdraw(
-        ctx: Context<KaminoWithdrawCPI>,
-        shares_amount: u64,
+        ctx: Context<KaminoWithdrawCPIComplete>,
+        max_amount: u64,
     ) -> Result<()> {
-        kamino_withdraw_cpi(ctx, shares_amount)
-    }
-
-    // Kamino CPI调用: 使用PDA权限存款
-    pub fn kamino_deposit_with_pda(
-        ctx: Context<KaminoDepositCPIWithPDA>,
-        amount: u64,
-    ) -> Result<()> {
-        kamino_deposit_cpi_with_pda(ctx, amount)
+        kamino_withdraw_cpi_complete(ctx, max_amount)
     }
 }

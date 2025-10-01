@@ -6,7 +6,7 @@ set -e
 echo "💰 Mars Vault 主网存款开始..."
 
 # 检查钱包文件
-WALLET_PATH="./phantom-wallet.json"
+WALLET_PATH="./user.json"
 if [ ! -f "$WALLET_PATH" ]; then
     echo "❌ 钱包文件不存在: $WALLET_PATH"
     exit 1
@@ -54,7 +54,7 @@ echo "📝 创建存款测试..."
 cat > mainnet-deposit-test.ts << 'EOF'
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Mars } from "../target/types/mars";
+import { Mars } from "./target/types/mars";
 import { 
     TOKEN_PROGRAM_ID, 
     ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -68,9 +68,11 @@ import {
     SystemProgram,
     SYSVAR_RENT_PUBKEY 
 } from "@solana/web3.js";
+import * as fs from "fs";
 
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 const KAMINO_PROGRAM_ID = new PublicKey("Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE");
+const MARS_PROGRAM_ID = new PublicKey("5j75RWGLHdj8UL3rtrinkBt4iHz5pE7rqo5hp4gvmWF");
 
 async function depositToMarsVault() {
     // 连接主网
@@ -78,7 +80,7 @@ async function depositToMarsVault() {
     
     // 加载钱包
     const walletKeypair = Keypair.fromSecretKey(
-        new Uint8Array(JSON.parse(require('fs').readFileSync('./phantom-wallet.json', 'utf8')))
+        new Uint8Array(JSON.parse(fs.readFileSync('./user.json', 'utf8')))
     );
     
     console.log("🔗 连接主网...");
@@ -101,7 +103,8 @@ async function depositToMarsVault() {
     anchor.setProvider(provider);
     
     // 加载程序
-    const program = anchor.workspace.Mars as Program<Mars>;
+    const idl = JSON.parse(fs.readFileSync('./target/idl/mars.json', 'utf8'));
+    const program = new Program(idl, provider) as Program<Mars>;
     const programId = program.programId;
     console.log("📋 Mars 程序 ID:", programId.toString());
     

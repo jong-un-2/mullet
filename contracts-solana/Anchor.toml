@@ -9,14 +9,14 @@ skip-lint = false
 cargo_args = ["--release"]
 
 [programs.localnet]
-mars = "6668zv314yKTUWEo3EygNaeEkQRPbczvaMiubksH67V"
+mars = "FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
-wallet = "~/.config/solana/mars-admin.json"
+cluster = "mainnet"
+wallet = "user.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

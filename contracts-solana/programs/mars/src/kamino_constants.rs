@@ -3,11 +3,15 @@ pub mod kamino {
 
 use anchor_lang::prelude::*;
 
-/// Kamino Vaults Program ID
-/// Program ID: Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE
-/// Multisig: 8ksXVE6SMSjQ9sPbj2XQ4Uxx6b7aXh9kHeq4nXMD2tDn
-/// IDL: https://explorer.solana.com/address/6LtLpnUFNByNXLyCoK9wA2MykKAmQNZKBdY8s47dehDc/anchor-program
-pub const KAMINO_PROGRAM_ID: Pubkey = pubkey!("Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE");
+/// Kamino Vaults Program ID (V2 - Current Mainnet Version)
+/// Program ID: KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd
+/// 注意: 这是Kamino V2程序，主网上所有活跃的vault都使用这个版本
+/// V1程序 (Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE) 已废弃
+pub const KAMINO_PROGRAM_ID: Pubkey = pubkey!("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");
+
+/// Kamino Lend (Klend) Program ID
+/// Program ID: KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD
+pub const KLEND_PROGRAM_ID: Pubkey = pubkey!("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD");
 
 /// Jupiter Program ID for DEX aggregation
 pub const JUPITER_PROGRAM_ID: Pubkey = pubkey!("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4");
