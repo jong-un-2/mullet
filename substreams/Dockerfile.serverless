@@ -1,0 +1,63 @@
+# Cloudflare Container - Mars V8 Substreams
+FROM rust:1.75-slim as builder
+
+# 安装构建依赖
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    curl \
+    ca-certificates \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 substreams-sink-sql
+RUN curl -L https://github.com/streamingfast/substreams-sink-sql/releases/latest/download/substreams-sink-sql_linux_x86_64.tar.gz \
+    | tar -xz && mv substreams-sink-sql /usr/local/bin/
+
+# 安装 substreams CLI
+RUN curl https://substreams.streamingfast.io/install | bash
+
+# 运行时镜像
+FROM debian:bookworm-slim
+
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    curl \
+    postgresql-client \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制工具
+COPY --from=builder /usr/local/bin/substreams-sink-sql /usr/local/bin/
+COPY --from=builder /root/.local/bin/substreams /usr/local/bin/
+
+# 创建非 root 用户
+RUN useradd -m -u 1000 substreams && \
+    mkdir -p /app/logs && \
+    chown -R substreams:substreams /app
+
+WORKDIR /app
+
+# 复制应用文件
+COPY --chown=substreams:substreams substreams.yaml .
+COPY --chown=substreams:substreams target/wasm32-unknown-unknown/release/mars_vaults_substreams.wasm ./target/wasm32-unknown-unknown/release/
+COPY --chown=substreams:substreams container-entrypoint.sh .
+COPY --chown=substreams:substreams health-check.sh .
+
+# 设置权限
+RUN chmod +x container-entrypoint.sh health-check.sh
+
+# 切换用户
+USER substreams
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ./health-check.sh
+
+# 暴露端口
+EXPOSE 8080 9090
+
+# 启动容器
+CMD ["./container-entrypoint.sh"]

@@ -68,19 +68,19 @@ modules:
 
 network: solana-mainnet
 
-# PostgreSQL Sink Usage:
+# PostgreSQL Sink Usage with substreams-sink-sql:
 # 
-# substreams-sink-postgres run \
-#   "$POSTGRES_DSN" \
-#   mainnet.sol.streamingfast.io:443 \
-#   substreams.yaml \
-#   db_out \
-#   --api-token "$JWT_TOKEN" \
-#   --start-block 370000000
+# Setup (first time):
+#   ./substreams-sink-sql setup "$POSTGRES_DSN" substreams.yaml
+#
+# Run:
+#   ./substreams-sink-sql run "$POSTGRES_DSN" substreams.yaml \
+#     --api-token "$JWT_TOKEN" \
+#     --start-block 370000000
 #
 # Expected tables:
 #   - mars_vault_deposits
-#   - mars_vault_withdrawals
+#   - mars_vault_withdrawals  
 #   - mars_vault_swaps
 #   - mars_vault_rebalances
 #   - mars_vault_states

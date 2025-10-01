@@ -70,17 +70,14 @@ check_tools() {
     echo "  substreams: $SUBSTREAMS_VERSION"
     
     if [ "$DEPLOYMENT_TYPE" = "postgres" ]; then
-        if ! command -v substreams-sink-postgres &> /dev/null; then
-            echo -e "${YELLOW}⚠️  警告：未安装 substreams-sink-postgres${NC}"
-            echo "安装命令:"
-            echo "  cargo install substreams-sink-postgres"
-            echo ""
-            read -p "是否继续？ (y/N) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                exit 1
-            fi
+        if ! command -v substreams-sink-sql &> /dev/null; then
+            echo -e "${RED}❌ 错误：未安装 substreams-sink-sql${NC}"
+            echo "请先安装 substreams-sink-sql 工具"
+            exit 1
         fi
+        
+        SINK_VERSION=$(substreams-sink-sql --version 2>&1 | head -n1)
+        echo "  substreams-sink-sql: $SINK_VERSION"
     fi
     
     echo -e "${GREEN}✅ 工具检查完成${NC}"
@@ -147,13 +144,15 @@ test_connection() {
 # 部署 PostgreSQL Sink
 deploy_postgres() {
     echo ""
-    echo "🚀 部署 PostgreSQL Sink"
+    echo "🚀 部署 PostgreSQL Sink (Relational Mappings)"
     echo "================================"
     
     CONFIG_FILE="substreams.yaml"
+    OUTPUT_MODULE="map_vault_events"
     
     echo "配置:"
     echo "  - Manifest: $CONFIG_FILE"
+    echo "  - 输出模块: $OUTPUT_MODULE"
     echo "  - 起始区块: $START_BLOCK"
     echo "  - 端点: $SUBSTREAMS_ENDPOINT"
     echo "  - 数据库: ${SUBSTREAMS_SINK_POSTGRES_DSN%%\?*}"
@@ -167,22 +166,24 @@ deploy_postgres() {
     fi
     
     echo ""
-    echo "启动 PostgreSQL Sink..."
+    echo "启动 PostgreSQL Sink (from-proto 方法)..."
     
     # 创建日志目录
     mkdir -p logs
     LOG_FILE="logs/substreams-postgres-$(date +%Y%m%d_%H%M%S).log"
     
-    # 启动 sink（后台运行）
-    substreams-sink-postgres run \
+    echo "使用 Relational Mappings 自动创建表结构并开始同步..."
+    
+    # 设置环境变量并启动 sink（后台运行）
+    export SUBSTREAMS_API_TOKEN="$SUBSTREAMS_JWT_TOKEN"
+    
+    # 启动 sink（后台运行）- 使用 from-proto 方法
+    substreams-sink-sql from-proto \
         "$SUBSTREAMS_SINK_POSTGRES_DSN" \
-        "$SUBSTREAMS_ENDPOINT" \
         "$CONFIG_FILE" \
-        db_out \
-        --api-token "$SUBSTREAMS_JWT_TOKEN" \
+        "$OUTPUT_MODULE" \
         --start-block "$START_BLOCK" \
-        --final-blocks-only="${SUBSTREAMS_FINAL_BLOCKS_ONLY:-false}" \
-        --flush-interval="${SUBSTREAMS_FLUSH_INTERVAL:-1s}" \
+        --final-blocks-only \
         2>&1 | tee "$LOG_FILE" &
     
     SINK_PID=$!
