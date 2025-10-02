@@ -84,22 +84,29 @@ echo "📊 RUST_LOG level: $RUST_LOG"
 echo ""
 
 # 启动 substreams-sink-sql（后台运行，持续模式）
-# 按照 deploy-production.sh 的方式配置
+# 使用 db_out 模式：setup + run（而不是 from-proto 模式）
 # 使用 tee 同时输出到 stdout 和文件，确保 Cloudflare 可以捕获所有日志
 echo "Starting sink with:"
 echo "  DSN: ${DSN%%\?*}"
 echo "  Config: substreams.yaml"
-echo "  Module: $OUTPUT_MODULE"
+echo "  Sink Module: db_out (configured in substreams.yaml)"
 echo "  Start Block: $START_BLOCK"
 echo "  Auth: ${SUBSTREAMS_API_TOKEN:+Token present}${SUBSTREAMS_API_KEY:+API Key present}"
 echo "  Log Level: $RUST_LOG"
 echo ""
 
+# Setup database tables (idempotent - safe to run multiple times)
+echo "📋 Setting up database schema..."
+substreams-sink-sql setup "$DSN" "substreams.yaml" 2>&1 | tee /app/logs/setup.log || {
+    echo "⚠️  Setup failed or tables already exist (this is normal on restart)"
+}
+echo ""
+
 # 使用 stdbuf 确保日志立即刷新到 stdout，不缓冲
-stdbuf -oL -eL substreams-sink-sql from-proto \
+# 使用 run 命令（用于 db_out 模式）而不是 from-proto（用于关系映射模式）
+stdbuf -oL -eL substreams-sink-sql run \
     "$DSN" \
     "substreams.yaml" \
-    "$OUTPUT_MODULE" \
     -s "$START_BLOCK" \
     --final-blocks-only \
     2>&1 | stdbuf -oL -eL tee /app/logs/substreams-sink.log &
@@ -127,10 +134,9 @@ while true; do
     
     if ! kill -0 $SINK_PID 2>/dev/null; then
         echo "❌ [$(date)] Substreams Sink process died, restarting..."
-        stdbuf -oL -eL substreams-sink-sql from-proto \
+        stdbuf -oL -eL substreams-sink-sql run \
             "$DSN" \
             "substreams.yaml" \
-            "$OUTPUT_MODULE" \
             -s "$START_BLOCK" \
             --final-blocks-only \
             2>&1 | stdbuf -oL -eL tee -a /app/logs/substreams-sink.log &

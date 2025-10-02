@@ -68,6 +68,14 @@ modules:
 
 network: solana-mainnet
 
+# PostgreSQL Sink Configuration (required for db_out mode)
+sink:
+  module: db_out
+  type: sf.substreams.sink.sql.v1.Service
+  config:
+    engine: postgres
+    schema: schema.sql
+
 # PostgreSQL Sink Usage with substreams-sink-sql:
 # 
 # Setup (first time):
