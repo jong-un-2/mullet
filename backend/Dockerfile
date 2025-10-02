@@ -5,7 +5,7 @@
 # Mars vault events from Solana into PostgreSQL (Neon)
 # ============================================================
 
-FROM rust:1.84-slim-bookworm as builder
+FROM rust:1.90-slim-bookworm AS builder
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -50,20 +50,25 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     curl \
     postgresql-client \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install substreams-sink-postgres (latest version)
-RUN curl -L https://github.com/streamingfast/substreams-sink-postgres/releases/download/v4.7.0/substreams-sink-postgres_Linux_x86_64.tar.gz \
+# Install substreams CLI
+RUN curl -L https://github.com/streamingfast/substreams/releases/download/v1.10.0/substreams_linux_x86_64.tar.gz \
     | tar -xzf - -C /usr/local/bin && \
-    chmod +x /usr/local/bin/substreams-sink-postgres
+    chmod +x /usr/local/bin/substreams
+
+# Install substreams-sink-sql (supports both PostgreSQL and other SQL databases)
+RUN curl -L https://github.com/streamingfast/substreams-sink-sql/releases/download/v4.7.0/substreams-sink-sql_Linux_x86_64.tar.gz \
+    | tar -xzf - -C /usr/local/bin && \
+    chmod +x /usr/local/bin/substreams-sink-sql
 
 WORKDIR /app
 
 # Copy Substreams package from builder
-COPY --from=builder /build/target/wasm32-unknown-unknown/release/*.wasm ./
+COPY --from=builder /build/target/wasm32-unknown-unknown/release/*.wasm ./target/wasm32-unknown-unknown/release/
 
-# Copy Substreams package and configuration
-COPY mars-vaults-substreams-graph-v1.0.0.spkg ./
+# Copy Substreams configuration and package
 COPY substreams.yaml ./
 COPY schema.sql ./
 
@@ -87,15 +92,15 @@ USER substreams
 ENV RUST_LOG=info
 ENV SUBSTREAMS_ENDPOINT=mainnet.sol.streamingfast.io:443
 ENV START_BLOCK=370500000
+ENV OUTPUT_MODULE=map_vault_events
 
-# Start the sink
-CMD ["substreams-sink-sql", "run", \
-     "$DATABASE_URL", \
-     "mars-vaults-substreams-graph-v1.0.0.spkg", \
-     "--endpoint=$SUBSTREAMS_ENDPOINT", \
-     "--plaintext=false", \
-     "--final-blocks-only", \
-     "--on-module-hash-mistmatch=warn", \
-     "--undo-buffer-size=12", \
-     "--start-block=$START_BLOCK", \
-     "graph_out"]
+# Start the sink using from-proto method (Relational Mappings)
+# This automatically creates table structure from protobuf definitions
+CMD substreams-sink-sql from-proto \
+    "${DATABASE_URL}" \
+    "substreams.yaml" \
+    "${OUTPUT_MODULE}" \
+    --start-block="${START_BLOCK}" \
+    --final-blocks-only \
+    --on-module-hash-mistmatch=warn \
+    --undo-buffer-size=12

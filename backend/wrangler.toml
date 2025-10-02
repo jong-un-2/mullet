@@ -111,6 +111,10 @@ new_sqlite_classes = ["D1Agent"]
 
 [[migrations]]
 tag = "v2"
+new_classes = ["SubstreamsIndexerContainer"]
+
+[[migrations]]
+tag = "v3"
 new_sqlite_classes = ["SubstreamsIndexerContainer"]
 
 # ✅ Cloudflare Containers Configuration
@@ -118,9 +122,9 @@ new_sqlite_classes = ["SubstreamsIndexerContainer"]
 [[containers]]
 class_name = "SubstreamsIndexerContainer"
 image = "./Dockerfile"
-image_build_context = "./container_src"  # Build context directory
-max_instances = 2
-instance_type = "standard-3"  # 4 vCPU, 8GB memory, 10GB disk
+image_build_context = "./container_src"
+max_instances = 1
+instance_type = "standard"
 name = "mars-substreams-indexer"
 
 # Build-time variables (passed to docker build)
