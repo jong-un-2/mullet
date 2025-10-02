@@ -184,9 +184,22 @@ export default {
 		try {
 			// Lightweight tasks for pure GraphQL architecture
 			switch (controller.cron) {
-				case "*/5 * * * *": // cache-warming - Warm critical caches every 5 minutes
-					console.log("🔥 Running cache warming...");
+				case "*/1 * * * *": // Every 1 minute - Cache warming & container heartbeat
+					console.log("🔥 Running cache warming & container heartbeat...");
 					await runCacheWarming(env);
+					
+					// Keep Substreams indexer container alive
+					if (env.SUBSTREAMS_INDEXER_CONTAINER) {
+						try {
+							const id = env.SUBSTREAMS_INDEXER_CONTAINER.idFromName("main-indexer");
+							const stub = env.SUBSTREAMS_INDEXER_CONTAINER.get(id);
+							const response = await stub.fetch("https://container/health");
+							const result = await response.json();
+							console.log("✅ Substreams indexer heartbeat successful:", result);
+						} catch (error) {
+							console.error("❌ Substreams indexer heartbeat failed:", error);
+						}
+					}
 					break;
 
 				case "0 * * * *": // metrics-collection - Collect metrics hourly

@@ -52,6 +52,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     postgresql-client \
     wget \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install substreams CLI
@@ -73,15 +74,11 @@ COPY --from=builder /build/target/wasm32-unknown-unknown/release/*.wasm ./target
 COPY substreams.yaml ./
 COPY schema.sql ./
 
-# Copy startup script if needed
-COPY deploy-production.sh ./start.sh
-RUN chmod +x start.sh
+# Copy container startup script
+COPY start-container.sh ./start-container.sh
+RUN chmod +x start-container.sh
 
-# Health check endpoint
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:9102/metrics || exit 1
-
-# Expose Prometheus metrics port
+# Expose health check port
 EXPOSE 9102
 
 # Run as non-root user
@@ -93,15 +90,7 @@ USER substreams
 ENV RUST_LOG=info
 ENV SUBSTREAMS_ENDPOINT=mainnet.sol.streamingfast.io:443
 ENV START_BLOCK=370500000
-ENV OUTPUT_MODULE=map_vault_events
+ENV OUTPUT_MODULE=db_out
 
-# Start the sink using from-proto method (Relational Mappings)
-# This automatically creates table structure from protobuf definitions
-CMD substreams-sink-sql from-proto \
-    "${DATABASE_URL}" \
-    "substreams.yaml" \
-    "${OUTPUT_MODULE}" \
-    --start-block="${START_BLOCK}" \
-    --final-blocks-only \
-    --on-module-hash-mistmatch=warn \
-    --undo-buffer-size=12
+# Start the container with monitoring and health check
+CMD ["./start-container.sh"]

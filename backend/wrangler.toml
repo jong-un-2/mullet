@@ -32,7 +32,7 @@ account_id = "ec9b597fa02615ca6a0e62b7ff35d0cc"
 # ✅ Scheduled jobs for data synchronization - Multiple cron triggers
 [triggers]
 crons = [
-  "*/5 * * * *",    # Every 5 minutes - Cache warming
+  "*/1 * * * *",    # Every 1 minute - Cache warming & container heartbeat
   "0 * * * *",      # Every hour - Hourly data updates  
   "0 2 * * 7"       # Every Sunday at 2 AM - Weekly cleanup (0 = Sunday)
 ]
@@ -123,7 +123,6 @@ new_sqlite_classes = ["SubstreamsIndexerContainer"]
 class_name = "SubstreamsIndexerContainer"
 image = "./Dockerfile"
 image_build_context = "./container_src"
-instances = 1
 max_instances = 1
 instance_type = "standard"
 name = "mars-substreams-indexer"
