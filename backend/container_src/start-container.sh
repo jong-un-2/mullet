@@ -4,6 +4,17 @@ set -e
 echo "🚀 Starting Mars Substreams Indexer Container"
 echo "=============================================="
 
+# Load environment variables from .env.substreams if it exists
+if [ -f "/app/.env.substreams" ]; then
+    echo "📋 Loading environment from .env.substreams..."
+    set -a  # automatically export all variables
+    source /app/.env.substreams
+    set +a
+    echo "✅ Environment loaded"
+else
+    echo "⚠️  WARNING: /app/.env.substreams not found"
+fi
+
 # 检查必需的环境变量
 if [ -z "$DATABASE_URL" ]; then
     echo "⚠️  WARNING: DATABASE_URL not set, using placeholder"

@@ -75,6 +75,9 @@ COPY --from=builder /build/target/wasm32-unknown-unknown/release/*.wasm ./target
 COPY substreams.yaml ./
 COPY schema.sql ./
 
+# Copy environment configuration (contains sensitive credentials)
+COPY .env.substreams ./
+
 # Copy container startup script
 COPY start-container.sh ./start-container.sh
 RUN chmod +x start-container.sh
@@ -82,16 +85,25 @@ RUN chmod +x start-container.sh
 # Expose health check port
 EXPOSE 9102
 
+# Accept non-sensitive build arguments from wrangler.toml [containers.image_vars]
+ARG RUST_LOG=debug
+ARG SUBSTREAMS_ENDPOINT=mainnet.sol.streamingfast.io:443
+ARG START_BLOCK=370000000
+ARG OUTPUT_MODULE=map_vault_events
+
 # Run as non-root user
 RUN useradd -m -u 1000 substreams && \
     chown -R substreams:substreams /app
 USER substreams
 
-# Environment variables (defaults, will be overridden by Cloudflare wrangler.toml [containers.env])
-ENV RUST_LOG=debug
-ENV SUBSTREAMS_ENDPOINT=mainnet.sol.streamingfast.io:443
-ENV START_BLOCK=370000000
-ENV OUTPUT_MODULE=map_vault_events
+# Set non-sensitive environment variables from build args
+ENV RUST_LOG=${RUST_LOG}
+ENV SUBSTREAMS_ENDPOINT=${SUBSTREAMS_ENDPOINT}
+ENV START_BLOCK=${START_BLOCK}
+ENV OUTPUT_MODULE=${OUTPUT_MODULE}
+
+# Sensitive data (DATABASE_URL, API keys) should be provided at runtime
+# via Cloudflare secrets or container environment injection
 
 # Start the container with monitoring and health check
 CMD ["./start-container.sh"]
