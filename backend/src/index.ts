@@ -194,8 +194,12 @@ export default {
 							const id = env.SUBSTREAMS_INDEXER_CONTAINER.idFromName("main-indexer");
 							const stub = env.SUBSTREAMS_INDEXER_CONTAINER.get(id);
 							const response = await stub.fetch("https://container/health");
-							const result = await response.json();
-							console.log("✅ Substreams indexer heartbeat successful:", result);
+							// Don't parse JSON, just check if response is ok
+							if (response.ok) {
+								console.log("✅ Substreams indexer heartbeat successful (status:", response.status, ")");
+							} else {
+								console.warn("⚠️ Substreams indexer response not ok:", response.status);
+							}
 						} catch (error) {
 							console.error("❌ Substreams indexer heartbeat failed:", error);
 						}
