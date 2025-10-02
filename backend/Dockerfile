@@ -74,6 +74,7 @@ COPY --from=builder /build/target/wasm32-unknown-unknown/release/*.wasm ./target
 # Copy Substreams configuration and package
 COPY substreams.yaml ./
 COPY schema.sql ./
+COPY proto/ ./proto/
 
 # Copy environment configuration (contains sensitive credentials)
 COPY .env.substreams ./
@@ -93,7 +94,8 @@ ARG OUTPUT_MODULE=map_vault_events
 
 # Run as non-root user
 RUN useradd -m -u 1000 substreams && \
-    chown -R substreams:substreams /app
+    chown -R substreams:substreams /app && \
+    chmod 600 /app/.env.substreams
 USER substreams
 
 # Set non-sensitive environment variables from build args
