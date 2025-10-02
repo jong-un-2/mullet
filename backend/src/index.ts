@@ -9,22 +9,26 @@ import { createDBRoutes } from './database/routes';
 import { createCacheRoutes } from './cache/routes';
 import { runCacheWarming } from './cache/warmer';
 
-import { createContainerRoutes } from './containers';
+import { createIndexerRoutes } from './containers';
 import { createMarsRoutes } from './mars/routes';
 
 export interface Env {
-  SANDBOX_SHELL_CONTAINER(SANDBOX_SHELL_CONTAINER: any, slug: string): unknown;
 	D1_DATABASE?: D1Database;
 	KV?: KVNamespace;
+	HYPERDRIVE?: Hyperdrive;
 	KEY: string;
 	NODE_ENV?: string;
 	// GraphQL configuration  
 	SUBGRAPH_URL?: string;
+	// Substreams configuration
+	SUBSTREAMS_INDEXER_CONTAINER?: any;
+	SUBSTREAMS_ENDPOINT?: string;
+	SUBSTREAMS_JWT_TOKEN?: string;
 }
 
 // Export Durable Objects for wrangler
 export { D1Agent } from './mcp/routes';
-export { SandboxShellContainer } from './containers'
+export { SubstreamsIndexerContainer } from './containers';
 
 // Create main Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -139,8 +143,8 @@ app.get("/debug", async (c) => {
 app.route('/v1/api/d1', createDBRoutes());
 app.route('/v1/api/cache', createCacheRoutes());
 
-
-app.route('/v1/api/container', createContainerRoutes());
+// Substreams Indexer routes
+app.route('/v1/api/indexer', createIndexerRoutes());
 
 // 404 handler
 app.notFound((c) => {

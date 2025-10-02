@@ -2,7 +2,7 @@
 set -e
 
 # Mars V8 Substreams 生产部署脚本
-# 支持两种部署方式：PostgreSQL Sink 和 The Graph
+# 支持两种部署方式：PostgreSQL Sink 和 Docker
 
 echo "🚀 Mars V8 Substreams 生产部署"
 echo "================================"
@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 
 # 配置
 START_BLOCK=${START_BLOCK:-370000000}
-DEPLOYMENT_TYPE=${1:-"postgres"}  # postgres 或 graph
+DEPLOYMENT_TYPE=${1:-"postgres"}  # postgres, docker
 
 # 检查环境
 check_environment() {
@@ -215,49 +215,6 @@ deploy_postgres() {
     fi
 }
 
-# 部署 The Graph
-deploy_graph() {
-    echo ""
-    echo "🚀 部署 The Graph"
-    echo "================================"
-    
-    CONFIG_FILE="substreams.yaml"
-    
-    echo -e "${YELLOW}⚠️  注意：The Graph 部署需要：${NC}"
-    echo "  1. 运行中的 Graph Node"
-    echo "  2. IPFS 节点"
-    echo "  3. 完整的 graph_out handler 实现"
-    echo ""
-    
-    read -p "确认环境已准备好? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "部署已取消"
-        echo ""
-        echo "The Graph 部署步骤:"
-        echo "  1. 安装 Graph CLI: npm install -g @graphprotocol/graph-cli"
-        echo "  2. 初始化项目: graph init"
-        echo "  3. 部署: graph deploy"
-        exit 0
-    fi
-    
-    # 打包 Substreams
-    echo "打包 Substreams..."
-    substreams pack "$CONFIG_FILE"
-    
-    SPKG_FILE="mars-vaults-v8-v1.0.0.spkg"
-    
-    if [ -f "$SPKG_FILE" ]; then
-        echo -e "${GREEN}✅ Substreams 包已创建: $SPKG_FILE${NC}"
-        echo ""
-        echo "下一步:"
-        echo "  graph deploy --subgraph $SPKG_FILE"
-    else
-        echo -e "${RED}❌ 打包失败${NC}"
-        exit 1
-    fi
-}
-
 # Docker 部署选项
 deploy_docker() {
     echo ""
@@ -401,7 +358,6 @@ main() {
             echo ""
             echo "部署类型:"
             echo "  postgres - PostgreSQL Sink"
-            echo "  graph    - The Graph Protocol (推荐)"
             echo "  docker   - Docker 部署"
             echo "  systemd  - systemd 服务"
             echo "  cloudflare - Cloudflare Container"

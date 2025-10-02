@@ -98,10 +98,11 @@ preview_id = "df3f475a32684aaf9843e876628171ca"
 binding = "HYPERDRIVE"
 id = "598eb138eef849c9a5682f494f20e753"  # mars-neon-db
 
+# ✅ Durable Objects Configuration
 [durable_objects]
 bindings = [
-  { name = "MCP_OBJECT", class_name = "D1Agent" }
-  # { name = "SANDBOX_SHELL_CONTAINER", class_name = "SandboxShellContainer" }  # Disabled for dev
+  { name = "MCP_OBJECT", class_name = "D1Agent" },
+  { name = "SUBSTREAMS_INDEXER_CONTAINER", class_name = "SubstreamsIndexerContainer" }
 ]
 
 [[migrations]]
@@ -110,13 +111,21 @@ new_sqlite_classes = ["D1Agent"]
 
 [[migrations]]
 tag = "v2"
-new_sqlite_classes = []
+new_sqlite_classes = ["SubstreamsIndexerContainer"]
 
-# [[containers]]
-# class_name = "SandboxShellContainer"
-# image = "./Dockerfile"
-# instances = 5
-# name = "sandbox-shell"
+# ✅ Cloudflare Containers Configuration
+# Substreams Indexer runs as a containerized Durable Object
+[[containers]]
+class_name = "SubstreamsIndexerContainer"
+image = "./Dockerfile"
+image_build_context = "./container_src"  # Build context directory
+max_instances = 2
+instance_type = "standard-3"  # 4 vCPU, 8GB memory, 10GB disk
+name = "mars-substreams-indexer"
+
+# Build-time variables (passed to docker build)
+[containers.image_vars]
+RUST_LOG = "info"
 
 # 🔧 Development environment configuration (minimal for testing)
 [env.development]
