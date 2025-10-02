@@ -53,6 +53,7 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     wget \
     netcat-openbsd \
+    coreutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install substreams CLI
@@ -86,11 +87,11 @@ RUN useradd -m -u 1000 substreams && \
     chown -R substreams:substreams /app
 USER substreams
 
-# Environment variables (will be overridden by Cloudflare)
-ENV RUST_LOG=info
+# Environment variables (defaults, will be overridden by Cloudflare wrangler.toml [containers.env])
+ENV RUST_LOG=debug
 ENV SUBSTREAMS_ENDPOINT=mainnet.sol.streamingfast.io:443
-ENV START_BLOCK=370500000
-ENV OUTPUT_MODULE=db_out
+ENV START_BLOCK=370000000
+ENV OUTPUT_MODULE=map_vault_events
 
 # Start the container with monitoring and health check
 CMD ["./start-container.sh"]

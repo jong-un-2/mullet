@@ -124,12 +124,23 @@ class_name = "SubstreamsIndexerContainer"
 image = "./Dockerfile"
 image_build_context = "./container_src"
 max_instances = 1
-instance_type = "standard"
+instance_type = "basic"
 name = "mars-substreams-indexer"
 
 # Build-time variables (passed to docker build)
 [containers.image_vars]
-RUST_LOG = "info"
+RUST_LOG = "debug"
+
+# Runtime environment variables (passed to running container)
+# These are injected by Cloudflare at runtime and available to start-container.sh
+[containers.env]
+DATABASE_URL = "postgresql://neondb_owner:npg_9kucNXKpA6eC@ep-solitary-heart-a19z1rs7.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+SUBSTREAMS_API_KEY = "server_4659a992cc417c3a2464188f653be8c3"
+SUBSTREAMS_API_TOKEN = "eyJhbGciOiJLTVNFUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTUzMzUyNDcsImp0aSI6IjQ0ZGVkNWU5LWFmNDktNDMwYS04ZWU5LWZjMDZhY2M0MGNkOSIsImlhdCI6MTc1OTMzNTI0NywiaXNzIjoiZGZ1c2UuaW8iLCJzdWIiOiIwZHlseTMxZjBmNjVjNTJkMzZhNGUiLCJ2IjoyLCJha2kiOiJlYmFkZjg0NGU1NGJlYzM1NGFlZGVhZTUyZWE3M2EwMjRmMDdkNWQ5OWI2NDgyYzE1YjlmZDc5OWU2NTNjN2QyIiwidWlkIjoiMGR5bHkzMWYwZjY1YzUyZDM2YTRlIiwic3Vic3RyZWFtc19wbGFuX3RpZXIiOiJGUkVFIiwiY2ZnIjp7IlNVQlNUUkVBTVNfTUFYX1JFUVVFU1RTIjoiMiIsIlNVQlNUUkVBTVNfUEFSQUxMRUxfSk9CUyI6IjUiLCJTVUJTVFJFQU1TX1BBUkFMTEVMX1dPUktFUlMiOiI1In19.AcMYa8cFyGgZcxzkloVbxrXYhxet7hTMh2uY0yBpb-jsms5pL2GjgSrpG9q7BZHgnAT8hINPArjAsCTUTo-YuA"
+SUBSTREAMS_ENDPOINT = "mainnet.sol.streamingfast.io:443"
+START_BLOCK = "370000000"
+OUTPUT_MODULE = "map_vault_events"
+RUST_LOG = "debug"
 
 # 🔧 Development environment configuration (minimal for testing)
 [env.development]
