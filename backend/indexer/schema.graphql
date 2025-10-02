@@ -1,635 +1,397 @@
-type Bundle @entity(immutable: false) {
-  id: ID!
+# Mars Vaults V8 - The Graph Protocol Schematype VaultDeposit @entity {
 
-  # price of BNB usd
-  bnbPriceUSD: BigDecimal!
-}
+# Generated for Solana Mainnet Substreams  id: ID!
 
-type LBFactory @entity(immutable: false) {
-  # Contract address
-  id: ID!
+  signature: String!
 
-  # Fee recipient
-  feeRecipient: Bytes!
+# Vault Deposit Event  user: Bytes!
 
-  # Pair count
-  pairCount: BigInt!
+type VaultDeposit @entity {  vault: Bytes!
 
-  # Volume USD
-  volumeUSD: BigDecimal!
+  id: ID!  amount: BigInt!
 
-  # Volume BNB
-  volumeBNB: BigDecimal!
+  signature: String!  sharesReceived: BigInt!
 
-  # Untracked volume
-  untrackedVolumeUSD: BigDecimal!
+  slot: BigInt!  protocolId: Int!
 
-  # tvl USD
-  totalValueLockedUSD: BigDecimal!
+  timestamp: BigInt!  timestamp: BigInt!
 
-  # tvl BNB
-  totalValueLockedBNB: BigDecimal!
+  user: String!  slot: BigInt!
 
-  # Transaction count
-  txCount: BigInt!
+  vault: String!}
 
-  # Token count
-  tokenCount: BigInt!
-
-  # User count
-  userCount: BigInt!
-
-  # flashloan fee
-  flashloanFee: BigInt!
-
-  # pairs not used in trade routing
-  ignoredLbPairs: [LBPair!]!
-
-  feesUSD: BigDecimal!
-  feesBNB: BigDecimal!
-
-  # Pairs
-  lbPairs: [LBPair!]! @derivedFrom(field: "factory")
-
-  # Tokens
-  tokens: [Token!]! @derivedFrom(field: "factory")
-
-  # Hour data
-  hourData: [LBHourData!]! @derivedFrom(field: "factory")
-
-  # Day data
-  dayData: [LBDayData!]! @derivedFrom(field: "factory")
-}
-
-type LBHourData @entity(immutable: false) {
-  # timestamp / 3600
-  id: ID!
-
-  # date - hour start timestamp
-  date: Int!
-
-  # factory
-  factory: LBFactory!
-
-  # volume
-  volumeBNB: BigDecimal!
-  volumeUSD: BigDecimal!
-  untrackedVolumeUSD: BigDecimal!
-
-  # TVL
-  totalValueLockedBNB: BigDecimal!
-  totalValueLockedUSD: BigDecimal!
-
-  feesUSD: BigDecimal!
-
-  # tx count
-  txCount: BigInt!
-}
-
-type LBDayData @entity(immutable: false) {
-  # timestamp / 86400
-  id: ID!
-
-  # date
-  date: Int!
-
-  # factory
-  factory: LBFactory!
-
-  # volume
-  volumeBNB: BigDecimal!
-  volumeUSD: BigDecimal!
-  untrackedVolumeUSD: BigDecimal!
-
-  # TVL
-  totalValueLockedBNB: BigDecimal!
-  totalValueLockedUSD: BigDecimal!
-
-  feesUSD: BigDecimal!
-
-  # tx count
-  txCount: BigInt!
-}
-
-type Token @entity(immutable: false) {
-  # token address
-  id: ID!
-
-  # factory
-  factory: LBFactory!
-
-  # mirrored from the smart contract
-  symbol: String!
-  name: String!
-  decimals: BigInt!
-
-  # used for other stats like marketcap
-  totalSupply: BigInt!
-
-  # token specific volume
-  volume: BigDecimal!
-  volumeUSD: BigDecimal!
-  untrackedVolumeUSD: BigDecimal!
-
-  # transactions across all pairs
-  txCount: BigInt!
-
-  # TVL across all pairs
-  totalValueLocked: BigDecimal!
-  totalValueLockedUSD: BigDecimal!
-
-  derivedBNB: BigDecimal!
-
-  feesUSD: BigDecimal!
-
-  # Token hour data
-  hourData: [TokenHourData!]! @derivedFrom(field: "token")
-
-  # Token day data
-  dayData: [TokenDayData!]! @derivedFrom(field: "token")
-
-  # Base pairs
-  basePairs: [LBPair!]! @derivedFrom(field: "tokenX")
-
-  # Quote pairs
-  quotePairs: [LBPair!]! @derivedFrom(field: "tokenY")
-
-  # Base pairs hour data
-  basePairsHourData: [LBPairHourData!]! @derivedFrom(field: "tokenX")
-
-  # Quote pairs hour data
-  quotePairsHourData: [LBPairHourData!]! @derivedFrom(field: "tokenY")
-
-  # Base pairs day data
-  basePairsDayData: [LBPairDayData!]! @derivedFrom(field: "tokenX")
-
-  # Quote pairs day data
-  quotePairsDayData: [LBPairDayData!]! @derivedFrom(field: "tokenY")
-}
-
-type TokenHourData @entity(immutable: false) {
-  # timestamp / 3600
-  id: ID!
-
-  # date - hour start timestamp
-  date: Int!
-
-  # token
-  token: Token!
-
-  # volume
-  volume: BigDecimal!
-  volumeBNB: BigDecimal!
-  volumeUSD: BigDecimal!
-
-  # tx count
-  txCount: BigInt!
-
-  # TVL
-  totalValueLocked: BigDecimal!
-  totalValueLockedBNB: BigDecimal!
-  totalValueLockedUSD: BigDecimal!
-
-  # price usd
-  priceUSD: BigDecimal!
-
-  feesUSD: BigDecimal!
-
-  # opening price USD
-  open: BigDecimal!
-  # high price USD
-  high: BigDecimal!
-  # low price USD
-  low: BigDecimal!
-  # close price USD
-  close: BigDecimal!
-}
-
-type TokenDayData @entity(immutable: false) {
-  # timestamp / 86400
-  id: ID!
-
-  # date - day start timestamp
-  date: Int!
-
-  # token
-  token: Token!
-
-  # volume
-  volume: BigDecimal!
-  volumeBNB: BigDecimal!
-  volumeUSD: BigDecimal!
-
-  # tx count
-  txCount: BigInt!
-
-  # TVL
-  totalValueLocked: BigDecimal!
-  totalValueLockedBNB: BigDecimal!
-  totalValueLockedUSD: BigDecimal!
-
-  # price usd
-  priceUSD: BigDecimal!
-
-  feesUSD: BigDecimal!
-
-  # opening price USD
-  open: BigDecimal!
-  # high price USD
-  high: BigDecimal!
-  # low price USD
-  low: BigDecimal!
-  # close price USD
-  close: BigDecimal!
-}
-
-# SUncDayData is used to store daily data for the staked token( aka sUnc = staked Unc)
-type SUncDayData @entity(immutable: false) {
-  # Timestamp / 86400
-  id: ID!
-
-  # date - day start timestamp
-  date: Int!
-
-  amountX: BigDecimal!
-  amountY: BigDecimal!
-
-  collectedBNB: BigDecimal!
-  collectedUSD: BigDecimal!
-}
-
-type LBPair @entity(immutable: false) {
-  # Contract address
-  id: ID!
-
-  # Factory
-  factory: LBFactory!
-
-  # Name
-  name: String!
-
-  # Base Fee
-  baseFeePct: BigDecimal!
-
-  # mirrored from the smart contract
-  tokenX: Token!
-  tokenY: Token!
-  binStep: BigInt!
-  activeId: Int!
-
-  reserveX: BigDecimal!
-  reserveY: BigDecimal!
-
-  # tvl
-  totalValueLockedBNB: BigDecimal!
-  totalValueLockedUSD: BigDecimal!
-
-  # Price in terms of the asset pair
-  tokenXPrice: BigDecimal!
-  tokenYPrice: BigDecimal!
-
-  # Price in terms of USDC
-  tokenXPriceUSD: BigDecimal!
-  tokenYPriceUSD: BigDecimal!
-
-  # lifetime volume stats
-  volumeTokenX: BigDecimal!
-  volumeTokenY: BigDecimal!
-  volumeUSD: BigDecimal!
-  untrackedVolumeUSD: BigDecimal!
-  txCount: BigInt!
-  feesTokenX: BigDecimal!
-  feesTokenY: BigDecimal!
-  feesUSD: BigDecimal! # swap fees
-  # Fields used to help derived relationship
-  # used to detect new exchanges
-  liquidityProviderCount: BigInt!
-
-  bins: [Bin!]! @derivedFrom(field: "lbPair")
-  liquidityPositions: [LiquidityPosition!]! @derivedFrom(field: "lbPair")
-  dayData: [LBPairDayData!]! @derivedFrom(field: "lbPair")
-  hourData: [LBPairHourData!]! @derivedFrom(field: "lbPair")
-
-  # Transactions
-  mints: [Mint!]! @derivedFrom(field: "lbPair")
-  burns: [Burn!]! @derivedFrom(field: "lbPair")
-  swaps: [Swap!]! @derivedFrom(field: "lbPair")
-  flashed: [Flash!]! @derivedFrom(field: "lbPair")
-  collects: [Collect!]! @derivedFrom(field: "lbPair")
-  transfers: [Transfer!]! @derivedFrom(field: "lbPair")
-
-  # Created at
-  timestamp: BigInt!
-  block: BigInt!
-}
-
-type LBPairParameterSet @entity(immutable: false) {
-  # LBPair address
-  id: ID!
-  sender: Bytes!
-  lbPair: LBPair!
-  baseFactor: Int!
-  filterPeriod: Int!
-  decayPeriod: Int!
-  reductionFactor: Int!
-  variableFeeControl: Int!
-  protocolShare: Int!
-  protocolSharePct: Int!
-  maxVolatilityAccumulator: Int!
-}
-
-type Bin @entity(immutable: false) {
-  id: ID! # lbPair address + # + binId
-  lbPair: LBPair!
-
-  priceX: BigDecimal!
-  priceY: BigDecimal!
-
-  totalSupply: BigInt!
-  reserveX: BigDecimal!
-  reserveY: BigDecimal!
-
-  binId: Int!
-
-  liquidityProviders: [String!]!
-  liquidityProviderCount: BigInt!
-}
-
-type User @entity(immutable: false) {
-  # Address
-  id: ID!
-
-  # Approval for All
-  lbTokenApprovals: [Bytes!]!
-
-  # Liquidity Positions
-  liquidityPositions: [LiquidityPosition!]! @derivedFrom(field: "user")
-
-  # fees collected by user for providing liquidity
-  collects: [Collect!]! @derivedFrom(field: "recipient")
-}
-
-type LBPairDayData @entity(immutable: false) {
-  # timestamp / 86400
-  id: ID!
-
-  # date - day start timestamp
-  date: Int!
-
-  # pair
-  lbPair: LBPair!
-
-  tokenX: Token!
-  tokenY: Token!
-
-  # reserves
-  reserveX: BigDecimal!
-  reserveY: BigDecimal!
-
-  # tvl at end of day
-  totalValueLockedUSD: BigDecimal!
-
-  # volume
-  volumeTokenX: BigDecimal!
-  volumeTokenY: BigDecimal!
-
-  # volume usd
-  volumeUSD: BigDecimal!
-  untrackedVolumeUSD: BigDecimal!
-
-  # tx count
-  txCount: BigInt!
-
-  # swap fees
-  feesUSD: BigDecimal!
-}
-
-type LBPairHourData @entity(immutable: false) {
-  # timestamp / 3600
-  id: ID!
-
-  # date - hour start timestamp
-  date: Int!
-
-  # pair
-  lbPair: LBPair!
-
-  tokenX: Token!
-  tokenY: Token!
-
-  # reserves
-  reserveX: BigDecimal!
-  reserveY: BigDecimal!
-
-  # tvl at end of hour
-  totalValueLockedUSD: BigDecimal!
-
-  # volume
-  volumeTokenX: BigDecimal!
-  volumeTokenY: BigDecimal!
-
-  # volume usd
-  volumeUSD: BigDecimal!
-  untrackedVolumeUSD: BigDecimal!
-
-  # tx count
-  txCount: BigInt!
-
-  # swap fees
-  feesUSD: BigDecimal!
-}
-
-type LiquidityPosition @entity(immutable: false) {
-  # lbPair address + user address
-  id: ID!
-  user: User!
-  lbPair: LBPair!
-
-  # user's bins liquidities
-  userBinLiquidities: [UserBinLiquidity!]!
-    @derivedFrom(field: "liquidityPosition")
-  binsCount: BigInt!
-
-  # block info
-  block: Int!
-  timestamp: Int!
-}
-
-type UserBinLiquidity @entity(immutable: false) {
-  # lbPair address + user + binId
-  id: ID!
-
-  # lbPair address + user address
-  liquidityPosition: LiquidityPosition!
-
-  # lbPair address + binId
-  lbPairBinId: Bin!
-
-  lbPair: LBPair!
-  user: User!
-  binId: BigInt!
-  liquidity: BigInt!
-
-  block: Int!
-  timestamp: Int!
-}
-
-type Transaction @entity(immutable: true) {
-  # transaction hash
-  id: ID!
-
-  # block info
-  blockNumber: Int!
-  timestamp: Int!
-
-  mints: [Mint!]! @derivedFrom(field: "transaction")
-  burns: [Burn!]! @derivedFrom(field: "transaction")
-  swaps: [Swap!]! @derivedFrom(field: "transaction")
-  flashed: [Flash!]! @derivedFrom(field: "transaction")
-  collects: [Collect!]! @derivedFrom(field: "transaction")
-  transfers: [Transfer!]! @derivedFrom(field: "transaction")
-}
-
-type Mint @entity(immutable: true) {
-  # transaction hash + "#" + index in mints Transaction array
-  id: ID!
-  transaction: Transaction!
-  timestamp: Int! # need this to pull recent txns for specific token or pair
-  # pair
-  lbPair: LBPair!
-
-  # populated from the primary Transfer event
-  lbTokenAmount: BigInt!
-
-  # populated from the Mint event
-  sender: Bytes!
-  recipient: Bytes!
-  origin: Bytes!
-
-  amountX: BigDecimal!
-  amountY: BigDecimal!
-  # derived amount based on available prices of tokens
-  amountUSD: BigDecimal!
-
-  logIndex: BigInt!
-}
-
-type Burn @entity(immutable: true) {
-  # transaction hash + "#" + index in burns Transaction array
-  id: ID!
-  transaction: Transaction!
-  timestamp: Int! # need this to pull recent txns for specific token or pair
-  # pair
-  lbPair: LBPair!
-
-  # populated from the primary Transfer event
-  lbTokenAmount: BigInt!
-
-  # populated from the Mint event
-  sender: Bytes!
-  recipient: Bytes!
-  origin: Bytes!
-
-  amountX: BigDecimal!
-  amountY: BigDecimal!
-  # derived amount based on available prices of tokens
-  amountUSD: BigDecimal!
-
-  logIndex: BigInt!
-}
-
-type Swap @entity(immutable: true) {
-  # transaction hash + "#" + index in swaps Transaction array
-  id: ID!
-  transaction: Transaction!
-  timestamp: Int! # need this to pull recent txns for specific token or pair
-  # pair
-  lbPair: LBPair!
-
-  # populated from the Swap event
-  sender: Bytes!
-  recipient: Bytes!
-  origin: Bytes!
-  activeId: Int!
-
-  amountXIn: BigDecimal!
-  amountYIn: BigDecimal!
-  amountXOut: BigDecimal!
-  amountYOut: BigDecimal!
-  amountUSD: BigDecimal!
-
-  feesTokenX: BigDecimal!
-  feesTokenY: BigDecimal!
-  feesUSD: BigDecimal!
-
-  logIndex: BigInt!
-}
-
-type Flash @entity(immutable: true) {
-  # transaction hash + "#" + index in Flash Transaction array
-  id: ID!
-  transaction: Transaction!
-  timestamp: Int! # need this to pull recent txns for specific token or pair
-  # pair
-  lbPair: LBPair!
-
-  # populated from the FlashLoan event
-  sender: Bytes!
-  origin: Bytes!
-  recipient: Bytes!
-
-  amountX: BigDecimal!
-  amountY: BigDecimal!
-  amountUSD: BigDecimal!
-
-  feesX: BigDecimal!
-  feesY: BigDecimal!
-  feesUSD: BigDecimal!
-
-  logIndex: BigInt!
-}
-
-type Collect @entity(immutable: true) {
-  # transaction hash + "#" + index in collect Transaction array
-  id: ID!
-  transaction: Transaction!
-  timestamp: Int!
-
-  lbPair: LBPair!
-
-  amountX: BigDecimal!
-  amountY: BigDecimal!
-
-  recipient: User!
-  origin: Bytes!
-
-  collectedBNB: BigDecimal!
-  collectedUSD: BigDecimal!
-
-  logIndex: BigInt!
-}
-
-# indexes both TransferSingle and TransferBatch events
-type Transfer @entity(immutable: true) {
-  # transaction hash + "#" + index in transfer Transaction array + "#" + (optional: TransferBatch index)
-  id: ID!
-  transaction: Transaction!
-  timestamp: Int!
-
-  isBatch: Boolean!
-  batchIndex: Int # optional only for TransferBatch event
-  isMint: Boolean!
-  isBurn: Boolean!
-
-  lbPair: LBPair!
-
-  binId: BigInt!
   amount: BigInt!
 
-  sender: Bytes!
-  from: Bytes!
-  to: Bytes!
+  sharesReceived: BigInt!type VaultWithdraw @entity {
 
-  origin: Bytes!
-  logIndex: BigInt!
+  protocolId: Int!  id: ID!
+
+}  signature: String!
+
+  user: Bytes!
+
+# Vault Withdrawal Event  vault: Bytes!
+
+type VaultWithdrawal @entity {  sharesBurned: BigInt!
+
+  id: ID!  amountReceived: BigInt!
+
+  signature: String!  protocolId: Int!
+
+  slot: BigInt!  timestamp: BigInt!
+
+  timestamp: BigInt!  slot: BigInt!
+
+  user: String!}
+
+  vault: String!
+
+  amountReceived: BigInt!type SwapAndDeposit @entity {
+
+  sharesBurned: BigInt!  id: ID!
+
+  protocolId: Int!  signature: String!
+
+}  user: Bytes!
+
+  vault: Bytes!
+
+# Swap and Deposit Event  fromToken: String!
+
+type SwapAndDeposit @entity {  toToken: String!
+
+  id: ID!  amountIn: BigInt!
+
+  signature: String!  amountOut: BigInt!
+
+  slot: BigInt!  sharesReceived: BigInt!
+
+  timestamp: BigInt!  protocolId: Int!
+
+  user: String!  timestamp: BigInt!
+
+  vault: String!  slot: BigInt!
+
+  fromToken: String!}
+
+  toToken: String!
+
+  amountIn: BigInt!type WithdrawWithSwap @entity {
+
+  amountOut: BigInt!  id: ID!
+
+  sharesReceived: BigInt!  signature: String!
+
+  protocolId: Int!  user: Bytes!
+
+}  vault: Bytes!
+
+  sharesBurned: BigInt!
+
+# Withdraw with Swap Event  targetToken: String!
+
+type WithdrawWithSwap @entity {  amountReceived: BigInt!
+
+  id: ID!  slippageBps: Int!
+
+  signature: String!  timestamp: BigInt!
+
+  slot: BigInt!  slot: BigInt!
+
+  timestamp: BigInt!}
+
+  user: String!
+
+  vault: String!type RebalanceEvent @entity {
+
+  sharesBurned: BigInt!  id: ID!
+
+  targetToken: String!  signature: String!
+
+  amountReceived: BigInt!  vault: Bytes!
+
+  slippageBps: Int!  protocolFrom: Int!
+
+}  protocolTo: Int!
+
+  amountIn: BigInt!
+
+# Vault Rebalance Event  amountOut: BigInt!
+
+type VaultRebalance @entity {  executor: Bytes!
+
+  id: ID!  reason: String!
+
+  signature: String!  timestamp: BigInt!
+
+  slot: BigInt!  slot: BigInt!
+
+  timestamp: BigInt!}
+
+  vault: String!
+
+  protocolFrom: Int!type SwapCostEstimate @entity {
+
+  protocolTo: Int!  id: ID!
+
+  amountIn: BigInt!  fromToken: String!
+
+  amountOut: BigInt!  toToken: String!
+
+  executor: String!  inputAmount: BigInt!
+
+  reason: String!  estimatedOutput: BigInt!
+
+}  priceImpactBps: Int!
+
+  totalFees: BigInt!
+
+# Kamino Finance Deposit  route: [String!]!
+
+type KaminoDeposit @entity {  timestamp: BigInt!
+
+  id: ID!}
+
+  signature: String!
+
+  slot: BigInt!type Vault @entity {
+
+  timestamp: BigInt!  id: ID! # vault address
+
+  user: String!  admin: Bytes!
+
+  vault: String!  baseTokenMint: String!
+
+  amount: BigInt!  sharesMint: String!
+
+  sharesReceived: BigInt!  totalDeposits: BigInt!
+
+  kaminoVault: String!  totalShares: BigInt!
+
+}  apy: BigInt!
+
+  status: VaultStatus!
+
+# Kamino Finance Withdrawal  protocols: [ProtocolAllocation!]!
+
+type KaminoWithdrawal @entity {  feeConfig: FeeConfig!
+
+  id: ID!  createdAt: BigInt!
+
+  signature: String!  lastUpdated: BigInt!
+
+  slot: BigInt!  
+
+  timestamp: BigInt!  # Aggregated metrics
+
+  user: String!  totalVolume24h: BigInt!
+
+  vault: String!  totalVolume7d: BigInt!
+
+  sharesBurned: BigInt!  totalVolume30d: BigInt!
+
+  amountReceived: BigInt!  totalFeesCollected: BigInt!
+
+  kaminoVault: String!  uniqueUsers24h: Int!
+
+}  uniqueUsers7d: Int!
+
+  uniqueUsersTotal: Int!
+
+# Vault State Update Event}
+
+type VaultStateUpdate @entity {
+
+  id: ID!type ProtocolAllocation @entity {
+
+  signature: String!  id: ID! # vault_address + protocol_id
+
+  slot: BigInt!  vault: Vault!
+
+  timestamp: BigInt!  protocolId: Int!
+
+  vault: String!  programId: String!
+
+  totalDeposits: BigInt!  enabled: Boolean!
+
+  totalShares: BigInt!  allocationWeightBps: Int!
+
+  apy: BigInt!  currentAllocation: BigInt!
+
+  activeProtocols: Int!  targetAllocationBps: Int!
+
+  totalUsers: Int!}
+
+}
+
+type FeeConfig @entity {
+
+# Vault State Snapshot (from store)  id: ID! # vault address
+
+type VaultState @entity {  vault: Vault!
+
+  id: ID!  depositFeeBps: Int!
+
+  vault: String!  withdrawFeeBps: Int!
+
+  totalSupply: BigInt!  managementFeeBps: Int!
+
+  totalAssets: BigInt!  performanceFeeBps: Int!
+
+  sharePrice: BigInt!  feeRecipient: Bytes!
+
+  lastUpdated: BigInt!}
+
+}
+
+enum VaultStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+  EMERGENCY
+}
+
+type UserPosition @entity {
+  id: ID! # user + vault address
+  user: Bytes!
+  vault: Vault!
+  amount: BigInt!
+  shares: BigInt!
+  timestamp: BigInt!
+  totalRewards: BigInt!
+  
+  # Historical metrics
+  totalDeposited: BigInt!
+  totalWithdrawn: BigInt!
+  realizedPnl: BigInt!
+  firstDepositTime: BigInt!
+  lastActivityTime: BigInt!
+}
+
+type ProtocolPerformance @entity {
+  id: ID! # vault_address + protocol_id + date
+  vault: Vault!
+  protocolId: Int!
+  totalDeposits: BigInt!
+  totalWithdrawals: BigInt!
+  currentApy: BigInt!
+  averageApy7d: BigInt!
+  totalRewardsGenerated: BigInt!
+  date: Int! # Unix timestamp at start of day
+}
+
+type VaultAnalytics @entity {
+  id: ID! # vault_address + date
+  vault: Vault!
+  totalVolume24h: BigInt!
+  totalVolume7d: BigInt!
+  totalVolume30d: BigInt!
+  totalFeesCollected: BigInt!
+  uniqueUsers24h: Int!
+  uniqueUsers7d: Int!
+  uniqueUsersTotal: Int!
+  protocolPerformance: [ProtocolPerformance!]!
+  timestamp: BigInt!
+}
+
+type VaultDailySnapshot @entity {
+  id: ID! # vault_address + date
+  vault: Vault!
+  date: Int! # Unix timestamp at start of day
+  totalDeposits: BigInt!
+  totalShares: BigInt!
+  apy: BigInt!
+  dailyVolume: BigInt!
+  dailyFees: BigInt!
+  uniqueUsers: Int!
+  protocolAllocations: [BigInt!]! # Array of allocations per protocol
+}
+
+type UserDailySnapshot @entity {
+  id: ID! # user + vault_address + date  
+  user: Bytes!
+  vault: Vault!
+  date: Int! # Unix timestamp at start of day
+  sharesBalance: BigInt!
+  tokenBalance: BigInt!
+  dailyPnl: BigInt!
+  totalRewards: BigInt!
+}
+
+type GlobalStats @entity {
+  id: ID! # "global"
+  totalVaults: Int!
+  totalUsers: Int!
+  totalValueLocked: BigInt!
+  totalVolume: BigInt!
+  averageApy: BigInt!
+  totalFeesCollected: BigInt!
+  lastUpdateTime: BigInt!
+}
+
+type EmergencyEvent @entity {
+  id: ID!
+  signature: String!
+  vault: Vault!
+  eventType: EmergencyEventType!
+  reason: String!
+  executor: Bytes!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+enum EmergencyEventType {
+  PAUSE
+  RESUME
+  EMERGENCY_WITHDRAW
+  FORCE_REBALANCE
+}
+
+# Kamino Integration Events
+
+type KaminoDeposit @entity {
+  id: ID!
+  signature: String!
+  user: Bytes!
+  vault: Bytes!
+  amount: BigInt!
+  sharesReceived: BigInt!
+  kaminoVault: String!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+type KaminoWithdraw @entity {
+  id: ID!
+  signature: String!
+  user: Bytes!
+  vault: Bytes!
+  sharesBurned: BigInt!
+  amountReceived: BigInt!
+  kaminoVault: String!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+type KaminoStake @entity {
+  id: ID!
+  signature: String!
+  user: Bytes!
+  vault: Bytes!
+  sharesAmount: BigInt!
+  farmAddress: String!
+  timestamp: BigInt!
+  slot: BigInt!
+}
+
+type KaminoUnstake @entity {
+  id: ID!
+  signature: String!
+  user: Bytes!
+  vault: Bytes!
+  sharesAmount: BigInt!
+  farmAddress: String!
+  isStart: Boolean!
+  timestamp: BigInt!
+  slot: BigInt!
 }

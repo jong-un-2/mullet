@@ -1,0 +1,87 @@
+specVersion: v0.1.0
+package:
+  name: mars_vaults_substreams
+  version: v1.0.0
+  doc: |
+    Mars Vaults V8 Substreams for Solana
+    
+    Real-time indexing of Mars vault events to PostgreSQL:
+    - Vault deposits and withdrawals
+    - Swap and rebalance events
+    - Kamino Finance V2 integration
+    - Jupiter Aggregator swaps
+    
+    Start block: 370,000,000 (Mars V8 deployment)
+    Target: Neon PostgreSQL via Cloudflare Hyperdrive
+
+protobuf:
+  files:
+    - vault_events.proto
+  importPaths:
+    - ./proto
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ./target/wasm32-unknown-unknown/release/mars_vaults_substreams.wasm
+
+modules:
+  # 1. Parse all blocks and extract Mars vault transactions
+  - name: map_blocks
+    kind: map
+    initialBlock: 370000000
+    inputs:
+      - source: sf.solana.type.v1.Block
+    output:
+      type: proto:mars.vaults.v1.Events
+
+  # 2. Filter and transform vault events
+  - name: map_vault_events
+    kind: map
+    initialBlock: 370000000
+    inputs:
+      - map: map_blocks
+    output:
+      type: proto:mars.vaults.v1.Events
+    
+  # 3. Maintain vault state snapshots (aggregation)
+  - name: store_vault_states
+    kind: store
+    initialBlock: 370000000
+    updatePolicy: set
+    valueType: proto:mars.vaults.v1.VaultSnapshot
+    inputs:
+      - map: map_vault_events
+    
+  # 4. Output database changes for PostgreSQL sink
+  # This module converts events to DatabaseChanges format
+  # which is compatible with substreams-sink-postgres
+  - name: db_out
+    kind: map
+    initialBlock: 370000000
+    inputs:
+      - map: map_vault_events
+      - store: store_vault_states
+        mode: deltas
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
+
+network: solana-mainnet
+
+# PostgreSQL Sink Usage with substreams-sink-sql:
+# 
+# Setup (first time):
+#   ./substreams-sink-sql setup "$POSTGRES_DSN" substreams.yaml
+#
+# Run:
+#   ./substreams-sink-sql run "$POSTGRES_DSN" substreams.yaml \
+#     --api-token "$JWT_TOKEN" \
+#     --start-block 370000000
+#
+# Expected tables:
+#   - mars_vault_deposits
+#   - mars_vault_withdrawals  
+#   - mars_vault_swaps
+#   - mars_vault_rebalances
+#   - mars_vault_states
+#   - mars_user_positions
