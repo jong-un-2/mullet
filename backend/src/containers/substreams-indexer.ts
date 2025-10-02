@@ -89,7 +89,14 @@ export class SubstreamsIndexerContainer extends Container {
       method: "GET"
     });
     
-    return await response.json();
+    // Container returns plain text "Healthy", wrap it in JSON
+    const text = await response.text();
+    return {
+      healthy: response.ok,
+      status: response.status,
+      message: text.trim(),
+      timestamp: Date.now()
+    };
   }
 
   /**
