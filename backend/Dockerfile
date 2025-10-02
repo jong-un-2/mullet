@@ -5,7 +5,8 @@
 # Mars vault events from Solana into PostgreSQL (Neon)
 # ============================================================
 
-FROM rust:1.90-slim-bookworm AS builder
+# Using DaoCloud mirror to avoid Docker Hub connectivity issues
+FROM docker.m.daocloud.io/library/rust:1.90-slim-bookworm AS builder
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -42,7 +43,7 @@ RUN rustup target add wasm32-unknown-unknown && \
 # ============================================================
 # Runtime stage - Minimal image
 # ============================================================
-FROM debian:bookworm-slim
+FROM docker.m.daocloud.io/library/debian:bookworm-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \

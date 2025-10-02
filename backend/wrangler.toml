@@ -123,6 +123,7 @@ new_sqlite_classes = ["SubstreamsIndexerContainer"]
 class_name = "SubstreamsIndexerContainer"
 image = "./Dockerfile"
 image_build_context = "./container_src"
+instances = 1
 max_instances = 1
 instance_type = "standard"
 name = "mars-substreams-indexer"
