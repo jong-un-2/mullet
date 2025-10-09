@@ -14,8 +14,8 @@
  *   DATABASE_URL="postgresql://..." npx tsx scripts/init-postgres.ts
  */
 
-import pg from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import * as dotenv from 'dotenv';
 import * as schema from '../src/database/postgres-schema';
 import { randomBytes } from 'crypto';
@@ -33,16 +33,15 @@ async function main() {
     process.exit(1);
   }
 
-  const client = new pg.Client({
-    connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
+  const sql = postgres(databaseUrl, {
+    max: 10, // More connections for initialization scripts
+    ssl: 'require',
   });
 
   try {
-    await client.connect();
     console.log('✅ Connected to Neon PostgreSQL\n');
     
-    const db = drizzle(client, { schema });
+    const db = drizzle(sql, { schema });
 
     // Create admin user
     console.log('👤 Creating admin user...');
@@ -161,7 +160,7 @@ async function main() {
     console.error('\n❌ Initialization failed:', error);
     process.exit(1);
   } finally {
-    await client.end();
+    await sql.end();
     console.log('🔚 Connection closed');
   }
 }

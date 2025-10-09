@@ -105,17 +105,14 @@ bindings = [
   { name = "SUBSTREAMS_INDEXER_CONTAINER", class_name = "SubstreamsIndexerContainer" }
 ]
 
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["D1Agent"]
+# Note: Migrations removed - Durable Objects already exist in production
+# [[migrations]]
+# tag = "v1"
+# new_sqlite_classes = ["D1Agent"]
 
-[[migrations]]
-tag = "v2"
-new_classes = ["SubstreamsIndexerContainer"]
-
-[[migrations]]
-tag = "v3"
-new_sqlite_classes = ["SubstreamsIndexerContainer"]
+# [[migrations]]
+# tag = "v2"
+# new_sqlite_classes = ["SubstreamsIndexerContainer"]
 
 # ✅ Cloudflare Containers Configuration
 # Substreams Indexer runs as a containerized Durable Object
@@ -131,7 +128,7 @@ name = "mars-substreams-indexer"
 [containers.image_vars]
 RUST_LOG = "debug"
 SUBSTREAMS_ENDPOINT = "mainnet.sol.streamingfast.io:443"
-START_BLOCK = "370000000"
+START_BLOCK = "372182088"
 OUTPUT_MODULE = "map_vault_events"
 
 # Note: Sensitive data (DATABASE_URL, SUBSTREAMS_API_TOKEN) should be:

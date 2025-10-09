@@ -1,67 +1,81 @@
-import { Client } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 export interface HyperdriveEnv {
   HYPERDRIVE: Hyperdrive;
   NODE_ENV?: string;
 }
 
-export async function createPgClient(env: HyperdriveEnv): Promise<Client> {
-  const connectionString = env.HYPERDRIVE.connectionString;
-  
-  const client = new Client({
-    connectionString,
-    connectionTimeoutMillis: 10000,
-    query_timeout: 30000,
-    statement_timeout: 30000,
-    ssl: { rejectUnauthorized: false },
+/**
+ * Create a postgres.js SQL client connected via Hyperdrive
+ * Following Cloudflare best practices:
+ * - max: 5 connections (Workers limit on concurrent external connections)
+ * - fetch_types: false (avoid extra round-trip if not using array types)
+ */
+export function createPgClient(env: HyperdriveEnv) {
+  return postgres(env.HYPERDRIVE.connectionString, {
+    max: 5, // Limit connections for Workers
+    fetch_types: false, // Disable if not using array types (reduces latency)
+    idle_timeout: 20,
+    max_lifetime: 60 * 30, // 30 minutes
   });
-
-  await client.connect();
-  return client;
 }
 
-export async function createDrizzleDb(env: HyperdriveEnv): Promise<NodePgDatabase> {
-  const client = await createPgClient(env);
-  return drizzle(client);
+/**
+ * Create a Drizzle database instance with postgres.js client
+ */
+export function createDrizzleDb(env: HyperdriveEnv): PostgresJsDatabase {
+  const sql = createPgClient(env);
+  return drizzle(sql);
 }
 
+/**
+ * Execute a database operation with a postgres.js SQL client
+ * The client is automatically closed after the operation
+ */
 export async function withDatabase<T>(
   env: HyperdriveEnv,
-  callback: (client: Client) => Promise<T>
+  callback: (sql: ReturnType<typeof postgres>) => Promise<T>
 ): Promise<T> {
-  const client = await createPgClient(env);
+  const sql = createPgClient(env);
   try {
-    return await callback(client);
+    return await callback(sql);
   } catch (error) {
     console.error('Database operation failed:', error);
     throw error;
   } finally {
-    await client.end();
+    await sql.end();
   }
 }
 
+/**
+ * Execute a database operation with Drizzle ORM
+ * The connection is automatically closed after the operation
+ */
 export async function withDrizzle<T>(
   env: HyperdriveEnv,
-  callback: (db: NodePgDatabase) => Promise<T>
+  callback: (db: PostgresJsDatabase) => Promise<T>
 ): Promise<T> {
-  const client = await createPgClient(env);
-  const db = drizzle(client);
+  const sql = createPgClient(env);
+  const db = drizzle(sql);
   try {
     return await callback(db);
   } catch (error) {
     console.error('Drizzle operation failed:', error);
     throw error;
   } finally {
-    await client.end();
+    await sql.end();
   }
 }
 
+/**
+ * Test database connection via Hyperdrive
+ */
 export async function testConnection(env: HyperdriveEnv): Promise<boolean> {
   try {
-    await withDatabase(env, async (client) => {
-      await client.query('SELECT 1');
+    await withDatabase(env, async (sql) => {
+      await sql`SELECT 1`;
     });
     return true;
   } catch (error) {
@@ -80,21 +94,24 @@ export function getConnectionInfo(env: HyperdriveEnv) {
   };
 }
 
+/**
+ * Execute a database transaction with postgres.js
+ * Automatically handles BEGIN, COMMIT, and ROLLBACK
+ */
 export async function withTransaction<T>(
   env: HyperdriveEnv,
-  callback: (client: Client) => Promise<T>
+  callback: (sql: ReturnType<typeof postgres>) => Promise<T>
 ): Promise<T> {
-  const client = await createPgClient(env);
+  const sql = createPgClient(env);
   try {
-    await client.query('BEGIN');
-    const result = await callback(client);
-    await client.query('COMMIT');
-    return result;
+    // postgres.js provides automatic transaction support via .begin()
+    return await sql.begin(async (tx) => {
+      return await callback(tx as any);
+    });
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Transaction failed:', error);
     throw error;
   } finally {
-    await client.end();
+    await sql.end();
   }
 }

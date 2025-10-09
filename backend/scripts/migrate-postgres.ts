@@ -13,9 +13,9 @@
  *   DATABASE_URL - Neon PostgreSQL connection string (required)
  */
 
-import pg from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -63,18 +63,17 @@ async function main() {
   migrationFiles.forEach(f => console.log(`   - ${f}`));
   console.log('');
 
-  // Create pg Client connection
-  const client = new pg.Client({
-    connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
+  // Create postgres.js connection
+  const sql = postgres(databaseUrl, {
+    max: 10, // More connections for migrations
+    ssl: 'require',
   });
 
   try {
-    await client.connect();
     console.log('✅ Connected to Neon PostgreSQL\n');
 
     // Create Drizzle instance
-    const db = drizzle(client);
+    const db = drizzle(sql);
 
     console.log('🔄 Running migrations...\n');
 
@@ -85,15 +84,15 @@ async function main() {
 
     // Verify tables
     console.log('🔍 Verifying tables...');
-    const tables = await client.query(`
+    const tables = await sql`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
       ORDER BY table_name
-    `);
+    `;
 
-    console.log(`\n✅ Found ${tables.rows.length} table(s):`);
-    tables.rows.forEach((t: any) => console.log(`   - ${t.table_name}`));
+    console.log(`\n✅ Found ${tables.length} table(s):`);
+    tables.forEach((t: any) => console.log(`   - ${t.table_name}`));
     console.log('');
 
   } catch (error) {
@@ -101,7 +100,7 @@ async function main() {
     process.exit(1);
   } finally {
     // Close connection
-    await client.end();
+    await sql.end();
     console.log('🔚 Connection closed');
   }
 }

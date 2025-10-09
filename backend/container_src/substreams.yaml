@@ -3,7 +3,7 @@ package:
   name: mars_vaults_substreams
   version: v1.0.0
   doc: |
-    Mars Vaults V8 Substreams for Solana
+    Mars Vaults V2 Substreams for Solana
     
     Real-time indexing of Mars vault events to PostgreSQL:
     - Vault deposits and withdrawals
@@ -11,7 +11,7 @@ package:
     - Kamino Finance V2 integration
     - Jupiter Aggregator swaps
     
-    Start block: 372,176,870 (Mars V11 deployment - Bo7yZeYR1i9C9CBpP3tRhMymPytNCZiZyBHJGNNfk3ic)
+    Start block: 372,182,088 (Mars V2 deployment - AEK6WoTp7vY6LM1ZDmedxXHoCkpJL1i86KD2qWzsaJx4)
     Target: Neon PostgreSQL via Cloudflare Hyperdrive
 
 protobuf:
@@ -29,7 +29,7 @@ modules:
   # 1. Parse all blocks and extract Mars vault transactions
   - name: map_blocks
     kind: map
-    initialBlock: 372176870
+    initialBlock: 372182088
     inputs:
       - source: sf.solana.type.v1.Block
     output:
@@ -38,7 +38,7 @@ modules:
   # 2. Filter and transform vault events
   - name: map_vault_events
     kind: map
-    initialBlock: 372176870
+    initialBlock: 372182088
     inputs:
       - map: map_blocks
     output:
@@ -47,7 +47,7 @@ modules:
   # 3. Maintain vault state snapshots (aggregation)
   - name: store_vault_states
     kind: store
-    initialBlock: 372176870
+    initialBlock: 372182088
     updatePolicy: set
     valueType: proto:mars.vaults.v1.VaultSnapshot
     inputs:
@@ -58,7 +58,7 @@ modules:
   # which is compatible with substreams-sink-postgres
   - name: db_out
     kind: map
-    initialBlock: 372176870
+    initialBlock: 372182088
     inputs:
       - map: map_vault_events
       - store: store_vault_states
@@ -84,7 +84,7 @@ sink:
 # Run:
 #   ./substreams-sink-sql run "$POSTGRES_DSN" substreams.yaml \
 #     --api-token "$JWT_TOKEN" \
-#     --start-block 372176870
+#     --start-block 372182088
 #
 # Expected tables:
 #   - mars_vault_deposits

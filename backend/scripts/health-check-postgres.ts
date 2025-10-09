@@ -14,8 +14,8 @@
  *   DATABASE_URL="postgresql://..." npx tsx scripts/health-check-postgres.ts
  */
 
-import pg from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import * as dotenv from 'dotenv';
 import * as schema from '../src/database/postgres-schema';
 import { sql as sqlOperator } from 'drizzle-orm';
@@ -33,23 +33,22 @@ async function main() {
     process.exit(1);
   }
 
-  const client = new pg.Client({
-    connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 10000,
+  const sql = postgres(databaseUrl, {
+    max: 5,
+    ssl: 'require',
+    connect_timeout: 10,
   });
 
   const startTime = Date.now();
   let allChecks = true;
 
   try {
-    await client.connect();
     console.log('✅ Connected to Neon PostgreSQL\n');
 
     // Test 1: Basic connectivity
     console.log('1️⃣  Testing basic connectivity...');
     try {
-      await client.query('SELECT 1 as check');
+      await sql`SELECT 1 as check`;
       console.log('   ✅ Connected successfully');
     } catch (error) {
       console.error('   ❌ Connection failed:', error);
@@ -59,8 +58,8 @@ async function main() {
     // Test 2: Database version
     console.log('\n2️⃣  Checking PostgreSQL version...');
     try {
-      const result = await client.query('SELECT version()');
-      const version = result.rows[0];
+      const result = await sql`SELECT version()`;
+      const version = result[0];
       console.log(`   ✅ ${version.version.split(',')[0]}`);
     } catch (error) {
       console.error('   ❌ Version check failed:', error);
@@ -70,16 +69,16 @@ async function main() {
     // Test 3: List tables
     console.log('\n3️⃣  Checking tables...');
     try {
-      const tables = await client.query(`
+      const tables = await sql`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
         ORDER BY table_name
-      `);
+      `;
       
-      if (tables.rows.length > 0) {
-        console.log(`   ✅ Found ${tables.rows.length} table(s):`);
-        tables.rows.forEach((t: any) => console.log(`      - ${t.table_name}`));
+      if (tables.length > 0) {
+        console.log(`   ✅ Found ${tables.length} table(s):`);
+        tables.forEach((t: any) => console.log(`      - ${t.table_name}`));
       } else {
         console.log('   ⚠️  No tables found (database might not be initialized)');
         allChecks = false;
@@ -92,15 +91,15 @@ async function main() {
     // Test 4: Drizzle ORM connectivity
     console.log('\n4️⃣  Testing Drizzle ORM...');
     try {
-      const db = drizzle(client, { schema });
+      const db = drizzle(sql, { schema });
       
-      // Check if users table exists and get count
-      const userCount = await db
+      // Check if mars_vault_states table exists and get count
+      const stateCount = await db
         .select({ count: sqlOperator`count(*)` })
-        .from(schema.users);
+        .from(schema.marsVaultStates);
       
       console.log(`   ✅ Drizzle ORM working`);
-      console.log(`   📊 Users in database: ${userCount[0].count}`);
+      console.log(`   📊 Vault states in database: ${stateCount[0].count}`);
     } catch (error) {
       console.error('   ❌ Drizzle ORM test failed:', error);
       console.error('   💡 Hint: Run migrations first (npm run migrate:postgres)');
@@ -110,28 +109,35 @@ async function main() {
     // Test 5: Write test
     console.log('\n5️⃣  Testing write operations...');
     try {
-      const db = drizzle(client, { schema });
-      const testWallet = `test_${Date.now()}`;
+      const db = drizzle(sql, { schema });
+      const testVault = `test_vault_${Date.now()}`;
+      const testTime = new Date();
       
-      // Insert test user
-      const [testUser] = await db.insert(schema.users).values({
-        walletAddress: testWallet,
-        displayName: 'Health Check Test User',
-        subscriptionTier: 'free',
+      // Insert test vault state
+      const [testState] = await db.insert(schema.marsVaultStates).values({
+        vaultAddress: testVault,
+        admin: 'test_admin',
+        baseTokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+        sharesMint: 'test_shares_mint',
+        totalDeposits: '0',
+        totalShares: '0',
+        status: 'active',
+        createdAt: testTime,
+        lastUpdated: testTime,
       }).returning();
 
       // Read it back
       const found = await db
         .select()
-        .from(schema.users)
-        .where(sqlOperator`wallet_address = ${testWallet}`);
+        .from(schema.marsVaultStates)
+        .where(sqlOperator`vault_address = ${testVault}`);
 
-      // Delete test user
+      // Delete test vault state
       await db
-        .delete(schema.users)
-        .where(sqlOperator`wallet_address = ${testWallet}`);
+        .delete(schema.marsVaultStates)
+        .where(sqlOperator`vault_address = ${testVault}`);
 
-      if (found.length === 1 && found[0].displayName === 'Health Check Test User') {
+      if (found.length === 1 && found[0].admin === 'test_admin') {
         console.log('   ✅ Write/Read/Delete operations working');
       } else {
         console.log('   ❌ Data integrity check failed');
@@ -146,7 +152,7 @@ async function main() {
     console.log('\n6️⃣  Testing query performance...');
     try {
       const queryStart = Date.now();
-      await client.query('SELECT * FROM users LIMIT 10');
+      await sql`SELECT * FROM mars_vault_states LIMIT 10`;
       const queryTime = Date.now() - queryStart;
       
       console.log(`   ✅ Query completed in ${queryTime}ms`);
@@ -162,16 +168,16 @@ async function main() {
     // Test 7: Connection info
     console.log('\n7️⃣  Connection information...');
     try {
-      const info = await client.query(`
+      const info = await sql`
         SELECT 
           current_database() as database,
           current_user as "user",
           inet_server_addr() as host,
           inet_server_port() as port,
           pg_backend_pid() as pid
-      `);
+      `;
       
-      const row = info.rows[0];
+      const row = info[0];
       console.log(`   ✅ Database: ${row.database}`);
       console.log(`   ✅ User: ${row.user}`);
       console.log(`   ✅ Process ID: ${row.pid}`);
@@ -197,7 +203,7 @@ async function main() {
     console.error('\n❌ Health check failed with unexpected error:', error);
     process.exit(1);
   } finally {
-    await client.end();
+    await sql.end();
     console.log('🔚 Connection closed');
   }
 }

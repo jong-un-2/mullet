@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Mars V8 Substreams 生产部署脚本
+# Mars V2 Substreams 生产部署脚本
 # 支持两种部署方式：PostgreSQL Sink 和 Docker
 
-echo "🚀 Mars V8 Substreams 生产部署"
+echo "🚀 Mars V2 Substreams 生产部署"
 echo "================================"
 
 # 颜色定义
@@ -14,7 +14,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # 配置
-START_BLOCK=${START_BLOCK:-370000000}
+START_BLOCK=${START_BLOCK:-372182088}
 DEPLOYMENT_TYPE=${1:-"postgres"}  # postgres, docker
 
 # 检查环境

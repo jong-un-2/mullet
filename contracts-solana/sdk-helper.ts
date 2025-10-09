@@ -299,8 +299,8 @@ export class KaminoSDKHelper {
       userSharesAta: new PublicKey(accounts[6].address),
     };
 
-    // Remaining accounts
-    const remainingAccounts = accounts.slice(12).map(acc => ({
+    // Remaining accounts (从第13个账户开始，前面有13个固定账户 0-12)
+    const remainingAccounts = accounts.slice(13).map(acc => ({
       pubkey: new PublicKey(acc.address),
       isSigner: false,
       isWritable: acc.role === 1 || acc.role === 3,
