@@ -311,9 +311,9 @@ pub fn handler_kamino_deposit_and_stake<'info>(
     ];
     
     // 添加 remaining_accounts
-    for (i, account) in ctx.remaining_accounts.iter().enumerate() {
-        let is_writable = i % 2 == 0;
-        if is_writable {
+    // 根据账户的 is_writable 属性来决定是否可写
+    for account in ctx.remaining_accounts.iter() {
+        if account.is_writable {
             deposit_accounts.push(AccountMeta::new(account.key(), false));
         } else {
             deposit_accounts.push(AccountMeta::new_readonly(account.key(), false));

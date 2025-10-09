@@ -3,8 +3,8 @@
 
 import { PublicKey } from "@solana/web3.js";
 
-// Mars 程序 V4 (最新部署 - 支持 Token-2022 + Kamino remaining_accounts + Withdraw)
-export const MARS_PROGRAM_ID = new PublicKey("9A2JwsP3yrP4TPAoRa2kqmBWwtfKfT73syPqSaSCLPXJ");
+// Mars Program ID (updated for V12 deployment)
+export const MARS_PROGRAM_ID = new PublicKey("AEK6WoTp7vY6LM1ZDmedxXHoCkpJL1i86KD2qWzsaJx4");
 
 // Kamino 集成
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");

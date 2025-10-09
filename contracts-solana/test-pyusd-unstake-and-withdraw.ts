@@ -12,7 +12,9 @@ import {
     ComputeBudgetProgram,
 } from "@solana/web3.js";
 import * as fs from "fs";
+import Decimal from "decimal.js/decimal";
 import { HELIUS_RPC, MARS_PROGRAM_ID, KAMINO_V2_PROGRAM, KLEND_PROGRAM, PYUSD_MINT } from "./constants";
+import { KaminoSDKHelper } from "./sdk-helper";
 
 // 实际的 PYUSD 账户地址
 const PYUSD_ACCOUNT = new PublicKey("DhxxxG3fouc2j9f5AUVqM9M3GHCQydnSeUxXkwJWb3y6");
@@ -42,7 +44,7 @@ async function main() {
   const connection = new Connection(HELIUS_RPC, "confirmed");
 
   // 加载钱包
-  const walletPath = "/Users/joung-un/mars-projects/klend-sdk/examples/phantom-wallet.json";
+  const walletPath = "./phantom-wallet.json";
   const walletData = JSON.parse(fs.readFileSync(walletPath, "utf-8"));
   const wallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
 
@@ -187,38 +189,35 @@ async function main() {
   console.log("=".repeat(60));
 
   try {
-
-    // Withdraw remaining accounts
-    const remainingAccounts: AccountMeta[] = [
-      { pubkey: VAULT_ADDRESS, isSigner: false, isWritable: true },
-      { pubkey: new PublicKey('2gc9Dm1eB6UgVYFBUN9bWks6Kes9PbWSaPaa9DqyvEiN'), isSigner: false, isWritable: true },
-      { pubkey: new PublicKey('DnpGhhzxN1ZFLuiFvtk3aLKGQ4KsML4DAXAZ5u4mrPd8'), isSigner: false, isWritable: true },
-      { pubkey: new PublicKey('7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'), isSigner: false, isWritable: false },
-      { pubkey: new PublicKey('9DrvZvyWh1HuAoZxvYWMvkf2XCzryCpGgHqrMjyDWpmo'), isSigner: false, isWritable: false },
-      { pubkey: new PublicKey('Gm2itCNPBpBSSrgCA194pmErjwHAFVpvBBFvpdTF5LuJ'), isSigner: false, isWritable: true },
-      { pubkey: new PublicKey('2dQkXr1e9LBvT2QcfKrzZaWY6gGAAVoCjLgkWFk3Mhkj'), isSigner: false, isWritable: true },
-      { pubkey: anchor.utils.token.TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-      { pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY, isSigner: false, isWritable: false },
-      { pubkey: EVENT_AUTHORITY, isSigner: false, isWritable: false },
-      { pubkey: new PublicKey(KAMINO_V2_PROGRAM), isSigner: false, isWritable: false },
-      { pubkey: new PublicKey('2gc9Dm1eB6UgVYFBUN9bWks6Kes9PbWSaPaa9DqyvEiN'), isSigner: false, isWritable: true },
-      { pubkey: new PublicKey('7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF'), isSigner: false, isWritable: false },
-    ];
-
     const withdrawSharesAmount = sharesAfterUnstake.value.amount;
     console.log(`💰 取款 ${sharesAfterUnstake.value.uiAmount} shares`);
+
+    // 使用 SDK Helper 动态获取取款所需的账户
+    console.log("\n⏳ 从 SDK 获取取款账户信息...");
+    const sdkHelper = new KaminoSDKHelper("./phantom-wallet.json");
+    await sdkHelper.initialize();
+    
+    const withdrawInfo = await sdkHelper.getWithdrawInstructionInfo(
+      VAULT_ADDRESS.toBase58(),
+      new Decimal(sharesAfterUnstake.value.uiAmount || 0)
+    );
+    
+    const { vaultAccounts, remainingAccounts } = withdrawInfo;
+    
+    console.log("✅ 获取到取款账户信息");
+    console.log(`� Remaining accounts: ${remainingAccounts.length} 个账户`);
 
     const withdrawTx = await program.methods
       .kaminoWithdraw(new anchor.BN(withdrawSharesAmount))
       .accounts({
         user: wallet.publicKey,
         vaultState: VAULT_ADDRESS,
-        tokenVault: tokenVault,
-        baseVaultAuthority: baseAuthority,
+        tokenVault: vaultAccounts.tokenVault,
+        baseVaultAuthority: vaultAccounts.baseAuthority,
         userTokenAta: PYUSD_ACCOUNT,
-        tokenMint: tokenMint,
-        userSharesAta: sharesAta,
-        sharesMint: sharesMint,
+        tokenMint: vaultAccounts.tokenMint,
+        userSharesAta: vaultAccounts.userSharesAta,
+        sharesMint: vaultAccounts.sharesMint,
         tokenProgram: TOKEN_2022_PROGRAM,
         sharesTokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
         klendProgram: new PublicKey(KLEND_PROGRAM),
@@ -237,7 +236,7 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const pyusdBalanceAfter = await connection.getTokenAccountBalance(PYUSD_ACCOUNT);
-    const sharesBalanceAfter = await connection.getTokenAccountBalance(sharesAta);
+    const sharesBalanceAfter = await connection.getTokenAccountBalance(vaultAccounts.userSharesAta);
 
     console.log("\n" + "=".repeat(60));
     console.log("最终余额");

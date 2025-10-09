@@ -302,51 +302,13 @@ pub fn kamino_withdraw_cpi<'info>(
     ];
 
     // Add remaining_accounts
-    // Withdraw requires more complex account structure, add accounts as returned by SDK
+    // Use account.is_writable to determine permissions (like in deposit)
     msg!("📋 Adding {} remaining accounts", ctx.remaining_accounts.len());
-    for (i, account) in ctx.remaining_accounts.iter().enumerate() {
-        // SDK 返回的账户已经标明了 writable/readonly，我们需要根据索引判断
-        // 基于 SDK 的输出，按照既定模式添加
-        match i {
-            0 => {
-                // Account 13: vault_state (writable, duplicate)
-                account_metas.push(AccountMeta::new(account.key(), false));
-                msg!("  [{}] Vault State (dup): {} (writable)", i, account.key());
-            }
-            1 | 2 => {
-                // Accounts 14-15: reserves (writable)
-                account_metas.push(AccountMeta::new(account.key(), false));
-                msg!("  [{}] Reserve: {} (writable)", i, account.key());
-            }
-            3 | 4 => {
-                // Accounts 16-17: lending markets (readonly)
-                account_metas.push(AccountMeta::new_readonly(account.key(), false));
-                msg!("  [{}] Lending Market: {} (readonly)", i, account.key());
-            }
-            5 | 6 => {
-                // Accounts 18-19: reserve liquidity supplies (writable)
-                account_metas.push(AccountMeta::new(account.key(), false));
-                msg!("  [{}] Reserve Liquidity Supply: {} (writable)", i, account.key());
-            }
-            7 | 8 | 9 | 10 => {
-                // Accounts 20-23: token program, sysvar, event authority, kamino program (readonly)
-                account_metas.push(AccountMeta::new_readonly(account.key(), false));
-                msg!("  [{}] System/Program Account: {} (readonly)", i, account.key());
-            }
-            11 => {
-                // Account 24: reserve (writable, duplicate)
-                account_metas.push(AccountMeta::new(account.key(), false));
-                msg!("  [{}] Reserve (dup): {} (writable)", i, account.key());
-            }
-            12 => {
-                // Account 25: lending market (readonly, duplicate)
-                account_metas.push(AccountMeta::new_readonly(account.key(), false));
-                msg!("  [{}] Lending Market (dup): {} (readonly)", i, account.key());
-            }
-            _ => {
-                msg!("  [{}] Extra Account: {}", i, account.key());
-                account_metas.push(AccountMeta::new_readonly(account.key(), false));
-            }
+    for account in ctx.remaining_accounts.iter() {
+        if account.is_writable {
+            account_metas.push(AccountMeta::new(account.key(), false));
+        } else {
+            account_metas.push(AccountMeta::new_readonly(account.key(), false));
         }
     }
 

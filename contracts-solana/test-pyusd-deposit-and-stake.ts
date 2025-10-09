@@ -3,12 +3,16 @@ import { Program } from "@coral-xyz/anchor";
 import { Mars } from "./target/types/mars";
 import { 
     TOKEN_2022_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    getAssociatedTokenAddressSync,
+    createAssociatedTokenAccountInstruction,
 } from "@solana/spl-token";
 import { 
     Connection, 
     Keypair, 
     PublicKey,
     ComputeBudgetProgram,
+    Transaction,
 } from "@solana/web3.js";
 import * as fs from "fs";
 import Decimal from "decimal.js/decimal";
@@ -34,7 +38,7 @@ async function main() {
   const connection = new Connection(HELIUS_RPC, "confirmed");
 
   // 加载钱包
-  const walletPath = "/Users/joung-un/mars-projects/klend-sdk/examples/phantom-wallet.json";
+  const walletPath = "./phantom-wallet.json";
   const walletData = JSON.parse(fs.readFileSync(walletPath, "utf-8"));
   const wallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
 
@@ -88,6 +92,31 @@ async function main() {
   console.log("\n🚀 调用 Mars 合约的 kamino_deposit_and_stake (存款并自动质押)...\n");
 
   try {
+    // 检查并创建 shares ATA（如果不存在）
+    const sharesAta = vaultAccounts.userSharesAta;
+    const accountInfo = await connection.getAccountInfo(sharesAta);
+    
+    if (!accountInfo) {
+      console.log("⚠️  Shares ATA 不存在，正在创建...");
+      const createAtaIx = createAssociatedTokenAccountInstruction(
+        wallet.publicKey, // payer
+        sharesAta, // ata
+        wallet.publicKey, // owner
+        vaultAccounts.sharesMint, // mint
+        TOKEN_PROGRAM_ID // token program (SPL Token, 不是 Token-2022)
+      );
+      
+      const createAtaTx = new Transaction().add(createAtaIx);
+      const sig = await connection.sendTransaction(createAtaTx, [wallet], {
+        skipPreflight: false,
+        preflightCommitment: "confirmed"
+      });
+      await connection.confirmTransaction(sig, "confirmed");
+      console.log("✅ Shares ATA 创建成功:", sig);
+    } else {
+      console.log("✅ Shares ATA 已存在");
+    }
+
     // 增加 Compute Units 限额到 400,000
     const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({
       units: 400_000
