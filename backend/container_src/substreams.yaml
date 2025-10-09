@@ -68,25 +68,22 @@ modules:
 
 network: solana-mainnet
 
-# PostgreSQL Sink Configuration (required for db_out mode)
-sink:
-  module: db_out
-  type: sf.substreams.sink.sql.v1.Service
-  config:
-    engine: postgres
-    schema: schema.sql
-
-# PostgreSQL Sink Usage with substreams-sink-sql:
+# PostgreSQL Sink Usage with substreams-sink-sql (v4.7.0+):
 # 
-# Setup (first time):
-#   ./substreams-sink-sql setup "$POSTGRES_DSN" substreams.yaml
+# The from-proto method automatically creates tables from protobuf schema:
+#   substreams-sink-sql from-proto \
+#     "$POSTGRES_DSN" \
+#     substreams.yaml \
+#     map_vault_events \
+#     --start-block 372182088 \
+#     --final-blocks-only
 #
-# Run:
-#   ./substreams-sink-sql run "$POSTGRES_DSN" substreams.yaml \
-#     --api-token "$JWT_TOKEN" \
-#     --start-block 372182088
+# This will automatically:
+#   1. Parse the protobuf schema from map_vault_events output
+#   2. Create tables based on the message structure
+#   3. Start streaming and inserting data
 #
-# Expected tables:
+# Expected tables (auto-generated):
 #   - mars_vault_deposits
 #   - mars_vault_withdrawals  
 #   - mars_vault_swaps

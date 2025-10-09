@@ -30,7 +30,10 @@ check_environment() {
         exit 1
     fi
     
+    # 使用 set -a 自动 export 所有变量
+    set -a
     source .env.substreams
+    set +a
     
     # 检查必要的环境变量
     if [ -z "$SUBSTREAMS_ENDPOINT" ]; then
@@ -66,18 +69,27 @@ check_tools() {
         exit 1
     fi
     
-    SUBSTREAMS_VERSION=$(substreams --version 2>&1 | head -n1)
+    SUBSTREAMS_VERSION=$(substreams --version 2>&1 | head -n1 || echo "unknown")
     echo "  substreams: $SUBSTREAMS_VERSION"
     
     if [ "$DEPLOYMENT_TYPE" = "postgres" ]; then
         if ! command -v substreams-sink-sql &> /dev/null; then
             echo -e "${RED}❌ 错误：未安装 substreams-sink-sql${NC}"
-            echo "请先安装 substreams-sink-sql 工具"
+            echo "安装命令:"
+            echo "  cargo install substreams-sink-sql"
             exit 1
         fi
         
-        SINK_VERSION=$(substreams-sink-sql --version 2>&1 | head -n1)
+        SINK_VERSION=$(substreams-sink-sql --version 2>&1 | head -n1 || echo "unknown")
         echo "  substreams-sink-sql: $SINK_VERSION"
+    fi
+    
+    if [ "$DEPLOYMENT_TYPE" = "docker" ]; then
+        if ! command -v docker &> /dev/null; then
+            echo -e "${RED}❌ 错误：未安装 docker${NC}"
+            exit 1
+        fi
+        echo "  docker: $(docker --version)"
     fi
     
     echo -e "${GREEN}✅ 工具检查完成${NC}"
@@ -175,7 +187,7 @@ deploy_postgres() {
     echo "使用 Relational Mappings 自动创建表结构并开始同步..."
     
     # 设置环境变量并启动 sink（后台运行）
-    export SUBSTREAMS_API_TOKEN="$SUBSTREAMS_JWT_TOKEN"
+    export SUBSTREAMS_API_TOKEN="$SUBSTREAMS_API_KEY"
     
     # 启动 sink（后台运行）- 使用 from-proto 方法
     substreams-sink-sql from-proto \
@@ -220,6 +232,21 @@ deploy_docker() {
     echo ""
     echo "🐳 Docker 部署 (PostgreSQL Sink)"
     echo "================================"
+    
+    # 创建启动脚本
+    cat > start-sink.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🚀 Starting Substreams PostgreSQL Sink..."
+
+substreams-sink-sql from-proto \
+    "$SUBSTREAMS_SINK_POSTGRES_DSN" \
+    /app/substreams.yaml \
+    map_vault_events \
+    --start-block "${START_BLOCK:-372182088}" \
+    --final-blocks-only
+EOF
     
     cat > Dockerfile.sink << 'EOF'
 FROM rust:1.75-slim
@@ -269,15 +296,30 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      - substreams-network
+
+networks:
+  substreams-network:
+    driver: bridge
 EOF
     
     echo -e "${GREEN}✅ Docker 配置已创建${NC}"
     echo ""
-    echo "启动 Docker:"
+    echo "文件创建成功:"
+    echo "  - Dockerfile.sink"
+    echo "  - docker-compose.yml"
+    echo "  - start-sink.sh"
+    echo ""
+    echo "构建并启动:"
+    echo "  docker-compose build"
     echo "  docker-compose up -d"
     echo ""
     echo "查看日志:"
-    echo "  docker-compose logs -f"
+    echo "  docker-compose logs -f substreams-sink"
+    echo ""
+    echo "停止服务:"
+    echo "  docker-compose down"
 }
 
 # 创建 systemd 服务
@@ -342,9 +384,6 @@ main() {
         postgres)
             deploy_postgres
             ;;
-        graph)
-            deploy_graph
-            ;;
         docker)
             deploy_docker
             ;;
@@ -354,13 +393,12 @@ main() {
         *)
             echo -e "${RED}❌ 未知的部署类型: $DEPLOYMENT_TYPE${NC}"
             echo ""
-            echo "用法: $0 [postgres|graph|docker|systemd]"
+            echo "用法: $0 [postgres|docker|systemd]"
             echo ""
             echo "部署类型:"
-            echo "  postgres - PostgreSQL Sink"
+            echo "  postgres - PostgreSQL Sink (默认)"
             echo "  docker   - Docker 部署"
             echo "  systemd  - systemd 服务"
-            echo "  cloudflare - Cloudflare Container"
             exit 1
             ;;
     esac

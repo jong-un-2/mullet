@@ -61,19 +61,21 @@ chmod +x /tmp/health_server.sh
 HEALTH_PID=$!
 echo "✅ Health check server started (PID: $HEALTH_PID)"
 
-# 设置认证 token
-if [ -z "$SUBSTREAMS_API_TOKEN" ]; then
-    if [ -n "$SUBSTREAMS_JWT_TOKEN" ]; then
-        export SUBSTREAMS_API_TOKEN="$SUBSTREAMS_JWT_TOKEN"
-    fi
-fi
-
-# 检查是否有认证信息
+# 验证认证信息（已通过 .env.substreams 自动 export）
 if [ -z "$SUBSTREAMS_API_TOKEN" ] && [ -z "$SUBSTREAMS_API_KEY" ]; then
-    echo "⚠️  WARNING: No authentication token found (SUBSTREAMS_API_TOKEN or SUBSTREAMS_API_KEY)"
+    echo "❌ ERROR: No authentication token found"
+    echo "   Required: SUBSTREAMS_API_TOKEN (JWT) or SUBSTREAMS_API_KEY"
+    echo "   Please check /app/.env.substreams configuration"
+    exit 1
 fi
 
-# 设置日志级别为 debug 以获取更多信息
+if [ -n "$SUBSTREAMS_API_TOKEN" ]; then
+    echo "✅ Using SUBSTREAMS_API_TOKEN (JWT) for authentication"
+elif [ -n "$SUBSTREAMS_API_KEY" ]; then
+    echo "✅ Using SUBSTREAMS_API_KEY for authentication"
+fi
+
+# 设置日志级别
 export RUST_LOG="${RUST_LOG:-debug}"
 
 echo ""
@@ -84,30 +86,26 @@ echo "📊 RUST_LOG level: $RUST_LOG"
 echo ""
 
 # 启动 substreams-sink-sql（后台运行，持续模式）
-# 使用 db_out 模式：setup + run（而不是 from-proto 模式）
+# 使用 from-proto 模式：Relational Mappings（自动从 protobuf 创建表）
 # 使用 tee 同时输出到 stdout 和文件，确保 Cloudflare 可以捕获所有日志
-echo "Starting sink with:"
+echo "Starting sink with from-proto method (Relational Mappings):"
 echo "  DSN: ${DSN%%\?*}"
 echo "  Config: substreams.yaml"
-echo "  Sink Module: db_out (configured in substreams.yaml)"
+echo "  Output Module: $OUTPUT_MODULE (map_vault_events)"
 echo "  Start Block: $START_BLOCK"
 echo "  Auth: ${SUBSTREAMS_API_TOKEN:+Token present}${SUBSTREAMS_API_KEY:+API Key present}"
 echo "  Log Level: $RUST_LOG"
-echo ""
-
-# Setup database tables (idempotent - safe to run multiple times)
-echo "📋 Setting up database schema..."
-substreams-sink-sql setup "$DSN" "substreams.yaml" 2>&1 | tee /app/logs/setup.log || {
-    echo "⚠️  Setup failed or tables already exist (this is normal on restart)"
-}
+echo "  Method: from-proto (auto-creates tables from protobuf schema)"
 echo ""
 
 # 使用 stdbuf 确保日志立即刷新到 stdout，不缓冲
-# 使用 run 命令（用于 db_out 模式）而不是 from-proto（用于关系映射模式）
-stdbuf -oL -eL substreams-sink-sql run \
+# 使用 from-proto 方法（Relational Mappings - 推荐方式）
+# 自动从 protobuf 消息结构创建表，无需手动 setup
+stdbuf -oL -eL substreams-sink-sql from-proto \
     "$DSN" \
     "substreams.yaml" \
-    -s "$START_BLOCK" \
+    "$OUTPUT_MODULE" \
+    --start-block "$START_BLOCK" \
     --final-blocks-only \
     2>&1 | stdbuf -oL -eL tee /app/logs/substreams-sink.log &
 
@@ -134,10 +132,11 @@ while true; do
     
     if ! kill -0 $SINK_PID 2>/dev/null; then
         echo "❌ [$(date)] Substreams Sink process died, restarting..."
-        stdbuf -oL -eL substreams-sink-sql run \
+        stdbuf -oL -eL substreams-sink-sql from-proto \
             "$DSN" \
             "substreams.yaml" \
-            -s "$START_BLOCK" \
+            "$OUTPUT_MODULE" \
+            --start-block "$START_BLOCK" \
             --final-blocks-only \
             2>&1 | stdbuf -oL -eL tee -a /app/logs/substreams-sink.log &
         SINK_PID=$!

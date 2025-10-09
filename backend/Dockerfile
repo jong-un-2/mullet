@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /build
 
 # Copy Cargo files for dependency caching
-COPY Cargo.toml Cargo.lock ./
+# Note: Rust source is in container_src/ subdirectory
+COPY container_src/Cargo.toml container_src/Cargo.lock ./
 
 # Create dummy main.rs to build dependencies
 RUN mkdir -p src && \
@@ -31,10 +32,10 @@ RUN mkdir -p src && \
 RUN cargo build --release && \
     rm -rf src
 
-# Copy actual source code
-COPY src ./src
-COPY proto ./proto
-COPY build.rs ./
+# Copy actual source code from container_src
+COPY container_src/src ./src
+COPY container_src/proto ./proto
+COPY container_src/build.rs ./
 
 # Build the WASM module
 RUN rustup target add wasm32-unknown-unknown && \
@@ -56,12 +57,12 @@ RUN apt-get update && apt-get install -y \
     coreutils \
     && rm -rf /var/lib/apt/lists/*
 
-# Install substreams CLI
-RUN curl -L https://github.com/streamingfast/substreams/releases/download/v1.10.0/substreams_linux_x86_64.tar.gz \
+# Install substreams CLI (更新到最新版本)
+RUN curl -L https://github.com/streamingfast/substreams/releases/download/v1.16.6/substreams_linux_x86_64.tar.gz \
     | tar -xzf - -C /usr/local/bin && \
     chmod +x /usr/local/bin/substreams
 
-# Install substreams-sink-sql (supports both PostgreSQL and other SQL databases)
+# Install substreams-sink-sql v4.7.0 (支持 from-proto 方法)
 RUN curl -L https://github.com/streamingfast/substreams-sink-sql/releases/download/v4.7.0/substreams-sink-sql_Linux_x86_64.tar.gz \
     | tar -xzf - -C /usr/local/bin && \
     chmod +x /usr/local/bin/substreams-sink-sql
@@ -71,16 +72,17 @@ WORKDIR /app
 # Copy Substreams package from builder
 COPY --from=builder /build/target/wasm32-unknown-unknown/release/*.wasm ./target/wasm32-unknown-unknown/release/
 
-# Copy Substreams configuration and package
-COPY substreams.yaml ./
-COPY schema.sql ./
-COPY proto/ ./proto/
+# Copy Substreams configuration and package from container_src
+COPY container_src/substreams.yaml ./
+COPY container_src/schema.sql ./
+COPY container_src/proto/ ./proto/
 
 # Copy environment configuration (contains sensitive credentials)
-COPY .env.substreams ./
+# Note: This should be injected at runtime via Cloudflare secrets
+COPY container_src/.env.substreams ./
 
 # Copy container startup script
-COPY start-container.sh ./start-container.sh
+COPY container_src/start-container.sh ./start-container.sh
 RUN chmod +x start-container.sh
 
 # Expose health check port
