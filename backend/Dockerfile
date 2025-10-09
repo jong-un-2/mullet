@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /build
 
 # Copy Cargo files for dependency caching
-# Note: Rust source is in container_src/ subdirectory
-COPY container_src/Cargo.toml container_src/Cargo.lock ./
+# Note: build context is ./container_src when deployed via wrangler
+COPY Cargo.toml Cargo.lock ./
 
 # Create dummy main.rs to build dependencies
 RUN mkdir -p src && \
@@ -32,10 +32,10 @@ RUN mkdir -p src && \
 RUN cargo build --release && \
     rm -rf src
 
-# Copy actual source code from container_src
-COPY container_src/src ./src
-COPY container_src/proto ./proto
-COPY container_src/build.rs ./
+# Copy actual source code
+COPY src ./src
+COPY proto ./proto
+COPY build.rs ./
 
 # Build the WASM module
 RUN rustup target add wasm32-unknown-unknown && \
@@ -57,14 +57,23 @@ RUN apt-get update && apt-get install -y \
     coreutils \
     && rm -rf /var/lib/apt/lists/*
 
-# Install substreams CLI (更新到最新版本)
-RUN curl -L https://github.com/streamingfast/substreams/releases/download/v1.16.6/substreams_linux_x86_64.tar.gz \
-    | tar -xzf - -C /usr/local/bin && \
-    chmod +x /usr/local/bin/substreams
-
-# Install substreams-sink-sql v4.7.0 (支持 from-proto 方法)
-RUN curl -L https://github.com/streamingfast/substreams-sink-sql/releases/download/v4.7.0/substreams-sink-sql_Linux_x86_64.tar.gz \
-    | tar -xzf - -C /usr/local/bin && \
+# Detect architecture and install appropriate binaries
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        SUBSTREAMS_ARCH="arm64"; \
+        SINK_ARCH="arm64"; \
+    else \
+        SUBSTREAMS_ARCH="x86_64"; \
+        SINK_ARCH="x86_64"; \
+    fi && \
+    echo "Installing for architecture: $ARCH (substreams: $SUBSTREAMS_ARCH, sink: $SINK_ARCH)" && \
+    # Install substreams CLI v1.16.6
+    curl -L "https://github.com/streamingfast/substreams/releases/download/v1.16.6/substreams_linux_${SUBSTREAMS_ARCH}.tar.gz" \
+        | tar -xzf - -C /usr/local/bin && \
+    chmod +x /usr/local/bin/substreams && \
+    # Install substreams-sink-sql v4.7.0
+    curl -L "https://github.com/streamingfast/substreams-sink-sql/releases/download/v4.7.0/substreams-sink-sql_Linux_${SINK_ARCH}.tar.gz" \
+        | tar -xzf - -C /usr/local/bin && \
     chmod +x /usr/local/bin/substreams-sink-sql
 
 WORKDIR /app
@@ -72,17 +81,18 @@ WORKDIR /app
 # Copy Substreams package from builder
 COPY --from=builder /build/target/wasm32-unknown-unknown/release/*.wasm ./target/wasm32-unknown-unknown/release/
 
-# Copy Substreams configuration and package from container_src
-COPY container_src/substreams.yaml ./
-COPY container_src/schema.sql ./
-COPY container_src/proto/ ./proto/
+# Copy Substreams configuration and package
+# Note: build context is ./container_src when deployed via wrangler
+COPY substreams.yaml ./
+COPY schema.sql ./
+COPY proto/ ./proto/
 
 # Copy environment configuration (contains sensitive credentials)
 # Note: This should be injected at runtime via Cloudflare secrets
-COPY container_src/.env.substreams ./
+COPY .env.substreams ./
 
 # Copy container startup script
-COPY container_src/start-container.sh ./start-container.sh
+COPY start-container.sh ./start-container.sh
 RUN chmod +x start-container.sh
 
 # Expose health check port
