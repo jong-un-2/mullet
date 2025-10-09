@@ -67,16 +67,36 @@ impl VaultWithdraw<'_> {
         // 2. 提取需要的数据避免借用冲突
         let vault_id = ctx.accounts.vault_state.vault_id;
         let bump = ctx.accounts.vault_state.bump;
+        let withdraw_fee_bps = ctx.accounts.vault_state.fee_config.withdraw_fee_bps;
         
         // 3. 通过 CPI 从 Kamino 赎回
-        let tokens_received = Self::kamino_withdraw_cpi(
+        let tokens_received_from_kamino = Self::kamino_withdraw_cpi(
             &ctx,
             shares_amount,
             vault_id,
             bump,
         )?;
         
-        // 4. 将代币从 Mars Treasury 转给用户
+        // 4. 计算提款费用
+        let withdraw_fee = (tokens_received_from_kamino as u128)
+            .checked_mul(withdraw_fee_bps as u128)
+            .and_then(|v| v.checked_div(10_000))
+            .and_then(|v| u64::try_from(v).ok())
+            .ok_or(CustomError::MathOverflow)?;
+        
+        let net_withdrawal_amount = tokens_received_from_kamino
+            .checked_sub(withdraw_fee)
+            .ok_or(CustomError::MathOverflow)?;
+        
+        msg!(
+            "💰 Withdraw: gross={}, fee={} ({} bps), net={}",
+            tokens_received_from_kamino,
+            withdraw_fee,
+            withdraw_fee_bps,
+            net_withdrawal_amount
+        );
+        
+        // 5. 将代币从 Mars Treasury 转给用户（扣除费用后的净额）
         let seeds = &[
             b"vault-state",
             vault_id.as_ref(),
@@ -93,17 +113,39 @@ impl VaultWithdraw<'_> {
             },
             signer_seeds,
         );
-        token::transfer(transfer_ctx, tokens_received)?;
+        token::transfer(transfer_ctx, net_withdrawal_amount)?;
         
-        // 5. 更新状态
+        // 6. 更新状态和费用
         let vault_state = &mut ctx.accounts.vault_state;
-        vault_state.total_deposits -= tokens_received;
-        vault_state.total_shares -= shares_amount;
+        vault_state.total_deposits = vault_state
+            .total_deposits
+            .checked_sub(tokens_received_from_kamino)
+            .ok_or(CustomError::MathOverflow)?;
+        vault_state.total_shares = vault_state
+            .total_shares
+            .checked_sub(shares_amount)
+            .ok_or(CustomError::MathOverflow)?;
         
-        // 6. 更新用户存款记录
+        // 记录费用（留在 treasury 中）
+        vault_state.unclaimed_withdraw_fee = vault_state
+            .unclaimed_withdraw_fee
+            .checked_add(withdraw_fee)
+            .ok_or(CustomError::MathOverflow)?;
+        vault_state.total_withdraw_fee_collected = vault_state
+            .total_withdraw_fee_collected
+            .checked_add(withdraw_fee)
+            .ok_or(CustomError::MathOverflow)?;
+        
+        // 7. 更新用户存款记录
         let mut updated_deposit = user_deposit.clone();
-        updated_deposit.shares -= shares_amount;
-        updated_deposit.amount -= tokens_received;
+        updated_deposit.shares = updated_deposit
+            .shares
+            .checked_sub(shares_amount)
+            .ok_or(CustomError::MathOverflow)?;
+        updated_deposit.amount = updated_deposit
+            .amount
+            .checked_sub(tokens_received_from_kamino)
+            .ok_or(CustomError::MathOverflow)?;
         
         if updated_deposit.shares == 0 {
             vault_state.remove_user_deposit(&ctx.accounts.user.key());
@@ -115,9 +157,11 @@ impl VaultWithdraw<'_> {
         }
         
         msg!(
-            "Vault withdrawal successful: shares={}, tokens={}",
+            "✅ Vault withdrawal successful: shares={}, gross_tokens={}, fee={}, net_tokens={}",
             shares_amount,
-            tokens_received
+            tokens_received_from_kamino,
+            withdraw_fee,
+            net_withdrawal_amount
         );
         
         Ok(())

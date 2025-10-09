@@ -68,7 +68,7 @@ pub struct KaminoDepositCPI<'info> {
 
 /// Kamino提取CPI调用所需的账户（简化版本 - withdrawFromAvailable）
 #[derive(Accounts)]
-pub struct KaminoWithdrawCPIComplete<'info> {
+pub struct KaminoWithdrawCPI<'info> {
     /// withdrawFromAvailable 部分
     /// 1. user
     #[account(mut)]
@@ -137,11 +137,11 @@ pub struct KaminoWithdrawCPIComplete<'info> {
 /// - reserve_1 (writable)
 /// - lending_market_1 (readonly)
 /// - ...
-pub fn kamino_deposit_cpi_complete<'info>(
+pub fn kamino_deposit_cpi<'info>(
     ctx: Context<'_, '_, '_, 'info, KaminoDepositCPI<'info>>,
     max_amount: u64,
 ) -> Result<()> {
-    msg!("🚀 开始Kamino存款CPI调用，金额: {}", max_amount);
+    msg!("🚀 Starting Kamino deposit CPI call, amount: {}", max_amount);
 
     // 验证Kamino程序ID
     require_eq!(
@@ -180,11 +180,11 @@ pub fn kamino_deposit_cpi_complete<'info>(
         AccountMeta::new_readonly(ctx.accounts.kamino_vault_program.key(), false),
     ];
 
-    // 添加 remaining_accounts (reserves + lending markets)
-    // 格式: [reserve (writable), lending_market (readonly), ...]
-    msg!("📋 添加 {} 个 remaining accounts", ctx.remaining_accounts.len());
+    // Add remaining_accounts (reserves + lending markets)
+    // Format: [reserve (writable), lending_market (readonly), ...]
+    msg!("📋 Adding {} remaining accounts", ctx.remaining_accounts.len());
     for (i, account) in ctx.remaining_accounts.iter().enumerate() {
-        // 偶数索引是 reserves (writable)，奇数索引是 lending markets (readonly)
+        // Even indices are reserves (writable), odd indices are lending markets (readonly)
         let is_writable = i % 2 == 0;
         if is_writable {
             account_metas.push(AccountMeta::new(account.key(), false));
@@ -238,7 +238,7 @@ pub fn kamino_deposit_cpi_complete<'info>(
         &account_infos,
     )?;
 
-    msg!("✅ Kamino存款CPI调用成功");
+    msg!("✅ Kamino deposit CPI call successful");
     Ok(())
 }
 
@@ -258,11 +258,11 @@ pub fn kamino_deposit_cpi_complete<'info>(
 /// - kamino_vault_program (readonly)
 /// - reserve_0 (writable, duplicate)
 /// - lending_market_0 (readonly, duplicate)
-pub fn kamino_withdraw_cpi_complete<'info>(
-    ctx: Context<'_, '_, '_, 'info, KaminoWithdrawCPIComplete<'info>>,
+pub fn kamino_withdraw_cpi<'info>(
+    ctx: Context<'_, '_, '_, 'info, KaminoWithdrawCPI<'info>>,
     max_amount: u64,
 ) -> Result<()> {
-    msg!("🚀 开始Kamino提取CPI调用，最大金额: {}", max_amount);
+    msg!("🚀 Starting Kamino withdraw CPI call, max amount: {}", max_amount);
 
     // 验证Kamino程序ID
     require_eq!(
@@ -301,9 +301,9 @@ pub fn kamino_withdraw_cpi_complete<'info>(
         AccountMeta::new_readonly(ctx.accounts.kamino_vault_program.key(), false),
     ];
 
-    // 添加 remaining_accounts
-    // Withdraw 需要更复杂的账户结构，直接按照 SDK 返回的账户添加
-    msg!("📋 添加 {} 个 remaining accounts", ctx.remaining_accounts.len());
+    // Add remaining_accounts
+    // Withdraw requires more complex account structure, add accounts as returned by SDK
+    msg!("📋 Adding {} remaining accounts", ctx.remaining_accounts.len());
     for (i, account) in ctx.remaining_accounts.iter().enumerate() {
         // SDK 返回的账户已经标明了 writable/readonly，我们需要根据索引判断
         // 基于 SDK 的输出，按照既定模式添加
@@ -389,7 +389,7 @@ pub fn kamino_withdraw_cpi_complete<'info>(
         &account_infos,
     )?;
 
-    msg!("✅ Kamino提取CPI调用成功");
+    msg!("✅ Kamino withdraw CPI call successful");
     Ok(())
 }
 

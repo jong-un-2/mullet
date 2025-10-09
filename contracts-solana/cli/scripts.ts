@@ -9,13 +9,8 @@ import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import { Mars } from "../target/types/mars";
 import {
   acceptAuthorityTx,
-  addOrchestratorTx,
   changeAdminTx,
   createInitializeTx,
-  removeBridgeLiquidityTx,
-  removeOrchestratorTx,
-  // createOrderTx,
-  // fillOrderTx,
   updateGlobalStateParamsTx,
   setTargetChainMinFeeTx,
   setFeeTiersTx,
@@ -185,127 +180,7 @@ export const setTargetChainMinFee = async (
   await execTx(tx, solConnection, payer);
 };
 
-/**
- * Admin can add new orchestrators to the program
- * @param orchestrator - public key of the new orchestrator to be added
- */
-export const addOrchestrator = async (orchestrator: PublicKey) => {
-  const tx = await addOrchestratorTx(payer.publicKey, orchestrator, program);
 
-  tx.recentBlockhash = (await solConnection.getLatestBlockhash()).blockhash;
-
-  await execTx(tx, solConnection, payer);
-};
-
-/**
- * Admin can remove orchestrators from the program
- * @param orchestrator - public key of the orchestrator to be removed
- */
-export const removeOrchestrator = async (orchestrator: PublicKey) => {
-  const tx = await removeOrchestratorTx(payer.publicKey, orchestrator, program);
-
-  tx.recentBlockhash = (await solConnection.getLatestBlockhash()).blockhash;
-
-  await execTx(tx, solConnection, payer);
-};
-
-/**
- * Orchestrator can remove bridge liquidity to the vault
- * @param amount - amount of USDC to be added
- */
-export const removeBridgeLiquidity = async (amount: number) => {
-  const tx = await removeBridgeLiquidityTx(payer.publicKey, amount, program);
-
-  tx.recentBlockhash = (await solConnection.getLatestBlockhash()).blockhash;
-
-  await execTx(tx, solConnection, payer);
-};
-
-
-/**
- * User can deposit any type of the token
- * @param tokenIn - address of the source token
- * @param amount - amount of token to be swaped to USDC and deposited
- */
-export const createOrder = async (
-  user: string,
-  amount: number,
-  seed: string,
-  orderHash: string,
-  receiver: string,
-  srcChainId: number,
-  destChainId: number,
-  tokenIn: string,
-  fee: number,
-  minAmountOut: number,
-  tokenOut: string
-) => {
-  const userKp = Keypair.fromSecretKey(
-    Uint8Array.from(JSON.parse(fs.readFileSync(user, "utf-8"))),
-    { skipValidation: true }
-  );
-  const userWallet = new NodeWallet(userKp);
-
-  //  here user is fee-payer
-  //  payer is orchestrator
-  // const tx = await createOrderTx(
-  //   userKp.publicKey,
-  //   payer.publicKey,
-  //   amount,
-  //   seed,
-  //   orderHash,
-  //   receiver,
-  //   srcChainId,
-  //   destChainId,
-  //   tokenIn,
-  //   fee,
-  //   minAmountOut,
-  //   tokenOut,
-  //   program
-  // );
-
-  // tx.recentBlockhash = (await solConnection.getLatestBlockhash()).blockhash;
-  // await execTx(tx, solConnection, userWallet);
-};
-
-/**
- * User can withdraw to any type of the token
- * orchestrator signs transaction as well and sends the token to user wallet
- * @param user -  path to user Keypair file, should be changed to Wallet on frontend
- * @param tokenOut - addres of the output token
- * @param amount - amount of USDC to be withdrawed
- */
-export const fillOrder = async (
-  amount: number,
-  seed: string,
-  orderHash: string,
-  trader: string,
-  receiver: PublicKey,
-  srcChainId: number,
-  destChainId: number,
-  tokenIn: string,
-  tokenOut: PublicKey,
-  fee: number,
-  minAmountOut: number
-) => {
-  // const tx = await fillOrderTx(
-  //   payer.publicKey,
-  //   amount,
-  //   seed,
-  //   orderHash,
-  //   trader,
-  //   receiver,
-  //   srcChainId,
-  //   destChainId,
-  //   tokenIn,
-  //   tokenOut,
-  //   fee,
-  //   minAmountOut,
-  //   program
-  // );
-  // tx.recentBlockhash = (await solConnection.getLatestBlockhash()).blockhash;
-  // await execTx(tx, solConnection, payer);
-};
 
 export const getJitoTip = async () => {
   //  get last transactions of all tip accounts
@@ -366,4 +241,193 @@ export const getJitoTip = async () => {
   }
 
   return process.env.JITO_FEE;
+};
+
+/**
+ * Claim vault fees by type
+ * @param vaultIdHex - vault id in hex format (32 bytes)
+ * @param amount - amount to claim
+ * @param feeType - fee type: deposit, withdraw, management, performance
+ */
+export const claimFees = async (
+  vaultIdHex: string,
+  amount: number,
+  feeType: string
+) => {
+  try {
+    // Convert hex vault_id to bytes
+    const vaultIdBytes = Buffer.from(vaultIdHex, "hex");
+    if (vaultIdBytes.length !== 32) {
+      throw new Error("vault_id must be 32 bytes");
+    }
+
+    // Derive vault state PDA
+    const [vaultStatePDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault-state"), vaultIdBytes],
+      program.programId
+    );
+
+    // Derive vault treasury PDA
+    const [vaultTreasuryPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault-treasury"), vaultIdBytes],
+      program.programId
+    );
+
+    // Get vault state to get base token mint
+    const vaultState = await program.account.vaultState.fetch(vaultStatePDA);
+
+    // Get or create admin token account
+    const adminTokenAccount = await anchor.utils.token.associatedAddress({
+      mint: vaultState.baseTokenMint,
+      owner: payer.publicKey,
+    });
+
+    // Map fee type string to enum
+    const feeTypeMap = {
+      deposit: { deposit: {} },
+      withdraw: { withdraw: {} },
+      management: { management: {} },
+      performance: { performance: {} },
+    };
+
+    const feeTypeEnum = feeTypeMap[feeType.toLowerCase()];
+    if (!feeTypeEnum) {
+      throw new Error(
+        "Invalid fee type. Must be: deposit, withdraw, management, or performance"
+      );
+    }
+
+    console.log("\n💰 Claiming Vault Fees:");
+    console.log("  Vault ID:", vaultIdHex);
+    console.log("  Vault State:", vaultStatePDA.toBase58());
+    console.log("  Amount:", amount);
+    console.log("  Fee Type:", feeType);
+    console.log("  Admin:", payer.publicKey.toBase58());
+
+    const tx = await program.methods
+      .claimFees(new anchor.BN(amount), feeTypeEnum)
+      .accountsStrict({
+        admin: payer.publicKey,
+        vaultState: vaultStatePDA,
+        vaultTreasury: vaultTreasuryPDA,
+        adminTokenAccount: adminTokenAccount,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    console.log("\n✅ Fees claimed successfully!");
+    console.log("Transaction:", tx);
+
+    // Fetch updated vault state
+    const updatedVaultState = await program.account.vaultState.fetch(
+      vaultStatePDA
+    );
+    console.log("\n📊 Updated Fee Balances:");
+    console.log(
+      "  Unclaimed Deposit Fee:",
+      updatedVaultState.unclaimedDepositFee.toString()
+    );
+    console.log(
+      "  Unclaimed Withdraw Fee:",
+      updatedVaultState.unclaimedWithdrawFee.toString()
+    );
+    console.log(
+      "  Unclaimed Management Fee:",
+      updatedVaultState.unclaimedManagementFee.toString()
+    );
+    console.log(
+      "  Unclaimed Performance Fee:",
+      updatedVaultState.unclaimedPerformanceFee.toString()
+    );
+  } catch (error) {
+    console.error("Error claiming vault fees:", error);
+    throw error;
+  }
+};
+
+/**
+ * Claim all vault fees at once
+ * @param vaultIdHex - vault id in hex format (32 bytes)
+ */
+export const claimAllFees = async (vaultIdHex: string) => {
+  try {
+    // Convert hex vault_id to bytes
+    const vaultIdBytes = Buffer.from(vaultIdHex, "hex");
+    if (vaultIdBytes.length !== 32) {
+      throw new Error("vault_id must be 32 bytes");
+    }
+
+    // Derive vault state PDA
+    const [vaultStatePDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault-state"), vaultIdBytes],
+      program.programId
+    );
+
+    // Derive vault treasury PDA
+    const [vaultTreasuryPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault-treasury"), vaultIdBytes],
+      program.programId
+    );
+
+    // Get vault state
+    const vaultState = await program.account.vaultState.fetch(vaultStatePDA);
+
+    // Get or create admin token account
+    const adminTokenAccount = await anchor.utils.token.associatedAddress({
+      mint: vaultState.baseTokenMint,
+      owner: payer.publicKey,
+    });
+
+    console.log("\n💰 Claiming All Vault Fees:");
+    console.log("  Vault ID:", vaultIdHex);
+    console.log("  Vault State:", vaultStatePDA.toBase58());
+    console.log("  Admin:", payer.publicKey.toBase58());
+    console.log("\n📊 Current Fee Balances:");
+    console.log(
+      "  Unclaimed Deposit Fee:",
+      vaultState.unclaimedDepositFee.toString()
+    );
+    console.log(
+      "  Unclaimed Withdraw Fee:",
+      vaultState.unclaimedWithdrawFee.toString()
+    );
+    console.log(
+      "  Unclaimed Management Fee:",
+      vaultState.unclaimedManagementFee.toString()
+    );
+    console.log(
+      "  Unclaimed Performance Fee:",
+      vaultState.unclaimedPerformanceFee.toString()
+    );
+
+    const totalFees = vaultState.unclaimedDepositFee
+      .add(vaultState.unclaimedWithdrawFee)
+      .add(vaultState.unclaimedManagementFee)
+      .add(vaultState.unclaimedPerformanceFee);
+
+    console.log("  Total Fees:", totalFees.toString());
+
+    if (totalFees.isZero()) {
+      console.log("\n⚠️  No fees to claim");
+      return;
+    }
+
+    const tx = await program.methods
+      .claimAllFees()
+      .accounts({
+        admin: payer.publicKey,
+        vaultState: vaultStatePDA,
+        vaultTreasury: vaultTreasuryPDA,
+        adminTokenAccount: adminTokenAccount,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    console.log("\n✅ All fees claimed successfully!");
+    console.log("Transaction:", tx);
+    console.log("Total amount claimed:", totalFees.toString());
+  } catch (error) {
+    console.error("Error claiming all vault fees:", error);
+    throw error;
+  }
 };

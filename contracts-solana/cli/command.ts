@@ -2,15 +2,10 @@ import { program } from "commander";
 import { PublicKey } from "@solana/web3.js";
 import {
   acceptAuthority,
-  addOrchestrator,
   changeAdmin,
   getJitoTip,
   initProject,
-  removeBridgeLiquidity,
-  removeOrchestrator,
   setClusterConfig,
-  createOrder,
-  fillOrder,
   updateGlobalStateParams,
   setTargetChainMinFee,
   setFeeTiers,
@@ -152,275 +147,6 @@ programCommand("set-target-chain-min-fee")
     await setTargetChainMinFee(dest_chain_id, min_fee);
   });
 
-programCommand("add-orchestrator")
-  .option("-o, --orchestrator <string>", "orchestrator address to be added")
-  .action(async (directory, cmd) => {
-    const { env, keypair, rpc, orchestrator } = cmd.opts();
-
-    console.log("Solana Cluster:", env);
-    console.log("Keypair Path:", keypair);
-    console.log("RPC URL:", rpc);
-    await setClusterConfig(env, keypair, rpc);
-
-    if (orchestrator === undefined) {
-      console.log("Error orchestrator address");
-      return;
-    }
-
-    //  add a new orchestrator
-    await addOrchestrator(orchestrator);
-  });
-
-programCommand("remove-orchestrator")
-  .option("-o, --orchestrator <string>", "orchestrator address to be removed")
-  .action(async (directory, cmd) => {
-    const { env, keypair, rpc, orchestrator } = cmd.opts();
-
-    console.log("Solana Cluster:", env);
-    console.log("Keypair Path:", keypair);
-    console.log("RPC URL:", rpc);
-    await setClusterConfig(env, keypair, rpc);
-
-    if (orchestrator === undefined) {
-      console.log("Error orchestrator address");
-      return;
-    }
-
-    //  add a new orchestrator
-    await removeOrchestrator(orchestrator);
-  });
-
-programCommand("remove-bridge-liquidity")
-  .option(
-    "-a, --amount <number>",
-    "amount of stable coin to be removed to liquidity"
-  )
-  .action(async (directory, cmd) => {
-    const { env, keypair, rpc, amount } = cmd.opts();
-
-    console.log("Solana Cluster:", env);
-    console.log("Keypair Path:", keypair);
-    console.log("RPC URL:", rpc);
-    await setClusterConfig(env, keypair, rpc);
-
-    if (amount === undefined || amount < 0) {
-      console.log("Error stable coin amount");
-      return;
-    }
-
-    await removeBridgeLiquidity(amount);
-  });
-
-programCommand("create-order")
-  .option("-u, --user <string>", "user that deposit the token")
-  .option("-a, --amount <number>", "amount of token to be deposited")
-  .option("-s, --seed <string>", "seed of order")
-  .option("-oh, --order_hash <string>", "hash of order")
-  .option("-rcv, --receiver <string>", "trader dest chain public key")
-  .option("-sid, --src_chain_id <number>", "source chain id")
-  .option("-did, --dest_chain_id <number>", "destination chain id")
-  .option("-ti, --token_in <string>", "source token address")
-  .option("-f, --fee <number>", "order fee")
-  .option("-m, --min_amount_out <number>", "min amount out")
-  .option("-to, --token_out <string>", "token out")
-  .action(async (directory, cmd) => {
-    const {
-      env,
-      keypair,
-      rpc,
-      user,
-      amount,
-      seed,
-      order_hash,
-      receiver,
-      src_chain_id,
-      dest_chain_id,
-      token_in,
-      fee,
-      min_amount_out,
-      token_out,
-    } = cmd.opts();
-
-    console.log("User:", user);
-    console.log("Amount:", amount);
-    console.log("Solana Cluster:", env);
-    console.log("Keypair Path:", keypair);
-    console.log("RPC URL:", rpc);
-    console.log("Seed:", seed);
-    console.log("Order hash:", order_hash);
-    console.log("Trader Destination Chain Public Key:", receiver);
-    console.log("Source Chain ID:", src_chain_id);
-    console.log("Destination Chain ID:", dest_chain_id);
-    console.log("Token in:", token_in);
-    console.log("Fee:", fee);
-    console.log("Min amount out:", min_amount_out);
-    console.log("Token out:", token_out);
-    await setClusterConfig(env, keypair, rpc);
-
-    if (user === undefined) {
-      console.log("Error user address");
-      return;
-    }
-    if (token_in === undefined) {
-      console.log("Error token_in address");
-      return;
-    }
-    if (token_out === undefined) {
-      console.log("Error token_out address");
-      return;
-    }
-    if (amount === undefined || amount < 0) {
-      console.log("Error stable coin amount");
-      return;
-    }
-    if (seed === undefined) {
-      console.log("Error seed");
-      return;
-    }
-    if (order_hash === undefined) {
-      console.log("Error order hash");
-      return;
-    }
-    if (receiver === undefined) {
-      console.log("Error trader destination chain public key");
-      return;
-    }
-    if (src_chain_id === undefined) {
-      console.log("Error source chain id");
-      return;
-    }
-    if (dest_chain_id === undefined) {
-      console.log("Error destination chain id");
-      return;
-    }
-    if (fee === undefined) {
-      console.log("Error fee");
-      return;
-    }
-    if (min_amount_out === undefined) {
-      console.log("Error min_amount_out");
-      return;
-    }
-
-    await createOrder(
-      user,
-      amount,
-      seed,
-      order_hash,
-      receiver,
-      src_chain_id,
-      dest_chain_id,
-      token_in,
-      fee,
-      min_amount_out,
-      token_out
-    );
-  });
-
-programCommand("fill-order")
-  .option("-a, --amount <number>", "amount of token to be deposited")
-  .option("-s, --seed <string>", "seed of order")
-  .option("-oh, --order_hash <string>", "hash of order")
-  .option("-tr, --trader <string>", "trader source chain public key")
-  .option("-rcv, --receiver <string>", "trader dest chain public key")
-  .option("-sid, --src_chain_id <number>", "source chain id")
-  .option("-did, --dest_chain_id <number>", "destination chain id")
-  .option("-ti, --token_in <string>", "source token address")
-  .option("-f, --fee <number>", "order fee")
-  .option("-m, --min_amount_out <number>", "min amount out")
-  .option("-to, --token_out <string>", "token out")
-  .action(async (directory, cmd) => {
-    const {
-      env,
-      keypair,
-      rpc,
-      amount,
-      seed,
-      order_hash,
-      trader,
-      receiver,
-      src_chain_id,
-      dest_chain_id,
-      token_in,
-      fee,
-      min_amount_out,
-      token_out,
-    } = cmd.opts();
-
-    console.log("Solana Cluster:", env);
-    console.log("Keypair Path:", keypair);
-    console.log("RPC URL:", rpc);
-    console.log("Seed:", seed);
-    console.log("Trader Source Chain Public Key:", trader);
-    console.log("Trader Destination Chain Public Key:", receiver);
-    console.log("Source Chain ID:", src_chain_id);
-    console.log("Destination Chain ID:", dest_chain_id);
-    console.log("Token in:", token_in);
-    console.log("Fee:", fee);
-    console.log("Min amount out:", min_amount_out);
-    console.log("Token out:", token_out);
-    await setClusterConfig(env, keypair, rpc);
-
-    if (token_in === undefined) {
-      console.log("Error token_in address");
-      return;
-    }
-    if (token_out === undefined) {
-      console.log("Error token_out address");
-      return;
-    }
-    if (amount === undefined || amount < 0) {
-      console.log("Error stable coin amount");
-      return;
-    }
-    if (seed === undefined) {
-      console.log("Error seed");
-      return;
-    }
-    if (order_hash === undefined) {
-      console.log("Error order hash");
-      return;
-    }
-    if (trader === undefined) {
-      console.log("Error trader source chain public key");
-      return;
-    }
-    if (receiver === undefined) {
-      console.log("Error trader destination chain public key");
-      return;
-    }
-    if (src_chain_id === undefined) {
-      console.log("Error source chain id");
-      return;
-    }
-    if (dest_chain_id === undefined) {
-      console.log("Error destination chain id");
-      return;
-    }
-    if (fee === undefined) {
-      console.log("Error fee");
-      return;
-    }
-    if (min_amount_out === undefined) {
-      console.log("Error min_amount_out");
-      return;
-    }
-
-    await fillOrder(
-      amount,
-      seed,
-      order_hash,
-      trader,
-      new PublicKey(receiver),
-      src_chain_id,
-      dest_chain_id,
-      token_in,
-      new PublicKey(token_out),
-      fee,
-      min_amount_out
-    );
-  });
-
 programCommand("get-jito-tip").action(async (directory, cmd) => {
   const { env, keypair, rpc } = cmd.opts();
 
@@ -431,6 +157,46 @@ programCommand("get-jito-tip").action(async (directory, cmd) => {
 
   await getJitoTip();
 });
+
+programCommand("claim-fees")
+  .option("-v, --vault_id <string>", "vault id (32 bytes hex)")
+  .option("-a, --amount <number>", "amount to claim (in token units)")
+  .option("-t, --fee_type <string>", "fee type: deposit, withdraw, management, performance")
+  .action(async (directory, cmd) => {
+    const { env, keypair, rpc, vault_id, amount, fee_type } = cmd.opts();
+
+    console.log("Solana Cluster:", env);
+    console.log("Keypair Path:", keypair);
+    console.log("RPC URL:", rpc);
+    await setClusterConfig(env, keypair, rpc);
+
+    if (!vault_id || !amount || !fee_type) {
+      console.log("Error: vault_id, amount, and fee_type are required");
+      return;
+    }
+
+    const { claimFees } = await import("./scripts");
+    await claimFees(vault_id, parseFloat(amount), fee_type);
+  });
+
+programCommand("claim-all-fees")
+  .option("-v, --vault_id <string>", "vault id (32 bytes hex)")
+  .action(async (directory, cmd) => {
+    const { env, keypair, rpc, vault_id } = cmd.opts();
+
+    console.log("Solana Cluster:", env);
+    console.log("Keypair Path:", keypair);
+    console.log("RPC URL:", rpc);
+    await setClusterConfig(env, keypair, rpc);
+
+    if (!vault_id) {
+      console.log("Error: vault_id is required");
+      return;
+    }
+
+    const { claimAllFees } = await import("./scripts");
+    await claimAllFees(vault_id);
+  });
 
 function programCommand(name: string) {
   return program

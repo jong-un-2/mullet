@@ -191,6 +191,12 @@ pub enum CustomError {
 
     #[msg("Orchestrator is not authorized to perform this action")]
     InvalidOrchestratorPermission,
+
+    #[msg("Math operation overflow")]
+    MathOverflow,
+
+    #[msg("Only admin can perform this action")]
+    OnlyAdmin,
 }
 
 pub type MarsError = CustomError;

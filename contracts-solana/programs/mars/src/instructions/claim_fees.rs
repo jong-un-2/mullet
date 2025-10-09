@@ -1,122 +1,177 @@
 use crate::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
-};
+use crate::error::CustomError;
+use anchor_spl::token::{Token, TokenAccount, Transfer};
 
 #[derive(Accounts)]
 pub struct ClaimFees<'info> {
-    //  need to check eligible withdraw
+    /// 管理员（必须是 vault 的 admin）
     #[account(mut)]
-    pub orchestrator: Signer<'info>,
-
-    //  Global state
-    #[account(
-        seeds = [GLOBAL_SEED],
-        bump,
-        constraint = global_state.frozen == false @MarsError::GlobalStateFrozen
-    )]
-    pub global_state: Box<Account<'info, GlobalState>>,
-
-    //  Asset
+    pub admin: Signer<'info>,
+    
+    /// Mars Vault 状态账户
     #[account(
         mut,
-        seeds = [ASSET_SEED],
-        bump,
+        seeds = [b"vault-state", vault_state.vault_id.as_ref()],
+        bump = vault_state.bump,
+        constraint = vault_state.admin == admin.key() @ CustomError::OnlyAdmin
     )]
-    pub asset: Box<Account<'info, Asset>>,
-
-    //  Stores orchestrator info
+    pub vault_state: Account<'info, VaultState>,
+    
+    /// Mars Vault 的代币金库（费用存储处）
     #[account(
-        seeds = [orchestrator.key().as_ref(), ORCHESTRATOR_SEED],
-        bump,
-        constraint = orchestrator_state.authorized == true @MarsError::IllegalOrchestrator,
+        mut,
+        seeds = [b"vault-treasury", vault_state.vault_id.as_ref()],
+        bump
     )]
-    pub orchestrator_state: Box<Account<'info, OrchestratorState>>,
-
-    //  Needed to check vault authority
-    #[account(	
-        seeds = [VAULT_SEED],	
-        bump,	
-    )]
-    /// CHECK: This is not dangerous because we don't read or write from this account
-    pub vault: AccountInfo<'info>,
-
-    //  USDC ata of vault
-    #[account(
-        mut, 
-        associated_token::mint = usdc_mint,
-        
-        //  Authority is set to vault
-        associated_token::authority = vault,
-    )]
-    pub ata_vault: Box<Account<'info, TokenAccount>>,
-
-    //  USDC token account of the orchestrator
-    #[account(
-        init_if_needed,
-        payer = orchestrator,
-        associated_token::mint = usdc_mint,
-        associated_token::authority = orchestrator,
-    )]
-    pub ata_orchestrator: Box<Account<'info, TokenAccount>>,
-
-    // The mint of $USDC because it's needed from above ⬆ token::mint = ...
-    #[account(
-        address = global_state.base_mint,
-    )]
-    pub usdc_mint: Box<Account<'info, Mint>>,
-
+    pub vault_treasury: Account<'info, TokenAccount>,
+    
+    /// 管理员的代币账户（接收费用）
+    #[account(mut)]
+    pub admin_token_account: Account<'info, TokenAccount>,
+    
     pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
 }
 
 impl ClaimFees<'_> {
-    pub fn process_instruction(ctx: Context<Self>, amount: u64, fee_type: FeeType) -> Result<()> {
-        //  check orchestrator is eligible
-        let orchestrator_state = &ctx.accounts.orchestrator_state;
-
-        let asset = &mut ctx.accounts.asset;
-
+    pub fn process_instruction(
+        ctx: Context<Self>,
+        amount: u64,
+        fee_type: FeeType,
+    ) -> Result<()> {
+        let vault_state = &mut ctx.accounts.vault_state;
+        
+        // 验证并更新对应的费用
         match fee_type {
-            FeeType::Base => {
-                require!((orchestrator_state.claim_base_fee_permission == true), MarsError::InvalidOrchestratorPermission);
-                require!(asset.unclaimed_base_fee >= amount, MarsError::InvalidAmount);
-                asset.unclaimed_base_fee -= amount;
+            FeeType::Deposit => {
+                require!(
+                    vault_state.unclaimed_deposit_fee >= amount,
+                    MarsError::InvalidAmount
+                );
+                vault_state.unclaimed_deposit_fee = vault_state
+                    .unclaimed_deposit_fee
+                    .checked_sub(amount)
+                    .ok_or(MarsError::InvalidAmount)?;
+                msg!("💳 Claiming deposit fee: {}", amount);
             }
-            FeeType::Lp => {
-                require!((orchestrator_state.claim_lp_fee_permission == true), MarsError::InvalidOrchestratorPermission);
-                require!(asset.unclaimed_lp_fee >= amount, MarsError::InvalidAmount);
-                asset.unclaimed_lp_fee -= amount;
+            FeeType::Withdraw => {
+                require!(
+                    vault_state.unclaimed_withdraw_fee >= amount,
+                    MarsError::InvalidAmount
+                );
+                vault_state.unclaimed_withdraw_fee = vault_state
+                    .unclaimed_withdraw_fee
+                    .checked_sub(amount)
+                    .ok_or(MarsError::InvalidAmount)?;
+                msg!("💳 Claiming withdraw fee: {}", amount);
             }
-            FeeType::Protocol => {
-                require!((orchestrator_state.claim_protocol_fee_permission == true), MarsError::InvalidOrchestratorPermission);
-                require!(asset.unclaimed_protocol_fee >= amount, MarsError::InvalidAmount);
-                asset.unclaimed_protocol_fee -= amount;
+            FeeType::Management => {
+                require!(
+                    vault_state.unclaimed_management_fee >= amount,
+                    MarsError::InvalidAmount
+                );
+                vault_state.unclaimed_management_fee = vault_state
+                    .unclaimed_management_fee
+                    .checked_sub(amount)
+                    .ok_or(MarsError::InvalidAmount)?;
+                msg!("💳 Claiming management fee: {}", amount);
             }
-
+            FeeType::Performance => {
+                require!(
+                    vault_state.unclaimed_performance_fee >= amount,
+                    MarsError::InvalidAmount
+                );
+                vault_state.unclaimed_performance_fee = vault_state
+                    .unclaimed_performance_fee
+                    .checked_sub(amount)
+                    .ok_or(MarsError::InvalidAmount)?;
+                msg!("💳 Claiming performance fee: {}", amount);
+            }
         }
-
+        
+        // 从 vault treasury 转账到管理员账户
+        let vault_id = vault_state.vault_id;
+        let bump = vault_state.bump;
+        let seeds = &[
+            b"vault-state".as_ref(),
+            vault_id.as_ref(),
+            &[bump],
+        ];
+        let signer_seeds = &[&seeds[..]];
+        
+        let transfer_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.vault_treasury.to_account_info(),
+                to: ctx.accounts.admin_token_account.to_account_info(),
+                authority: ctx.accounts.vault_state.to_account_info(),
+            },
+            signer_seeds,
+        );
+        anchor_spl::token::transfer(transfer_ctx, amount)?;
+        
         msg!(
-            "ClaimedFee: {{\
-            \"orchestrator_address\":\"{:?}\",\
-            \"amount\":\"{:?}\",\
-            \"fee_type\":\"{:?}\"\
-            }}",
-            ctx.accounts.orchestrator.key(),
+            "✅ ClaimedFee: admin={}, amount={}, fee_type={:?}",
+            ctx.accounts.admin.key(),
             amount,
             fee_type
         );
-
-        // Transfer USDC from vault to orchestrator
-        token_transfer_with_signer(
-            ctx.accounts.ata_vault.to_account_info().clone(),
-            ctx.accounts.vault.to_account_info().clone(),
-            ctx.accounts.ata_orchestrator.to_account_info().clone(),
-            ctx.accounts.token_program.to_account_info().clone(),
-            &[&[VAULT_SEED, &[ctx.bumps.vault]]],
-            amount,
-        )
+        
+        Ok(())
+    }
+    
+    /// 提取所有未认领的费用
+    pub fn claim_all_fees(ctx: Context<Self>) -> Result<()> {
+        let vault_state = &ctx.accounts.vault_state;
+        
+        let total_unclaimed = vault_state
+            .unclaimed_deposit_fee
+            .checked_add(vault_state.unclaimed_withdraw_fee)
+            .and_then(|v| v.checked_add(vault_state.unclaimed_management_fee))
+            .and_then(|v| v.checked_add(vault_state.unclaimed_performance_fee))
+            .ok_or(MarsError::InvalidAmount)?;
+        
+        require!(total_unclaimed > 0, MarsError::InvalidAmount);
+        
+        msg!("💰 Claiming all fees: total={}", total_unclaimed);
+        msg!("  - Deposit: {}", vault_state.unclaimed_deposit_fee);
+        msg!("  - Withdraw: {}", vault_state.unclaimed_withdraw_fee);
+        msg!("  - Management: {}", vault_state.unclaimed_management_fee);
+        msg!("  - Performance: {}", vault_state.unclaimed_performance_fee);
+        
+        // 转账总金额
+        let vault_id = vault_state.vault_id;
+        let bump = vault_state.bump;
+        let seeds = &[
+            b"vault-state".as_ref(),
+            vault_id.as_ref(),
+            &[bump],
+        ];
+        let signer_seeds = &[&seeds[..]];
+        
+        let transfer_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.vault_treasury.to_account_info(),
+                to: ctx.accounts.admin_token_account.to_account_info(),
+                authority: ctx.accounts.vault_state.to_account_info(),
+            },
+            signer_seeds,
+        );
+        anchor_spl::token::transfer(transfer_ctx, total_unclaimed)?;
+        
+        // 清零所有未认领费用
+        let vault_state = &mut ctx.accounts.vault_state;
+        vault_state.unclaimed_deposit_fee = 0;
+        vault_state.unclaimed_withdraw_fee = 0;
+        vault_state.unclaimed_management_fee = 0;
+        vault_state.unclaimed_performance_fee = 0;
+        
+        msg!(
+            "✅ Claimed all fees: admin={}, total_amount={}",
+            ctx.accounts.admin.key(),
+            total_unclaimed
+        );
+        
+        Ok(())
     }
 }

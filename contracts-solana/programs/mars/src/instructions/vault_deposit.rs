@@ -65,7 +65,28 @@ impl VaultDeposit<'_> {
         ctx: Context<Self>,
         amount: u64,
     ) -> Result<()> {
-        // 1. 将用户代币转入 Mars Vault Treasury
+        // 1. 计算存款费用
+        let vault_state = &ctx.accounts.vault_state;
+        let deposit_fee_bps = vault_state.fee_config.deposit_fee_bps;
+        let deposit_fee = (amount as u128)
+            .checked_mul(deposit_fee_bps as u128)
+            .and_then(|v| v.checked_div(10_000))
+            .and_then(|v| u64::try_from(v).ok())
+            .ok_or(CustomError::MathOverflow)?;
+        
+        let net_deposit_amount = amount
+            .checked_sub(deposit_fee)
+            .ok_or(CustomError::MathOverflow)?;
+        
+        msg!(
+            "💰 Deposit: total={}, fee={} ({} bps), net={}",
+            amount,
+            deposit_fee,
+            deposit_fee_bps,
+            net_deposit_amount
+        );
+        
+        // 2. 将用户代币转入 Mars Vault Treasury
         let transfer_ctx = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
@@ -76,28 +97,38 @@ impl VaultDeposit<'_> {
         );
         token::transfer(transfer_ctx, amount)?;
         
-        // 2. 提取需要的数据避免借用冲突
+        // 3. 提取需要的数据避免借用冲突
         let vault_id = ctx.accounts.vault_state.vault_id;
         let bump = ctx.accounts.vault_state.bump;
         
-        // 3. 通过 CPI 调用 Kamino 存款
+        // 4. 通过 CPI 调用 Kamino 存款（使用净金额）
         let kamino_deposit_result = Self::kamino_deposit_cpi(
             &ctx,
-            amount,
+            net_deposit_amount,
             vault_id,
             bump,
         )?;
         
-        // 4. 更新 Mars Vault 状态
+        // 5. 更新 Mars Vault 状态和费用
         let vault_state = &mut ctx.accounts.vault_state;
-        vault_state.total_deposits += amount;
+        vault_state.total_deposits += net_deposit_amount;
         vault_state.total_shares += kamino_deposit_result.shares_received;
         
-        // 5. 记录用户存款
+        // 记录费用
+        vault_state.unclaimed_deposit_fee = vault_state
+            .unclaimed_deposit_fee
+            .checked_add(deposit_fee)
+            .ok_or(CustomError::MathOverflow)?;
+        vault_state.total_deposit_fee_collected = vault_state
+            .total_deposit_fee_collected
+            .checked_add(deposit_fee)
+            .ok_or(CustomError::MathOverflow)?;
+        
+        // 6. 记录用户存款（净金额）
         vault_state.insert_user_deposit(
             ctx.accounts.user.key(),
             UserDeposit {
-                amount,
+                amount: net_deposit_amount,
                 shares: kamino_deposit_result.shares_received,
                 timestamp: Clock::get()?.unix_timestamp,
                 last_action_time: Clock::get()?.unix_timestamp,
@@ -106,8 +137,10 @@ impl VaultDeposit<'_> {
         );
         
         msg!(
-            "Vault deposit successful: amount={}, shares={}",
+            "✅ Vault deposit successful: amount={}, fee={}, net={}, shares={}",
             amount,
+            deposit_fee,
+            net_deposit_amount,
             kamino_deposit_result.shares_received
         );
         

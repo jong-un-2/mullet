@@ -115,7 +115,7 @@ solana-keygen pubkey user.json
 
 - **2025-10-01 21:45**: ✅ 成功部署 Mars V3 到主网！程序ID: AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
   - 🎉 **新特性**: 支持 Kamino Vault remaining_accounts
-  - 修改 kamino_deposit_cpi_complete 支持动态 remaining_accounts
+  - 修改 kamino_deposit_cpi 支持动态 remaining_accounts
   - 可传入 vault reserves 和对应的 lending markets
   - 重命名 KaminoDepositCPIComplete → KaminoDepositCPI
   - 关闭旧程序 BFw4j...，回收租金 3.52 SOL

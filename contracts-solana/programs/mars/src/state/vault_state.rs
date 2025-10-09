@@ -56,8 +56,26 @@ pub struct VaultState {
     /// PDA bump
     pub bump: u8,
     
+    /// 已收集但未认领的存款费用
+    pub unclaimed_deposit_fee: u64,
+    
+    /// 已收集但未认领的提款费用
+    pub unclaimed_withdraw_fee: u64,
+    
+    /// 已收集但未认领的管理费用
+    pub unclaimed_management_fee: u64,
+    
+    /// 已收集但未认领的性能费用
+    pub unclaimed_performance_fee: u64,
+    
+    /// 总费用收集统计
+    pub total_deposit_fee_collected: u64,
+    pub total_withdraw_fee_collected: u64,
+    pub total_management_fee_collected: u64,
+    pub total_performance_fee_collected: u64,
+    
     /// 保留字段用于未来扩展
-    pub reserved: [u8; 128],
+    pub reserved: [u8; 64],
 }
 
 impl VaultState {
@@ -84,7 +102,15 @@ impl VaultState {
         2 + // platform_fee_bps
         2 + // max_slippage_bps
         1 + // bump
-        128 // reserved
+        8 + // unclaimed_deposit_fee
+        8 + // unclaimed_withdraw_fee
+        8 + // unclaimed_management_fee
+        8 + // unclaimed_performance_fee
+        8 + // total_deposit_fee_collected
+        8 + // total_withdraw_fee_collected
+        8 + // total_management_fee_collected
+        8 + // total_performance_fee_collected
+        64 // reserved
     }
     
     /// 更新再平衡记录

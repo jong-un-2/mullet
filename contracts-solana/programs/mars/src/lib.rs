@@ -204,9 +204,14 @@ pub mod mars {
         RemoveBridgeLiquidity::process_instruction(ctx, amount)
     }
 
-    // orchestrator can claim fee
+    /// 管理员提取 Vault 累积的费用（按类型）
     pub fn claim_fees(ctx: Context<ClaimFees>, amount: u64, fee_type: FeeType) -> Result<()> {
         ClaimFees::process_instruction(ctx, amount, fee_type)
+    }
+    
+    /// 管理员提取 Vault 所有累积的费用
+    pub fn claim_all_fees(ctx: Context<ClaimFees>) -> Result<()> {
+        ClaimFees::claim_all_fees(ctx)
     }
 
     // 已移除 create_order 指令以优化合约大小
@@ -248,15 +253,15 @@ pub mod mars {
         ctx: Context<'_, '_, '_, 'info, KaminoDepositCPI<'info>>,
         max_amount: u64,
     ) -> Result<()> {
-        kamino_deposit_cpi_complete(ctx, max_amount)
+        kamino_deposit_cpi(ctx, max_amount)
     }
 
     // Kamino CPI调用: 从Kamino Vault提取（完整实现，匹配Kamino IDL）
     pub fn kamino_withdraw<'info>(
-        ctx: Context<'_, '_, '_, 'info, KaminoWithdrawCPIComplete<'info>>,
+        ctx: Context<'_, '_, '_, 'info, KaminoWithdrawCPI<'info>>,
         max_amount: u64,
     ) -> Result<()> {
-        kamino_withdraw_cpi_complete(ctx, max_amount)
+        kamino_withdraw_cpi(ctx, max_amount)
     }
 
     // Kamino Farm质押: 将vault shares质押到farm赚取奖励
@@ -290,4 +295,6 @@ pub mod mars {
     ) -> Result<()> {
         handler_kamino_deposit_and_stake(ctx, max_amount)
     }
+
+
 }

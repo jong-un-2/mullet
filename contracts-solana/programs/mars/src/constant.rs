@@ -31,7 +31,8 @@ pub const WRAPPED_SOL_MINT: &str = "So11111111111111111111111111111111111111112"
 #[repr(u8)]
 pub enum FeeType {
     #[default]
-    Base = 0,
-    Lp = 1,
-    Protocol = 2,
+    Deposit = 0,
+    Withdraw = 1,
+    Management = 2,
+    Performance = 3,
 }
