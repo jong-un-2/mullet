@@ -36,10 +36,33 @@ export const useMarsContract = () => {
       publicKey = new PublicKey(privyWallet.address);
       // Use Privy's signTransaction + connection.sendRawTransaction
       sendTransaction = async (transaction: any, conn: any) => {
-        // Sign the transaction
-        const signedResult = await privyWallet.signTransaction(transaction);
+        console.log('🔵 [Privy sendTransaction] 开始使用 Privy 签名...');
+        
+        // Transaction should already have blockhash from marsContract
+        // Just ensure feePayer is set
+        if (!transaction.feePayer) {
+          transaction.feePayer = publicKey;
+        }
+        
+        console.log('🔵 [Privy sendTransaction] 序列化交易...');
+        // Serialize the transaction to bytes
+        const serializedTx = transaction.serialize({
+          requireAllSignatures: false,
+          verifySignatures: false,
+        });
+        
+        console.log('🔵 [Privy sendTransaction] 调用 Privy signTransaction...');
+        // Sign the serialized transaction bytes
+        const signedResult = await privyWallet.signTransaction(serializedTx);
+        
+        console.log('🔵 [Privy sendTransaction] 发送已签名交易...');
         // Send the signed transaction (signedResult.signedTransaction is a Uint8Array)
-        const signature = await conn.sendRawTransaction(signedResult.signedTransaction);
+        const signature = await conn.sendRawTransaction(signedResult.signedTransaction, {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+        });
+        
+        console.log('🔵 [Privy sendTransaction] 交易已发送:', signature);
         return signature;
       };
     } catch (error) {

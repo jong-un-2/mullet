@@ -126,8 +126,9 @@ export async function createDepositAndStakeTransaction(
   transaction.add(depositInstruction);
 
   // 设置最近的 blockhash
-  const { blockhash } = await connection.getLatestBlockhash();
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
   transaction.recentBlockhash = blockhash;
+  transaction.lastValidBlockHeight = lastValidBlockHeight;
   transaction.feePayer = userPublicKey;
 
   console.log('✅ 存款交易构建完成');
@@ -212,8 +213,8 @@ export async function createUnstakeAndWithdrawTransactions(
 
   const transactions: Transaction[] = [];
 
-  // 获取最新的 blockhash
-  const { blockhash } = await connection.getLatestBlockhash();
+  // 获取最新的 blockhash（所有交易共享）
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
   // === 交易 1: Start Unstake ===
   const tx1 = new Transaction();
@@ -226,6 +227,7 @@ export async function createUnstakeAndWithdrawTransactions(
     )
   );
   tx1.recentBlockhash = blockhash;
+  tx1.lastValidBlockHeight = lastValidBlockHeight;
   tx1.feePayer = userPublicKey;
   transactions.push(tx1);
 
@@ -240,6 +242,7 @@ export async function createUnstakeAndWithdrawTransactions(
     )
   );
   tx2.recentBlockhash = blockhash;
+  tx2.lastValidBlockHeight = lastValidBlockHeight;
   tx2.feePayer = userPublicKey;
   transactions.push(tx2);
 
@@ -258,6 +261,7 @@ export async function createUnstakeAndWithdrawTransactions(
     )
   );
   tx3.recentBlockhash = blockhash;
+  tx3.lastValidBlockHeight = lastValidBlockHeight;
   tx3.feePayer = userPublicKey;
   transactions.push(tx3);
 
