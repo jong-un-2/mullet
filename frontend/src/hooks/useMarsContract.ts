@@ -5,6 +5,8 @@
 
 import { useState, useCallback } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useWallets } from '@privy-io/react-auth/solana';
+import { PublicKey } from '@solana/web3.js';
 import {
   createDepositAndStakeTransaction,
   createUnstakeAndWithdrawTransactions,
@@ -20,7 +22,30 @@ export interface TransactionStatus {
 
 export const useMarsContract = () => {
   const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
+  const walletAdapter = useWallet();
+  const { wallets: privyWallets } = useWallets();
+  
+  // Try to get publicKey from either source
+  let publicKey = walletAdapter.publicKey;
+  let sendTransaction = walletAdapter.sendTransaction;
+  
+  // If wallet adapter doesn't have publicKey, try Privy
+  if (!publicKey && privyWallets.length > 0) {
+    const privyWallet = privyWallets[0];
+    try {
+      publicKey = new PublicKey(privyWallet.address);
+      // Use Privy's signTransaction + connection.sendRawTransaction
+      sendTransaction = async (transaction: any, conn: any) => {
+        // Sign the transaction
+        const signedResult = await privyWallet.signTransaction(transaction);
+        // Send the signed transaction (signedResult.signedTransaction is a Uint8Array)
+        const signature = await conn.sendRawTransaction(signedResult.signedTransaction);
+        return signature;
+      };
+    } catch (error) {
+      console.error('Failed to get publicKey from Privy wallet:', error);
+    }
+  }
   
   const [status, setStatus] = useState<TransactionStatus['status']>('idle');
   const [currentSignature, setCurrentSignature] = useState<string | undefined>();

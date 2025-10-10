@@ -238,7 +238,14 @@ const XFundPage = () => {
       const amount = parseFloat(depositAmount);
       console.log('💰 开始调用 marsContract.deposit, 金额:', amount);
       
-      const signature = await marsContract.deposit(amount);
+      // 添加超时处理 (60秒)
+      const DEPOSIT_TIMEOUT = 60000; // 60 seconds
+      const depositPromise = marsContract.deposit(amount);
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Transaction timeout after 60 seconds')), DEPOSIT_TIMEOUT)
+      );
+      
+      const signature = await Promise.race([depositPromise, timeoutPromise]);
       
       console.log('✅ marsContract.deposit 返回结果:', signature);
       
@@ -317,10 +324,17 @@ const XFundPage = () => {
       setCurrentTxStep(0);
       setProgressMessage('Starting withdrawal process...');
       
-      const signatures = await marsContract.withdraw(amount, (step, txName) => {
+      // 添加超时处理 (120秒，因为有3笔交易)
+      const WITHDRAW_TIMEOUT = 120000; // 120 seconds
+      const withdrawPromise = marsContract.withdraw(amount, (step, txName) => {
         setCurrentTxStep(step);
         setProgressMessage(`Processing: ${txName}...`);
       });
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Withdrawal timeout after 120 seconds')), WITHDRAW_TIMEOUT)
+      );
+      
+      const signatures = await Promise.race([withdrawPromise, timeoutPromise]);
       
       if (signatures && signatures.length > 0) {
         console.log('✅ 取款成功! 完成了 3 笔交易');
