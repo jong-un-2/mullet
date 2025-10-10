@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { useWallets } from '@privy-io/react-auth/solana';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import {
   createDepositAndStakeTransaction,
   createUnstakeAndWithdrawTransactions,
@@ -37,6 +37,7 @@ export const useMarsContract = () => {
       // Use Privy's signTransaction + connection.sendRawTransaction
       sendTransaction = async (transaction: any, conn: any) => {
         console.log('🔵 [Privy sendTransaction] 开始使用 Privy 签名...');
+        console.log('🔵 [Privy sendTransaction] Transaction type:', transaction.constructor.name);
         
         // Transaction should already have blockhash from marsContract
         // Just ensure feePayer is set
@@ -44,19 +45,22 @@ export const useMarsContract = () => {
           transaction.feePayer = publicKey;
         }
         
+        console.log('🔵 [Privy sendTransaction] 转换为 VersionedTransaction...');
+        // Convert legacy Transaction to VersionedTransaction
+        const message = TransactionMessage.decompile(transaction.compileMessage());
+        const versionedTx = new VersionedTransaction(message.compileToV0Message());
+        
         console.log('🔵 [Privy sendTransaction] 序列化交易...');
-        // Serialize the transaction to bytes
-        const serializedTx = transaction.serialize({
-          requireAllSignatures: false,
-          verifySignatures: false,
-        });
+        // Serialize to bytes - Privy expects { transaction: Uint8Array }
+        const serializedTx = versionedTx.serialize();
         
         console.log('🔵 [Privy sendTransaction] 调用 Privy signTransaction...');
-        // Sign the serialized transaction bytes
-        const signedResult = await privyWallet.signTransaction(serializedTx);
+        const signedResult = await privyWallet.signTransaction({ transaction: serializedTx });
         
+        console.log('🔵 [Privy sendTransaction] 签名成功！');
         console.log('🔵 [Privy sendTransaction] 发送已签名交易...');
-        // Send the signed transaction (signedResult.signedTransaction is a Uint8Array)
+        
+        // signedResult.signedTransaction is already a Uint8Array
         const signature = await conn.sendRawTransaction(signedResult.signedTransaction, {
           skipPreflight: false,
           preflightCommitment: 'confirmed',

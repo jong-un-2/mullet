@@ -215,9 +215,13 @@ export class KaminoSDKHelper {
       this.getStakeInstructionInfo(vaultAddress, amountDecimal),
     ]);
 
+    // 统计实际账户数量
+    const vaultAccountsCount = Object.keys(depositInfo.vaultAccounts).length;
+    const farmAccountsCount = Object.keys(farmAccounts).filter(key => farmAccounts[key as keyof FarmAccounts] !== undefined).length;
+
     console.log('✅ 成功获取所有账户信息');
-    console.log(`  - Vault accounts: 6 个`);
-    console.log(`  - Farm accounts: 4 个`);
+    console.log(`  - Vault accounts: ${vaultAccountsCount} 个`);
+    console.log(`  - Farm accounts: ${farmAccountsCount} 个`);
     console.log(`  - Remaining accounts: ${depositInfo.remainingAccounts.length} 个`);
 
     return {
@@ -360,9 +364,13 @@ export class KaminoSDKHelper {
       this.getUnstakeInstructionInfo(vaultAddress, amountDecimal),
     ]);
 
+    // 统计实际账户数量
+    const vaultAccountsCount = Object.keys(withdrawInfo.vaultAccounts).length;
+    const farmAccountsCount = Object.keys(farmAccounts).filter(key => farmAccounts[key as keyof FarmAccounts] !== undefined).length;
+
     console.log('✅ 成功获取所有取款账户信息');
-    console.log(`  - Vault accounts: 6 个`);
-    console.log(`  - Farm accounts: 5 个`);
+    console.log(`  - Vault accounts: ${vaultAccountsCount} 个`);
+    console.log(`  - Farm accounts: ${farmAccountsCount} 个`);
     console.log(`  - Remaining accounts: ${withdrawInfo.remainingAccounts.length} 个`);
 
     return {
