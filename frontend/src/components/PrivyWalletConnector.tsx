@@ -3,7 +3,6 @@ import { Box, Button, Typography, Paper, Stack } from '@mui/material';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import PrivySolanaDemo from './PrivySolanaDemo';
 
 const PrivyWalletConnector: React.FC = () => {
   const { login, logout, authenticated, user } = usePrivy();
@@ -93,9 +92,6 @@ const PrivyWalletConnector: React.FC = () => {
             )}
           </Box>
         </Stack>
-        
-        {/* Privy Solana Demo */}
-        <PrivySolanaDemo />
       </Paper>
     </Box>
   );
