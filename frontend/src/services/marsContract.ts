@@ -197,22 +197,8 @@ export async function createUnstakeAndWithdrawTransactions(
   const sdkHelper = new KaminoSDKHelper(rpcUrl, userPublicKey);
   await sdkHelper.initialize();
 
-  // 从 SDK 获取账户信息
-  const withdrawInfo = await sdkHelper.getWithdrawAndUnstakeInfo(
-    PYUSD_VAULT,
-    sharesAmount
-  );
-
-  // 注意: getWithdrawAndUnstakeInfo 返回 DepositAndStakeInfo 类型
-  // deposit 字段实际包含 withdraw 账户信息
-  const { vaultAccounts, remainingAccounts } = withdrawInfo.deposit;
-  const { farmAccounts } = withdrawInfo.stake;
-
   // 转换金额为 lamports (6 decimals for shares)
   const amountLamports = Math.floor(sharesAmount * 1_000_000);
-
-  // 获取当前 slot（用于 start_unstake）
-  const currentSlot = await connection.getSlot();
 
   // 获取最新的 blockhash
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
@@ -220,33 +206,78 @@ export async function createUnstakeAndWithdrawTransactions(
   // 获取用户 PYUSD 账户
   const userPyusdAccount = await getUserPyusdAccount(userPublicKey);
 
-  // === 创建一个批量交易，包含所有3个指令 ===
+  // 尝试获取账户信息（可能没有 farm 质押）
+  let needUnstake = true;
+  let farmAccounts: any = null;
+  let withdrawInfo: any;
+
+  try {
+    // 从 SDK 获取完整的账户信息（包含 unstake）
+    withdrawInfo = await sdkHelper.getWithdrawAndUnstakeInfo(
+      PYUSD_VAULT,
+      sharesAmount
+    );
+    farmAccounts = withdrawInfo.stake.farmAccounts;
+    console.log('✅ 检测到 Farm 质押，需要执行 unstake');
+  } catch (error: any) {
+    if (error.message?.includes('没有找到取消质押指令') || error.message?.includes('没有找到 WithdrawUnstakedDeposits')) {
+      console.log('⚠️  没有 Farm 质押，跳过 unstake 步骤');
+      needUnstake = false;
+      
+      // 只获取 withdraw 账户信息
+      const withdrawOnlyInfo = await sdkHelper.getWithdrawInstructionInfo(
+        PYUSD_VAULT,
+        new (await import('decimal.js')).default(sharesAmount)
+      );
+      withdrawInfo = { deposit: withdrawOnlyInfo };
+    } else {
+      throw error;
+    }
+  }
+
+  const { vaultAccounts, remainingAccounts } = withdrawInfo.deposit;
+
+  // === 创建批量交易 ===
   const batchTx = new Transaction();
   
-  // 设置更高的 compute units（3个指令需要更多）
-  batchTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 }));
+  if (needUnstake && farmAccounts) {
+    // 需要 unstake：3 个指令
+    console.log('📦 构建完整批量交易（Start Unstake + Unstake + Withdraw）');
+    
+    // 设置更高的 compute units
+    batchTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 }));
+    
+    // 获取当前 slot
+    const currentSlot = await connection.getSlot();
+    
+    // 1. Start Unstake 指令
+    batchTx.add(
+      createStartUnstakeInstruction(
+        userPublicKey,
+        farmAccounts,
+        amountLamports,
+        currentSlot
+      )
+    );
+    
+    // 2. Unstake 指令
+    batchTx.add(
+      createUnstakeInstruction(
+        userPublicKey,
+        farmAccounts,
+        vaultAccounts.userSharesAta,
+        amountLamports
+      )
+    );
+  } else {
+    // 不需要 unstake：只有 1 个指令
+    console.log('📦 构建简化批量交易（只有 Withdraw）');
+    
+    // 设置较低的 compute units
+    batchTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
+  }
   
-  // 1. Start Unstake 指令
-  batchTx.add(
-    createStartUnstakeInstruction(
-      userPublicKey,
-      farmAccounts,
-      amountLamports,
-      currentSlot
-    )
-  );
-  
-  // 2. Unstake 指令（需要 userSharesAta）
-  batchTx.add(
-    createUnstakeInstruction(
-      userPublicKey,
-      farmAccounts,
-      vaultAccounts.userSharesAta,
-      amountLamports
-    )
-  );
-  
-  // 3. Withdraw 指令
+  // 3. Withdraw 指令（总是需要）
   batchTx.add(
     createWithdrawInstruction(
       userPublicKey,
@@ -262,7 +293,8 @@ export async function createUnstakeAndWithdrawTransactions(
   batchTx.lastValidBlockHeight = lastValidBlockHeight;
   batchTx.feePayer = userPublicKey;
 
-  console.log('✅ 批量取款交易构建完成（3个指令）');
+  const instructionCount = needUnstake ? 3 : 1;
+  console.log(`✅ 批量取款交易构建完成（${instructionCount} 个指令）`);
   return [batchTx];
 }
 
