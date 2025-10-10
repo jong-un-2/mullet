@@ -596,9 +596,14 @@ const XFundPage = () => {
               </Typography>
             </Box>
             <Typography variant="body1" sx={{ mb: 1, color: '#94a3b8' }}>
-              Earn automated yield from curated lending vaults.{' '}
+              Better for Borrowers, Simpler for Lenders - now with $2m+ in incentives and a bunch of new assets. 
+              This is just the beginning though, we need your feedback to improve:{' '}
               <Button 
                 variant="text" 
+                component="a"
+                href="https://feedback.marsliquidity.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 sx={{ 
                   textDecoration: 'underline', 
                   fontSize: '0.875rem',
@@ -611,7 +616,7 @@ const XFundPage = () => {
                   }
                 }}
               >
-                How it works
+                feedback.marsliquidity.com
               </Button>
             </Typography>
           </Box>
