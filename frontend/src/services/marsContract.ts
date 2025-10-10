@@ -83,6 +83,22 @@ export async function createDepositAndStakeTransaction(
 
   const { vaultAccounts, remainingAccounts } = depositAndStakeInfo.deposit;
   const { farmAccounts } = depositAndStakeInfo.stake;
+  const { setupInstructions } = depositAndStakeInfo;
+
+  // 🔍 调试信息
+  console.log('📋 从 Kamino SDK 获取的账户信息：');
+  console.log(`  - userFarm: ${farmAccounts.userFarm.toString()}`);
+  console.log(`  - farmState: ${farmAccounts.farmState.toString()}`);
+  console.log(`  - delegatedStake: ${farmAccounts.delegatedStake.toString()}`);
+  console.log(`  - farmsProgram: ${farmAccounts.farmsProgram.toString()}`);
+  console.log(`  - setup 指令数量: ${setupInstructions?.length || 0}`);
+  
+  if (setupInstructions && setupInstructions.length > 0) {
+    console.log('🔍 Setup 指令详情：');
+    setupInstructions.forEach((ix: any, i: number) => {
+      console.log(`  [${i}] Program: ${ix.programAddress}, Data length: ${ix.data?.length || 0}, Accounts: ${ix.accounts?.length || 0}`);
+    });
+  }
 
   // 获取用户的 PYUSD ATA
   const userPyusdAccount = await getUserPyusdAccount(userPublicKey);
@@ -99,8 +115,8 @@ export async function createDepositAndStakeTransaction(
   );
 
   // 2. 检查并创建 Shares ATA（如果需要）
-  const accountInfo = await connection.getAccountInfo(vaultAccounts.userSharesAta);
-  if (!accountInfo) {
+  const sharesAtaInfo = await connection.getAccountInfo(vaultAccounts.userSharesAta);
+  if (!sharesAtaInfo) {
     console.log('⚠️ Shares ATA 不存在，创建中...');
     const createAtaIx = createAssociatedTokenAccountInstruction(
       userPublicKey,
@@ -110,6 +126,44 @@ export async function createDepositAndStakeTransaction(
       TOKEN_PROGRAM_ID
     );
     transaction.add(createAtaIx);
+  }
+
+  // 2.5 🔥 检查 userFarm 账户是否存在，如果不存在则自动创建
+  const userFarmInfo = await connection.getAccountInfo(farmAccounts.userFarm);
+  if (!userFarmInfo) {
+    console.log('⚠️ userFarm 账户不存在，准备自动初始化...');
+    
+    // 🔥 如果 SDK 返回了 setup 指令，添加它们
+    if (setupInstructions && setupInstructions.length > 0) {
+      console.log(`✅ 找到 ${setupInstructions.length} 个 Farm 初始化指令`);
+      for (let i = 0; i < setupInstructions.length; i++) {
+        const setupIx = setupInstructions[i];
+        console.log(`  [${i + 1}/${setupInstructions.length}] 添加初始化指令: ${setupIx.programAddress}`);
+        
+        // 将 Kamino SDK 的指令转换为 Solana TransactionInstruction
+        const ix = new TransactionInstruction({
+          programId: new PublicKey(setupIx.programAddress),
+          keys: setupIx.accounts.map((acc: any) => ({
+            pubkey: new PublicKey(acc.address),
+            isSigner: acc.role === 2 || acc.role === 3, // 2=signer, 3=signer+writable
+            isWritable: acc.role === 1 || acc.role === 3, // 1=writable, 3=signer+writable
+          })),
+          data: Buffer.from(setupIx.data),
+        });
+        transaction.add(ix);
+      }
+      console.log('✅ userFarm 初始化指令已添加到交易中');
+    } else {
+      // 🚨 SDK 没有返回 setup 指令
+      console.log('⚠️ Kamino SDK 没有返回初始化指令');
+      console.log('💡 Kamino Farms 可能支持 init_if_needed，继续构建交易...');
+      console.log('💡 如果交易失败，可能需要先单独初始化 userFarm 账户');
+      
+      // 不抛出错误，让交易尝试执行
+      // Kamino Farms 程序可能会自动初始化账户（通过 init_if_needed）
+    }
+  } else {
+    console.log('✅ userFarm 账户已存在，无需初始化');
   }
 
   // 3. 创建 kamino_deposit_and_stake 指令

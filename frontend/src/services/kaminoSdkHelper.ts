@@ -158,7 +158,7 @@ export class KaminoSDKHelper {
   async getStakeInstructionInfo(
     vaultAddress: PublicKey,
     depositAmount: Decimal
-  ): Promise<FarmAccounts> {
+  ): Promise<{ farmAccounts: FarmAccounts; setupInstructions: any[]; allDepositIxs: any }> {
     this.ensureInitialized();
 
     const user = {
@@ -171,12 +171,27 @@ export class KaminoSDKHelper {
     // 获取存款指令（包含 stake 指令）
     const depositIxs = await this.manager!.depositToVaultIxs(user, vault, depositAmount);
 
+    // 🔍 调试：打印所有指令类型
+    console.log('📋 Kamino SDK 返回的指令结构：');
+    console.log(`  - depositIxs: ${depositIxs.depositIxs.length} 个`);
+    console.log(`  - stakeInFarmIfNeededIxs: ${depositIxs.stakeInFarmIfNeededIxs.length} 个`);
+    
     if (depositIxs.stakeInFarmIfNeededIxs.length === 0) {
       throw new Error('没有找到质押指令');
     }
 
+    // 🔥 获取所有质押相关指令
+    // 如果有多个指令，第一个可能是 userFarm 初始化，最后一个是实际的 stake
+    const allStakeIxs = depositIxs.stakeInFarmIfNeededIxs;
+    
+    // 分离 setup 指令和主要 stake 指令
+    const setupInstructions = allStakeIxs.length > 1 ? allStakeIxs.slice(0, -1) : [];
+    
+    console.log(`📋 Setup 指令（userFarm 初始化等）: ${setupInstructions.length} 个`);
+    console.log(`📋 Stake 主指令: 1 个`);
+    
     // 通常最后一个是主要的质押指令
-    const mainStakeIx = depositIxs.stakeInFarmIfNeededIxs[depositIxs.stakeInFarmIfNeededIxs.length - 1];
+    const mainStakeIx = allStakeIxs[allStakeIxs.length - 1];
 
     if (!mainStakeIx || !mainStakeIx.accounts) {
       throw new Error('质押指令没有账户信息');
@@ -195,7 +210,11 @@ export class KaminoSDKHelper {
       delegatedStake: new PublicKey(accounts[3]!.address),
     };
 
-    return farmAccounts;
+    return { 
+      farmAccounts, 
+      setupInstructions,
+      allDepositIxs: depositIxs  // 返回完整的指令对象供调试
+    };
   }
 
   /**
@@ -204,31 +223,34 @@ export class KaminoSDKHelper {
   async getDepositAndStakeInfo(
     vaultAddress: PublicKey,
     depositAmount: number
-  ): Promise<DepositAndStakeInfo> {
+  ): Promise<DepositAndStakeInfo & { setupInstructions: any[]; allDepositIxs: any }> {
     this.ensureInitialized();
 
     const amountDecimal = new Decimal(depositAmount);
 
     console.log('📡 从 Kamino SDK 获取存款账户...');
-    const [depositInfo, farmAccounts] = await Promise.all([
+    const [depositInfo, stakeInfo] = await Promise.all([
       this.getDepositInstructionInfo(vaultAddress, amountDecimal),
       this.getStakeInstructionInfo(vaultAddress, amountDecimal),
     ]);
 
     // 统计实际账户数量
     const vaultAccountsCount = Object.keys(depositInfo.vaultAccounts).length;
-    const farmAccountsCount = Object.keys(farmAccounts).filter(key => farmAccounts[key as keyof FarmAccounts] !== undefined).length;
+    const farmAccountsCount = Object.keys(stakeInfo.farmAccounts).filter(key => stakeInfo.farmAccounts[key as keyof FarmAccounts] !== undefined).length;
 
     console.log('✅ 成功获取所有账户信息');
     console.log(`  - Vault accounts: ${vaultAccountsCount} 个`);
     console.log(`  - Farm accounts: ${farmAccountsCount} 个`);
+    console.log(`  - Setup instructions: ${stakeInfo.setupInstructions.length} 个`);
     console.log(`  - Remaining accounts: ${depositInfo.remainingAccounts.length} 个`);
 
     return {
       deposit: depositInfo,
       stake: {
-        farmAccounts,
+        farmAccounts: stakeInfo.farmAccounts,
       },
+      setupInstructions: stakeInfo.setupInstructions,
+      allDepositIxs: stakeInfo.allDepositIxs,
     };
   }
 
