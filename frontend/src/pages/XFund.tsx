@@ -71,6 +71,7 @@ const XFundPage = () => {
   const [progressMessage, setProgressMessage] = useState('');
   const [currentTxStep, setCurrentTxStep] = useState(0);
   const [totalTxSteps, setTotalTxSteps] = useState(0);
+  const [txSignature, setTxSignature] = useState<string | undefined>();
 
   // Calendar helper functions
   const getMonthName = (monthNum: string) => {
@@ -254,7 +255,8 @@ const XFundPage = () => {
         console.log(`🔗 Solscan: https://solscan.io/tx/${signature}`);
         
         // 更新为成功状态
-        setProgressMessage(`Transaction confirmed! View on Solscan: ${signature.slice(0, 8)}...`);
+        setTxSignature(signature);
+        setProgressMessage(`Transaction confirmed! Click below to view on Solscan`);
         
         // 清空表单
         setDepositAmount('');
@@ -262,6 +264,7 @@ const XFundPage = () => {
         // 6秒后隐藏进度提示
         setTimeout(() => {
           setShowProgress(false);
+          setTxSignature(undefined);
         }, 6000);
       }
     } catch (error) {
@@ -344,7 +347,8 @@ const XFundPage = () => {
         
         // 更新为成功状态
         setCurrentTxStep(3);
-        setProgressMessage(`All transactions confirmed! View on Solscan: ${signatures[0].slice(0, 8)}...`);
+        setTxSignature(signatures[0]); // Use the first transaction signature
+        setProgressMessage(`All transactions confirmed! Click below to view on Solscan`);
         
         // 清空表单
         setWithdrawAmount('');
@@ -352,6 +356,7 @@ const XFundPage = () => {
         // 6秒后隐藏进度提示
         setTimeout(() => {
           setShowProgress(false);
+          setTxSignature(undefined);
         }, 6000);
       }
     } catch (error) {
@@ -2016,6 +2021,7 @@ const XFundPage = () => {
       currentStep={currentTxStep}
       totalSteps={totalTxSteps}
       error={marsContract.error}
+      txSignature={txSignature}
     />
   </Box>
   );

@@ -16,6 +16,7 @@ interface TransactionProgressProps {
   currentStep?: number;
   totalSteps?: number;
   error?: string;
+  txSignature?: string;
   onClose?: () => void;
 }
 
@@ -27,6 +28,7 @@ export const TransactionProgress: React.FC<TransactionProgressProps> = ({
   currentStep,
   totalSteps,
   error,
+  txSignature,
 }) => {
   const getStatusText = () => {
     switch (status) {
@@ -151,6 +153,60 @@ export const TransactionProgress: React.FC<TransactionProgressProps> = ({
           >
             {message || getStatusText()}
           </Typography>
+
+          {/* Clickable Solscan link for successful transactions */}
+          {status === 'success' && txSignature && (
+            <Box
+              sx={{
+                mt: 1.5,
+                pt: 1.5,
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              <Box
+                component="a"
+                href={`https://solscan.io/tx/${txSignature}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  padding: '8px 16px',
+                  backgroundColor: 'rgba(96, 165, 250, 0.15)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(96, 165, 250, 0.3)',
+                  color: '#60a5fa',
+                  textDecoration: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    backgroundColor: 'rgba(96, 165, 250, 0.25)',
+                    borderColor: 'rgba(96, 165, 250, 0.5)',
+                    transform: 'translateY(-1px)',
+                  },
+                }}
+              >
+                <span>View on Solscan</span>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </Box>
+            </Box>
+          )}
 
           {/* Additional info for multi-step transactions */}
           {isProcessing && totalSteps && totalSteps > 1 && (
