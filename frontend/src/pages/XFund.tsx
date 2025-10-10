@@ -256,7 +256,7 @@ const XFundPage = () => {
         
         // 更新为成功状态
         setTxSignature(signature);
-        setProgressMessage(`Transaction confirmed! Click below to view on Solscan`);
+        setProgressMessage(`Transaction confirmed!`);
         
         // 清空表单
         setDepositAmount('');
@@ -348,7 +348,7 @@ const XFundPage = () => {
         // 更新为成功状态
         setCurrentTxStep(3);
         setTxSignature(signatures[0]); // Use the first transaction signature
-        setProgressMessage(`All transactions confirmed! Click below to view on Solscan`);
+        setProgressMessage(`All transactions confirmed!`);
         
         // 清空表单
         setWithdrawAmount('');
@@ -921,7 +921,7 @@ const XFundPage = () => {
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                   <Typography variant="body1" sx={{ color: 'white', fontWeight: 600, fontSize: '0.95rem' }}>
-                    You Deposit
+                    {activeTab === 0 ? 'You Deposit' : 'You Withdraw'}
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
                     ~$0.00
@@ -1042,10 +1042,14 @@ const XFundPage = () => {
                 </Box>
                 
                 <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1.5, fontSize: '0.85rem' }}>
-                  Available: {isWalletConnected ? 
+                  {activeTab === 0 ? 'Available' : 'Deposited'}: {isWalletConnected ? 
                     balanceLoading ? 
                       'Loading...' : 
-                      `${getWalletBalance(selectedToken)} ${selectedToken}` 
+                      activeTab === 0 
+                        ? `${getWalletBalance(selectedToken)} ${selectedToken}`
+                        : marsUserEarnings?.byAsset?.[selectedToken]?.totalEarnings 
+                          ? `${(marsUserEarnings.byAsset[selectedToken].totalEarnings / (marsUserEarnings.byAsset[selectedToken].apy / 100 || 0.08)).toFixed(4)} ${selectedToken}`
+                          : `0 ${selectedToken}`
                     : '0'}
                 </Typography>
 
@@ -1057,7 +1061,15 @@ const XFundPage = () => {
                     onClick={() => {
                       if (isWalletConnected) {
                         const balance = parseFloat(getWalletBalance(selectedToken).replace(',', ''));
-                        setDepositAmount((balance / 2).toString());
+                        if (activeTab === 0) {
+                          setDepositAmount((balance / 2).toString());
+                        } else {
+                          // For withdraw, use half of deposited amount
+                          const deposited = marsUserEarnings?.byAsset?.[selectedToken]?.totalEarnings 
+                            ? (marsUserEarnings.byAsset[selectedToken].totalEarnings / (marsUserEarnings.byAsset[selectedToken].apy / 100 || 0.08))
+                            : 0;
+                          setWithdrawAmount((deposited / 2).toString());
+                        }
                       }
                     }}
                     sx={{
@@ -1087,8 +1099,16 @@ const XFundPage = () => {
                     disabled={!isWalletConnected}
                     onClick={() => {
                       if (isWalletConnected) {
-                        const balance = getWalletBalance(selectedToken).replace(',', '');
-                        setDepositAmount(balance);
+                        if (activeTab === 0) {
+                          const balance = getWalletBalance(selectedToken).replace(',', '');
+                          setDepositAmount(balance);
+                        } else {
+                          // For withdraw, use max deposited amount
+                          const deposited = marsUserEarnings?.byAsset?.[selectedToken]?.totalEarnings 
+                            ? (marsUserEarnings.byAsset[selectedToken].totalEarnings / (marsUserEarnings.byAsset[selectedToken].apy / 100 || 0.08))
+                            : 0;
+                          setWithdrawAmount(deposited.toString());
+                        }
                       }
                     }}
                     sx={{
