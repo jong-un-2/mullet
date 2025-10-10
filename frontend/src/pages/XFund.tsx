@@ -223,6 +223,11 @@ const XFundPage = () => {
 
     try {
       console.log('🚀 开始 PYUSD 存款并质押到 Farm...');
+      console.log('📊 存款金额:', depositAmount);
+      console.log('👛 钱包地址:', userWalletAddress);
+      console.log('🔗 钱包已连接:', isWalletConnected);
+      console.log('🔧 marsContract 对象:', marsContract);
+      console.log('🔧 marsContract.deposit 函数:', typeof marsContract.deposit);
       
       // 显示进度提示
       setShowProgress(true);
@@ -231,7 +236,11 @@ const XFundPage = () => {
       setCurrentTxStep(1);
       
       const amount = parseFloat(depositAmount);
+      console.log('💰 开始调用 marsContract.deposit, 金额:', amount);
+      
       const signature = await marsContract.deposit(amount);
+      
+      console.log('✅ marsContract.deposit 返回结果:', signature);
       
       if (signature) {
         console.log('✅ 存款成功!');

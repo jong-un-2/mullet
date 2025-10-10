@@ -28,38 +28,48 @@ export const useMarsContract = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const deposit = useCallback(async (amount: number): Promise<string | undefined> => {
+    console.log('🔵 [useMarsContract] deposit 函数被调用, amount:', amount);
+    console.log('🔵 [useMarsContract] publicKey:', publicKey?.toString());
+    console.log('🔵 [useMarsContract] sendTransaction:', typeof sendTransaction);
+    
     if (!publicKey || !sendTransaction) {
-      setError('请先连接钱包');
+      const errorMsg = '请先连接钱包';
+      console.error('❌ [useMarsContract]', errorMsg);
+      setError(errorMsg);
       return;
     }
 
     try {
+      console.log('🟢 [useMarsContract] 开始存款流程...');
       setIsProcessing(true);
       setError(undefined);
       setStatus('building');
 
-      console.log('构建存款交易...', { amount, wallet: publicKey.toString() });
+      console.log('🟢 [useMarsContract] 构建存款交易...', { amount, wallet: publicKey.toString() });
 
       const balance = await checkPyusdBalance(publicKey, connection);
-      console.log('PYUSD 余额:', balance);
+      console.log('🟢 [useMarsContract] PYUSD 余额:', balance);
 
       if (balance < amount) {
         throw new Error(`PYUSD 余额不足。当前: ${balance}, 需要: ${amount}`);
       }
 
+      console.log('🟢 [useMarsContract] 调用 createDepositAndStakeTransaction...');
       const transaction = await createDepositAndStakeTransaction(
         publicKey,
         amount,
         connection
       );
+      console.log('🟢 [useMarsContract] 交易构建完成:', transaction);
 
       setStatus('signing');
-      console.log('等待签名...');
+      console.log('🟡 [useMarsContract] 等待用户签名...');
+      console.log('🟡 [useMarsContract] 即将调用 sendTransaction...');
 
       setStatus('sending');
       const signature = await sendTransaction(transaction, connection);
       setCurrentSignature(signature);
-      console.log('交易已发送:', signature);
+      console.log('🟢 [useMarsContract] 交易已发送:', signature);
 
       setStatus('confirming');
       console.log('等待确认...');
