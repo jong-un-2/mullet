@@ -313,13 +313,14 @@ function createUnstakeInstruction(
   const data = DISCRIMINATOR_UNSTAKE;
 
   const keys = [
-    { pubkey: userPublicKey, isSigner: true, isWritable: true },
-    { pubkey: farmAccounts.farmState, isSigner: false, isWritable: true },
-    { pubkey: farmAccounts.userFarm, isSigner: false, isWritable: true },
-    { pubkey: userSharesAta, isSigner: false, isWritable: true },
-    { pubkey: farmAccounts.delegatedStake, isSigner: false, isWritable: true },
-    { pubkey: farmAccounts.scopePrices || PublicKey.default, isSigner: false, isWritable: false },
-    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: userPublicKey, isSigner: true, isWritable: true },                    // 0: user
+    { pubkey: farmAccounts.farmState, isSigner: false, isWritable: true },          // 1: farm_state
+    { pubkey: farmAccounts.userFarm, isSigner: false, isWritable: true },           // 2: user_farm
+    { pubkey: userSharesAta, isSigner: false, isWritable: true },                   // 3: user_shares_ata
+    { pubkey: farmAccounts.delegatedStake, isSigner: false, isWritable: true },     // 4: delegated_stake
+    { pubkey: farmAccounts.scopePrices || PublicKey.default, isSigner: false, isWritable: false }, // 5: scope_prices
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },               // 6: token_program
+    { pubkey: farmAccounts.farmsProgram, isSigner: false, isWritable: false },      // 7: farms_program ✅ 新增
   ];
 
   return new TransactionInstruction({
