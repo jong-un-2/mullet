@@ -9,7 +9,12 @@ import {
   KaminoManager, 
   KaminoVault 
 } from '@kamino-finance/klend-sdk';
-import { PublicKey, AccountMeta, Connection } from '@solana/web3.js';
+import { 
+  createDefaultRpcTransport, 
+  createRpc, 
+  createSolanaRpcApi 
+} from '@solana/kit';
+import { PublicKey, AccountMeta } from '@solana/web3.js';
 
 /**
  * Vault 账户接口
@@ -51,7 +56,7 @@ export interface DepositAndStakeInfo {
  * Kamino SDK Helper 类 - 前端版本
  */
 export class KaminoSDKHelper {
-  private connection: Connection;
+  private rpc: any;
   private manager: KaminoManager | null = null;
   private initialized = false;
   private userPublicKey: PublicKey;
@@ -59,8 +64,9 @@ export class KaminoSDKHelper {
   constructor(rpcUrl: string, userPublicKey: PublicKey) {
     this.userPublicKey = userPublicKey;
     
-    // 使用标准的 Connection 对象，Kamino SDK 期望这个格式
-    this.connection = new Connection(rpcUrl, 'confirmed');
+    // 使用 @solana/kit 的 RPC（和后端版本一样）
+    const transport = createDefaultRpcTransport({ url: rpcUrl });
+    this.rpc = createRpc({ api: createSolanaRpcApi(), transport });
   }
 
   /**
@@ -73,7 +79,7 @@ export class KaminoSDKHelper {
     
     console.log('⏳ 初始化 Kamino SDK Manager...');
     const slotDuration = await getMedianSlotDurationInMsFromLastEpochs();
-    this.manager = new KaminoManager(this.connection as any, slotDuration);
+    this.manager = new KaminoManager(this.rpc, slotDuration);
     this.initialized = true;
     console.log('✅ Kamino SDK Manager 初始化完成');
   }
@@ -239,8 +245,8 @@ export class KaminoSDKHelper {
     const vault = new KaminoVault(vaultAddress as any);
     
     // 获取取款指令（包含 unstake 指令）
-    const currentSlot = await this.connection.getSlot();
-    const withdrawIxs = await this.manager!.withdrawFromVaultIxs(user, vault, sharesToWithdraw, BigInt(currentSlot));
+    const currentSlot = await this.rpc.getSlot().send();
+    const withdrawIxs = await this.manager!.withdrawFromVaultIxs(user, vault, sharesToWithdraw, currentSlot as bigint);
 
     if (withdrawIxs.unstakeFromFarmIfNeededIxs.length === 0) {
       throw new Error('没有找到取消质押指令');
@@ -294,8 +300,8 @@ export class KaminoSDKHelper {
     const vault = new KaminoVault(vaultAddress as any);
     
     // 获取取款指令
-    const currentSlot = await this.connection.getSlot();
-    const withdrawIxs = await this.manager!.withdrawFromVaultIxs(user, vault, sharesToWithdraw, BigInt(currentSlot));
+    const currentSlot = await this.rpc.getSlot().send();
+    const withdrawIxs = await this.manager!.withdrawFromVaultIxs(user, vault, sharesToWithdraw, currentSlot as bigint);
 
     if (withdrawIxs.withdrawIxs.length === 0) {
       throw new Error('没有找到取款指令');
