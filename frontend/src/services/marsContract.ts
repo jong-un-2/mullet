@@ -332,6 +332,7 @@ function createUnstakeInstruction(
 
 /**
  * 创建 withdraw 指令
+ * 账户顺序必须匹配 KaminoWithdrawCPI struct
  */
 function createWithdrawInstruction(
   userPublicKey: PublicKey,
@@ -346,20 +347,20 @@ function createWithdrawInstruction(
   const data = Buffer.concat([DISCRIMINATOR_WITHDRAW, amountBuffer]);
 
   const keys = [
-    { pubkey: userPublicKey, isSigner: true, isWritable: true },
-    { pubkey: vaultState, isSigner: false, isWritable: true },
-    { pubkey: vaultAccounts.tokenVault, isSigner: false, isWritable: true },
-    { pubkey: vaultAccounts.tokenMint, isSigner: false, isWritable: false },
-    { pubkey: vaultAccounts.baseAuthority, isSigner: false, isWritable: false },
-    { pubkey: vaultAccounts.sharesMint, isSigner: false, isWritable: true },
-    { pubkey: userTokenAta, isSigner: false, isWritable: true },
-    { pubkey: vaultAccounts.userSharesAta, isSigner: false, isWritable: true },
-    { pubkey: new PublicKey(KLEND_PROGRAM), isSigner: false, isWritable: false },
-    { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: EVENT_AUTHORITY, isSigner: false, isWritable: false },
-    { pubkey: KAMINO_V2_PROGRAM, isSigner: false, isWritable: false },
-    ...remainingAccounts,
+    { pubkey: userPublicKey, isSigner: true, isWritable: true },                    // 0: user
+    { pubkey: vaultState, isSigner: false, isWritable: true },                      // 1: vault_state
+    { pubkey: vaultAccounts.tokenVault, isSigner: false, isWritable: true },        // 2: token_vault
+    { pubkey: vaultAccounts.baseAuthority, isSigner: false, isWritable: false },    // 3: base_vault_authority
+    { pubkey: userTokenAta, isSigner: false, isWritable: true },                    // 4: user_token_ata ✅
+    { pubkey: vaultAccounts.tokenMint, isSigner: false, isWritable: true },         // 5: token_mint
+    { pubkey: vaultAccounts.userSharesAta, isSigner: false, isWritable: true },     // 6: user_shares_ata
+    { pubkey: vaultAccounts.sharesMint, isSigner: false, isWritable: true },        // 7: shares_mint
+    { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },          // 8: token_program
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },               // 9: shares_token_program
+    { pubkey: new PublicKey(KLEND_PROGRAM), isSigner: false, isWritable: false },   // 10: klend_program
+    { pubkey: EVENT_AUTHORITY, isSigner: false, isWritable: false },                // 11: event_authority
+    { pubkey: KAMINO_V2_PROGRAM, isSigner: false, isWritable: false },              // 12: kamino_vault_program
+    ...remainingAccounts,                                                           // 13+: remaining_accounts
   ];
 
   return new TransactionInstruction({
