@@ -36,6 +36,7 @@ import { useMarsOpportunities, getUserWalletAddress, formatCurrency, formatPerce
 import { useSolanaBalance } from '../hooks/useSolanaBalance';
 import { useMarsProtocolData } from '../hooks/useMarsData';
 import { useMarsContract } from '../hooks/useMarsContract';
+import { useUserVaultPosition } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
 
 // Register Chart.js components
@@ -192,7 +193,8 @@ const XFundPage = () => {
   // Get real Solana wallet balances
   const { getBalance: getSolanaBalance, loading: balanceLoading } = useSolanaBalance(userWalletAddress);
   
-
+  // Get user's vault position (Total Supplied)
+  const userVaultPosition = useUserVaultPosition(userWalletAddress || null);
   
   // Get real wallet balance for selected token
   const getWalletBalance = (token: string) => {
@@ -1043,12 +1045,12 @@ const XFundPage = () => {
                 
                 <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1.5, fontSize: '0.85rem' }}>
                   {activeTab === 0 ? 'Available' : 'Deposited'}: {isWalletConnected ? 
-                    balanceLoading ? 
+                    (balanceLoading || userVaultPosition.loading) ? 
                       'Loading...' : 
                       activeTab === 0 
                         ? `${getWalletBalance(selectedToken)} ${selectedToken}`
-                        : marsUserEarnings?.byAsset?.[selectedToken]?.totalEarnings 
-                          ? `${(marsUserEarnings.byAsset[selectedToken].totalEarnings / (marsUserEarnings.byAsset[selectedToken].apy / 100 || 0.08)).toFixed(4)} ${selectedToken}`
+                        : selectedToken === 'PYUSD' && userVaultPosition.totalSupplied > 0
+                          ? `${userVaultPosition.totalSupplied.toFixed(4)} ${selectedToken}`
                           : `0 ${selectedToken}`
                     : '0'}
                 </Typography>
@@ -1060,13 +1062,13 @@ const XFundPage = () => {
                     disabled={!isWalletConnected}
                     onClick={() => {
                       if (isWalletConnected) {
-                        const balance = parseFloat(getWalletBalance(selectedToken).replace(',', ''));
                         if (activeTab === 0) {
+                          const balance = parseFloat(getWalletBalance(selectedToken).replace(',', ''));
                           setDepositAmount((balance / 2).toString());
                         } else {
-                          // For withdraw, use half of deposited amount
-                          const deposited = marsUserEarnings?.byAsset?.[selectedToken]?.totalEarnings 
-                            ? (marsUserEarnings.byAsset[selectedToken].totalEarnings / (marsUserEarnings.byAsset[selectedToken].apy / 100 || 0.08))
+                          // For withdraw, use half of vault deposited amount
+                          const deposited = selectedToken === 'PYUSD' 
+                            ? userVaultPosition.totalSupplied 
                             : 0;
                           setWithdrawAmount((deposited / 2).toString());
                         }
@@ -1103,9 +1105,9 @@ const XFundPage = () => {
                           const balance = getWalletBalance(selectedToken).replace(',', '');
                           setDepositAmount(balance);
                         } else {
-                          // For withdraw, use max deposited amount
-                          const deposited = marsUserEarnings?.byAsset?.[selectedToken]?.totalEarnings 
-                            ? (marsUserEarnings.byAsset[selectedToken].totalEarnings / (marsUserEarnings.byAsset[selectedToken].apy / 100 || 0.08))
+                          // For withdraw, use max vault deposited amount
+                          const deposited = selectedToken === 'PYUSD' 
+                            ? userVaultPosition.totalSupplied 
                             : 0;
                           setWithdrawAmount(deposited.toString());
                         }
@@ -1178,43 +1180,6 @@ const XFundPage = () => {
                   'Withdraw'
                 )}
               </Button>
-
-              {/* Transaction Status Display */}
-              {marsContract.currentSignature && (
-                <Alert 
-                  severity={
-                    marsContract.status === 'success' ? 'success' :
-                    marsContract.status === 'error' ? 'error' : 'info'
-                  }
-                  sx={{ 
-                    mt: 2, 
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    '& .MuiAlert-message': { color: 'white' }
-                  }}
-                >
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      {marsContract.status === 'success' && '✅ Transaction Confirmed!'}
-                      {marsContract.status === 'confirming' && '⏳ Transaction Confirming...'}
-                      {marsContract.status === 'error' && `❌ Transaction Failed: ${marsContract.error}`}
-                    </Typography>
-                    <Typography 
-                      variant="caption" 
-                      component="a"
-                      href={`https://solscan.io/tx/${marsContract.currentSignature}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ 
-                        color: '#22c55e', 
-                        textDecoration: 'underline',
-                        '&:hover': { color: '#16a34a' }
-                      }}
-                    >
-                      View on Solscan: {marsContract.currentSignature.slice(0, 8)}...{marsContract.currentSignature.slice(-8)}
-                    </Typography>
-                  </Box>
-                </Alert>
-              )}
 
               {/* Old deposit form - keeping for reference but hiding */}
               <Box sx={{ display: 'none' }}>
