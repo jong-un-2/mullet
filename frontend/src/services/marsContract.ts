@@ -128,42 +128,31 @@ export async function createDepositAndStakeTransaction(
     transaction.add(createAtaIx);
   }
 
-  // 2.5 🔥 检查 userFarm 账户是否存在，如果不存在则自动创建
-  const userFarmInfo = await connection.getAccountInfo(farmAccounts.userFarm);
-  if (!userFarmInfo) {
-    console.log('⚠️ userFarm 账户不存在，准备自动初始化...');
-    
-    // 🔥 如果 SDK 返回了 setup 指令，添加它们
-    if (setupInstructions && setupInstructions.length > 0) {
-      console.log(`✅ 找到 ${setupInstructions.length} 个 Farm 初始化指令`);
-      for (let i = 0; i < setupInstructions.length; i++) {
-        const setupIx = setupInstructions[i];
-        console.log(`  [${i + 1}/${setupInstructions.length}] 添加初始化指令: ${setupIx.programAddress}`);
-        
-        // 将 Kamino SDK 的指令转换为 Solana TransactionInstruction
-        const ix = new TransactionInstruction({
-          programId: new PublicKey(setupIx.programAddress),
-          keys: setupIx.accounts.map((acc: any) => ({
-            pubkey: new PublicKey(acc.address),
-            isSigner: acc.role === 2 || acc.role === 3, // 2=signer, 3=signer+writable
-            isWritable: acc.role === 1 || acc.role === 3, // 1=writable, 3=signer+writable
-          })),
-          data: Buffer.from(setupIx.data),
-        });
-        transaction.add(ix);
-      }
-      console.log('✅ userFarm 初始化指令已添加到交易中');
-    } else {
-      // 🚨 SDK 没有返回 setup 指令
-      console.log('⚠️ Kamino SDK 没有返回初始化指令');
-      console.log('💡 Kamino Farms 可能支持 init_if_needed，继续构建交易...');
-      console.log('💡 如果交易失败，可能需要先单独初始化 userFarm 账户');
+  // 2.5 🔥 添加 Farm setup 指令（如果有的话，通常是 InitializeFarm）
+  // SDK 返回的 stakeInFarmIfNeededIxs 可能包含多个指令：
+  // - 如果 userFarm 不存在：[InitializeFarm, Stake]
+  // - 如果 userFarm 已存在：[Stake]
+  if (setupInstructions && setupInstructions.length > 0) {
+    console.log(`🔧 添加 ${setupInstructions.length} 个 Farm setup 指令（如 InitializeFarm）`);
+    for (let i = 0; i < setupInstructions.length; i++) {
+      const setupIx = setupInstructions[i];
+      console.log(`  [${i + 1}/${setupInstructions.length}] Program: ${setupIx.programAddress}, Data: ${setupIx.data?.length} bytes`);
       
-      // 不抛出错误，让交易尝试执行
-      // Kamino Farms 程序可能会自动初始化账户（通过 init_if_needed）
+      // 将 Kamino SDK 的指令转换为 Solana TransactionInstruction
+      const ix = new TransactionInstruction({
+        programId: new PublicKey(setupIx.programAddress),
+        keys: setupIx.accounts.map((acc: any) => ({
+          pubkey: new PublicKey(acc.address),
+          isSigner: acc.role === 2 || acc.role === 3, // 2=signer, 3=signer+writable
+          isWritable: acc.role === 1 || acc.role === 3, // 1=writable, 3=signer+writable
+        })),
+        data: Buffer.from(setupIx.data),
+      });
+      transaction.add(ix);
     }
+    console.log('✅ Farm setup 指令已添加到交易中');
   } else {
-    console.log('✅ userFarm 账户已存在，无需初始化');
+    console.log('ℹ️  没有 Farm setup 指令（userFarm 可能已存在）');
   }
 
   // 3. 创建 kamino_deposit_and_stake 指令
