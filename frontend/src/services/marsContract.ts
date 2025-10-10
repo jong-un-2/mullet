@@ -183,14 +183,14 @@ function createDepositAndStakeInstruction(
 }
 
 /**
- * 创建取消质押和取款的 3 个交易
+ * 创建取消质押和取款的批量交易（一次签名）
  */
 export async function createUnstakeAndWithdrawTransactions(
   userPublicKey: PublicKey,
   sharesAmount: number,
   connection: Connection
 ): Promise<Transaction[]> {
-  console.log('🏗️ 构建取款交易 (3步)...', { sharesAmount, user: userPublicKey.toString() });
+  console.log('🏗️ 构建取款批量交易...', { sharesAmount, user: userPublicKey.toString() });
 
   // 初始化 SDK
   const rpcUrl = connection.rpcEndpoint;
@@ -211,46 +211,43 @@ export async function createUnstakeAndWithdrawTransactions(
   // 转换金额为 lamports (6 decimals for shares)
   const amountLamports = Math.floor(sharesAmount * 1_000_000);
 
-  const transactions: Transaction[] = [];
+  // 获取当前 slot（用于 start_unstake）
+  const currentSlot = await connection.getSlot();
 
-  // 获取最新的 blockhash（所有交易共享）
+  // 获取最新的 blockhash
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
-  // === 交易 1: Start Unstake ===
-  const tx1 = new Transaction();
-  tx1.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
-  tx1.add(
+  // 获取用户 PYUSD 账户
+  const userPyusdAccount = await getUserPyusdAccount(userPublicKey);
+
+  // === 创建一个批量交易，包含所有3个指令 ===
+  const batchTx = new Transaction();
+  
+  // 设置更高的 compute units（3个指令需要更多）
+  batchTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 1_000_000 }));
+  
+  // 1. Start Unstake 指令
+  batchTx.add(
     createStartUnstakeInstruction(
       userPublicKey,
       farmAccounts,
-      amountLamports
+      amountLamports,
+      currentSlot
     )
   );
-  tx1.recentBlockhash = blockhash;
-  tx1.lastValidBlockHeight = lastValidBlockHeight;
-  tx1.feePayer = userPublicKey;
-  transactions.push(tx1);
-
-  // === 交易 2: Unstake ===
-  const tx2 = new Transaction();
-  tx2.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
-  tx2.add(
+  
+  // 2. Unstake 指令（需要 userSharesAta）
+  batchTx.add(
     createUnstakeInstruction(
       userPublicKey,
       farmAccounts,
+      vaultAccounts.userSharesAta,
       amountLamports
     )
   );
-  tx2.recentBlockhash = blockhash;
-  tx2.lastValidBlockHeight = lastValidBlockHeight;
-  tx2.feePayer = userPublicKey;
-  transactions.push(tx2);
-
-  // === 交易 3: Withdraw ===
-  const userPyusdAccount = await getUserPyusdAccount(userPublicKey);
-  const tx3 = new Transaction();
-  tx3.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
-  tx3.add(
+  
+  // 3. Withdraw 指令
+  batchTx.add(
     createWithdrawInstruction(
       userPublicKey,
       PYUSD_VAULT,
@@ -260,32 +257,38 @@ export async function createUnstakeAndWithdrawTransactions(
       remainingAccounts
     )
   );
-  tx3.recentBlockhash = blockhash;
-  tx3.lastValidBlockHeight = lastValidBlockHeight;
-  tx3.feePayer = userPublicKey;
-  transactions.push(tx3);
 
-  console.log('✅ 3个取款交易构建完成');
-  return transactions;
+  batchTx.recentBlockhash = blockhash;
+  batchTx.lastValidBlockHeight = lastValidBlockHeight;
+  batchTx.feePayer = userPublicKey;
+
+  console.log('✅ 批量取款交易构建完成（3个指令）');
+  return [batchTx];
 }
 
 /**
  * 创建 start_unstake 指令
+ * @param currentSlot 当前 slot（必须参数，用于 Kamino Farm）
  */
 function createStartUnstakeInstruction(
   userPublicKey: PublicKey,
   farmAccounts: any,
-  amount: number
+  amount: number,
+  currentSlot: number
 ): TransactionInstruction {
+  // 指令数据: discriminator (8 bytes) + amount (8 bytes) + slot (8 bytes)
   const amountBuffer = Buffer.alloc(8);
   amountBuffer.writeBigUInt64LE(BigInt(amount), 0);
-  const data = Buffer.concat([DISCRIMINATOR_START_UNSTAKE, amountBuffer]);
+  
+  const slotBuffer = Buffer.alloc(8);
+  slotBuffer.writeBigUInt64LE(BigInt(currentSlot), 0);
+  
+  const data = Buffer.concat([DISCRIMINATOR_START_UNSTAKE, amountBuffer, slotBuffer]);
 
   const keys = [
     { pubkey: userPublicKey, isSigner: true, isWritable: true },
     { pubkey: farmAccounts.farmState, isSigner: false, isWritable: true },
     { pubkey: farmAccounts.userFarm, isSigner: false, isWritable: true },
-    { pubkey: farmAccounts.delegatedStake, isSigner: false, isWritable: true },
     { pubkey: farmAccounts.farmsProgram, isSigner: false, isWritable: false },
   ];
 
@@ -297,23 +300,25 @@ function createStartUnstakeInstruction(
 }
 
 /**
- * 创建 unstake 指令
+ * 创建 unstake 指令 (WithdrawUnstakedDeposits)
+ * 这个指令不需要 amount 参数（Kamino 自动计算可取的 shares）
  */
 function createUnstakeInstruction(
   userPublicKey: PublicKey,
   farmAccounts: any,
-  amount: number
+  userSharesAta: PublicKey,
+  _amount: number  // 保留参数以保持接口一致，但实际不使用
 ): TransactionInstruction {
-  const amountBuffer = Buffer.alloc(8);
-  amountBuffer.writeBigUInt64LE(BigInt(amount), 0);
-  const data = Buffer.concat([DISCRIMINATOR_UNSTAKE, amountBuffer]);
+  // WithdrawUnstakedDeposits 指令只有 discriminator（8 bytes），没有参数
+  const data = DISCRIMINATOR_UNSTAKE;
 
   const keys = [
     { pubkey: userPublicKey, isSigner: true, isWritable: true },
     { pubkey: farmAccounts.farmState, isSigner: false, isWritable: true },
     { pubkey: farmAccounts.userFarm, isSigner: false, isWritable: true },
+    { pubkey: userSharesAta, isSigner: false, isWritable: true },
     { pubkey: farmAccounts.delegatedStake, isSigner: false, isWritable: true },
-    { pubkey: farmAccounts.farmsProgram, isSigner: false, isWritable: false },
+    { pubkey: farmAccounts.scopePrices || PublicKey.default, isSigner: false, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
 

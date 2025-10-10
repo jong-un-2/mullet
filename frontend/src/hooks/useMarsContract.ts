@@ -157,7 +157,7 @@ export const useMarsContract = () => {
       setError(undefined);
       setStatus('building');
 
-      console.log('构建取款交易...', { amount, wallet: publicKey.toString() });
+      console.log('构建批量取款交易...', { amount, wallet: publicKey.toString() });
 
       const transactions = await createUnstakeAndWithdrawTransactions(
         publicKey,
@@ -165,74 +165,36 @@ export const useMarsContract = () => {
         connection
       );
 
-      const signatures: string[] = [];
-      const errors: string[] = [];
+      // 现在只有一个批量交易
+      console.log('📦 批量交易（包含 3 个指令）');
 
-      for (let i = 0; i < transactions.length; i++) {
-        const txName = ['Start Unstake', 'Unstake', 'Withdraw'][i];
-        console.log(`第 ${i + 1}/3 步: ${txName}`);
-
-        try {
-          // 通知进度更新
-          if (onStepChange) {
-            onStepChange(i + 1, txName);
-          }
-
-          setStatus('signing');
-          console.log('等待签名...');
-
-          setStatus('sending');
-          const signature = await sendTransaction(transactions[i], connection);
-          signatures.push(signature);
-          setCurrentSignature(signature);
-          console.log(`${txName} 交易已发送:`, signature);
-
-          setStatus('confirming');
-          console.log('等待确认...');
-          await connection.confirmTransaction(signature, 'confirmed');
-          console.log(`${txName} 确认成功!`);
-
-          if (i < 2) {
-            console.log('等待 5 秒后继续...');
-            await new Promise(resolve => setTimeout(resolve, 5000));
-          }
-        } catch (stepError: any) {
-          // 记录错误但继续执行下一步
-          const errorMsg = `第 ${i + 1} 步 (${txName}) 失败: ${stepError.message || '未知错误'}`;
-          console.error(`❌ ${errorMsg}`);
-          errors.push(errorMsg);
-          
-          // 即使失败也要等待，避免太快
-          if (i < 2) {
-            console.log('⚠️ 步骤失败，等待 5 秒后继续下一步...');
-            await new Promise(resolve => setTimeout(resolve, 5000));
-          }
-        }
+      if (onStepChange) {
+        onStepChange(1, 'Start Unstake + Unstake + Withdraw');
       }
 
-      // 检查是否有成功的交易
-      if (signatures.length > 0) {
-        setStatus('success');
-        console.log('取款流程完成!');
-        console.log(`✅ 成功: ${signatures.length}/3 步`);
-        console.log('成功的交易:', signatures);
-        
-        if (errors.length > 0) {
-          console.warn('⚠️ 部分步骤失败:', errors);
-        }
-      } else {
-        setStatus('error');
-        const errorMessage = '所有步骤都失败了:\n' + errors.join('\n');
-        setError(errorMessage);
-        throw new Error(errorMessage);
-      }
-      
-      return signatures;
+      setStatus('signing');
+      console.log('等待签名...');
 
+      setStatus('sending');
+      const signature = await sendTransaction(transactions[0], connection);
+      setCurrentSignature(signature);
+      console.log('批量交易已发送:', signature);
+
+      setStatus('confirming');
+      console.log('等待确认...');
+      await connection.confirmTransaction(signature, 'confirmed');
+      console.log('批量交易确认成功!');
+
+      setStatus('success');
+      console.log('取款流程完成!');
+      console.log('成功的交易:', [signature]);
+
+      return [signature];
     } catch (err: any) {
-      console.error('取款失败:', err);
+      const errorMessage = err.message || '取款失败';
+      console.error('❌ 取款失败:', err);
+      setError(errorMessage);
       setStatus('error');
-      setError(err.message || '取款失败');
       throw err;
     } finally {
       setIsProcessing(false);

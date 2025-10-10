@@ -303,54 +303,37 @@ const XFundPage = () => {
     }
 
     try {
-      console.log('🚀 开始 PYUSD 取款流程（3笔交易）...');
+      console.log('🚀 开始 PYUSD 取款流程（批量交易）...');
       
       const amount = parseFloat(withdrawAmount);
-      
-      // 确认用户了解需要3笔交易
-      const confirmed = window.confirm(
-        `取款需要执行 3 笔交易：\n\n` +
-        `1. 发起取消质押请求\n` +
-        `2. 从 Farm 提取已取消质押的 shares\n` +
-        `3. 从 Vault 取款\n\n` +
-        `请确保每笔交易都确认，整个流程约需 15-30 秒。\n\n` +
-        `是否继续？`
-      );
-      
-      if (!confirmed) {
-        console.log('❌ 用户取消取款');
-        return;
-      }
       
       // 显示进度提示
       setShowProgress(true);
       setProgressTitle('Withdrawing PYUSD from the vault');
-      setTotalTxSteps(3);
+      setTotalTxSteps(1);
       setCurrentTxStep(0);
-      setProgressMessage('Starting withdrawal process...');
+      setProgressMessage('Preparing batch transaction (Start Unstake + Unstake + Withdraw)...');
       
-      // 添加超时处理 (120秒，因为有3笔交易)
-      const WITHDRAW_TIMEOUT = 120000; // 120 seconds
+      // 添加超时处理 (60秒，批量交易)
+      const WITHDRAW_TIMEOUT = 60000; // 60 seconds
       const withdrawPromise = marsContract.withdraw(amount, (step, txName) => {
         setCurrentTxStep(step);
         setProgressMessage(`Processing: ${txName}...`);
       });
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Withdrawal timeout after 120 seconds')), WITHDRAW_TIMEOUT)
+        setTimeout(() => reject(new Error('Withdrawal timeout after 60 seconds')), WITHDRAW_TIMEOUT)
       );
       
       const signatures = await Promise.race([withdrawPromise, timeoutPromise]);
       
       if (signatures && signatures.length > 0) {
-        console.log('✅ 取款成功! 完成了 3 笔交易');
-        signatures.forEach((sig: string, index: number) => {
-          console.log(`  交易 ${index + 1}: https://solscan.io/tx/${sig}`);
-        });
+        console.log('✅ 批量取款成功!');
+        console.log(`  交易签名: https://solscan.io/tx/${signatures[0]}`);
         
         // 更新为成功状态
-        setCurrentTxStep(3);
-        setTxSignature(signatures[0]); // Use the first transaction signature
-        setProgressMessage(`All transactions confirmed!`);
+        setCurrentTxStep(1);
+        setTxSignature(signatures[0]);
+        setProgressMessage(`Transaction confirmed!`);
         
         // 清空表单
         setWithdrawAmount('');
