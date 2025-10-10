@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -31,12 +31,12 @@ import { FaInfoCircle } from 'react-icons/fa';
 import { usePrivy } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
 import { useWallets } from '@privy-io/react-auth/solana';
-import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { Transaction, PublicKey, TransactionInstruction, ComputeBudgetProgram } from '@solana/web3.js';
-// Solana web3 imports for future transaction building
-import { useMarsOpportunities, useMarsDeposit, useMarsWithdraw, getUserWalletAddress, formatCurrency, formatPercentage } from '../hooks/useMarsApi';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useMarsOpportunities, getUserWalletAddress, formatCurrency, formatPercentage } from '../hooks/useMarsApi';
 import { useSolanaBalance } from '../hooks/useSolanaBalance';
 import { useMarsProtocolData } from '../hooks/useMarsData';
+import { useMarsContract } from '../hooks/useMarsContract';
+import { TransactionProgress } from '../components/TransactionProgress';
 
 // Register Chart.js components
 ChartJS.register(
@@ -51,125 +51,6 @@ ChartJS.register(
 );
 
 // Build transaction based on protocol parameters using Jupiter Lend API
-const buildProtocolTransaction = async (
-  txParams: any, 
-  userPublicKey: PublicKey
-): Promise<Transaction | null> => {
-  try {
-    console.log('🔧 Building transaction:', txParams.type, txParams.protocol);
-    
-    if (!txParams.type) {
-      console.error('❌ Transaction type is missing!');
-      throw new Error('Transaction type is required');
-    }
-    
-    // Get token mint address for the asset
-    const tokenMintMap: { [key: string]: string } = {
-      'SOL': 'So11111111111111111111111111111111111111112',
-      'USDC': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-      'USDT': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
-    };
-    
-    const assetMint = tokenMintMap[txParams.asset] || tokenMintMap['USDC'];
-    
-    // Convert amount to proper decimals (assuming 6 decimals for USDC/USDT, 9 for SOL)
-    const decimals = txParams.asset === 'SOL' ? 9 : 6;
-    const amountInBaseUnits = Math.floor(txParams.amount * Math.pow(10, decimals)).toString();
-    
-    // Use Jupiter Lend API for Jupiter protocol
-    if (txParams.protocol === 'jupiter') {
-        const apiUrl = txParams.type === 'deposit' 
-        ? 'https://lite-api.jup.ag/lend/v1/earn/deposit'
-        : 'https://lite-api.jup.ag/lend/v1/earn/withdraw';
-      
-      console.log('🪐 Jupiter API:', txParams.type, apiUrl);
-      
-      // Call Jupiter Lend API to get transaction
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          asset: assetMint,
-          amount: amountInBaseUnits,
-          signer: userPublicKey.toBase58(),
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Jupiter API error: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ Jupiter API success');
-      
-      // Deserialize the transaction from base64
-      if (data.transaction) {
-        const transaction = Transaction.from(Buffer.from(data.transaction, 'base64'));
-        
-        // Add compute budget instructions at the beginning
-        const computeBudgetInstruction = ComputeBudgetProgram.setComputeUnitLimit({
-          units: 1_400_000, // 设置计算单元上限为 1.4M (最大限制)
-        });
-        
-        // Add compute unit price instruction for higher priority
-        const computePriceInstruction = ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 50_000, // 0.05 lamports per compute unit
-        });
-        
-        // Add compute budget instructions as the first instructions
-        const instructionsWithBudget = [
-          computeBudgetInstruction, 
-          computePriceInstruction, 
-          ...transaction.instructions
-        ];
-        
-        // Create new transaction with budget instruction
-        const budgetTransaction = new Transaction();
-        budgetTransaction.add(...instructionsWithBudget);
-        
-        // Copy other transaction properties
-        budgetTransaction.feePayer = transaction.feePayer;
-        budgetTransaction.recentBlockhash = transaction.recentBlockhash;
-        
-        console.log('✅ Transaction built with compute budget');
-        return budgetTransaction;
-      } else {
-        throw new Error('No transaction returned from Jupiter API');
-      }
-    }
-    
-    // Fallback for other protocols
-    console.log('⚠️ Fallback memo transaction');
-    const transaction = new Transaction();
-    
-    // Add compute budget instructions
-    const computeBudgetInstruction = ComputeBudgetProgram.setComputeUnitLimit({
-      units: 1_400_000, // 设置计算单元上限为 1.4M (最大限制)
-    });
-    
-    const computePriceInstruction = ComputeBudgetProgram.setComputeUnitPrice({
-      microLamports: 50_000, // 0.05 lamports per compute unit
-    });
-    
-    const memoInstruction = new TransactionInstruction({
-      keys: [],
-      programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
-      data: Buffer.from(`Mars ${txParams.protocol} ${txParams.type}: ${txParams.amount} ${txParams.asset}`)
-    });
-    
-    transaction.add(computeBudgetInstruction);
-    transaction.add(computePriceInstruction);
-    transaction.add(memoInstruction);
-    return transaction;
-    
-  } catch (error) {
-    console.error('❌ Failed to build transaction:', error);
-    console.error('Error details:', error);
-    return null;
-  }
-};
 
 const XFundPage = () => {
   const [depositAmount, setDepositAmount] = useState('');
@@ -183,6 +64,13 @@ const XFundPage = () => {
   const [selectedYear, setSelectedYear] = useState('2025');
   const [selectedMonth, setSelectedMonth] = useState('09');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
+  // Transaction progress state
+  const [showProgress, setShowProgress] = useState(false);
+  const [progressTitle, setProgressTitle] = useState('');
+  const [progressMessage, setProgressMessage] = useState('');
+  const [currentTxStep, setCurrentTxStep] = useState(0);
+  const [totalTxSteps, setTotalTxSteps] = useState(0);
 
   // Calendar helper functions
   const getMonthName = (monthNum: string) => {
@@ -203,66 +91,19 @@ const XFundPage = () => {
 
   // Note: Day earnings are now handled directly in the calendar rendering
   
-  // Transaction status tracking
-  const [transactionStatus, setTransactionStatus] = useState<{
-    hash?: string;
-    status: 'idle' | 'building' | 'signing' | 'sending' | 'pending' | 'confirmed' | 'failed';
-    error?: string;
-  }>({ status: 'idle' });
-  
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // Transaction status tracking function
-  const updateTransactionStatus = (status: string, hash?: string, error?: string) => {
-    console.log(`🔄 Transaction status: ${status}`, { hash, error });
-    setTransactionStatus({ status: status as any, hash, error });
-  };
-
-  // Monitor transaction confirmation
-  const waitForConfirmation = async (signature: string, connection: any) => {
-    try {
-      updateTransactionStatus('pending', signature);
-      
-      console.log('⏳ Waiting for transaction confirmation...', signature);
-      
-      // Wait for confirmation with timeout
-      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-      
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${confirmation.value.err}`);
-      }
-      
-      updateTransactionStatus('confirmed', signature);
-      console.log('✅ Transaction confirmed:', signature);
-      
-      // Show success message or redirect
-      return true;
-      
-    } catch (error) {
-      console.error('❌ Transaction confirmation failed:', error);
-      updateTransactionStatus('failed', signature, error instanceof Error ? error.message : 'Unknown error');
-      return false;
-    }
-  };
-
   // Wallet connection states  
   const { authenticated, user } = usePrivy();
   const { isConnected: ethConnected, address: ethAddress } = useAccount();
   const { wallets: solanaWallets } = useWallets();
+  
   // Safely get Solana wallet adapter context
-  let sendTransaction: any = null;
   let solanaPublicKey: any = null;
   let directSolanaConnected = false;
-  let connection: any = null;
   
   try {
     const walletContext = useWallet();
-    const connectionContext = useConnection();
-    
-    sendTransaction = walletContext.sendTransaction;
     solanaPublicKey = walletContext.publicKey;
     directSolanaConnected = walletContext.connected;
-    connection = connectionContext.connection;
   } catch (error) {
     console.warn('⚠️ Solana wallet adapter not available:', error);
   }
@@ -281,10 +122,11 @@ const XFundPage = () => {
     console.log('⚠️ No wallet connected');
   }
   
-  // Mars API hooks
+  // Mars API hooks (已弃用，现在使用 useMarsContract 直接与合约交互)
   const { opportunities, loading: opportunitiesLoading } = useMarsOpportunities();
-  const { deposit, loading: depositLoading, error: depositError } = useMarsDeposit();
-  const { withdraw } = useMarsWithdraw();
+  
+  // Mars Contract Hook - 直接与 Mars 合约交互
+  const marsContract = useMarsContract();
   
   // Mars Data hooks - 新的数据API集成
   const {
@@ -306,6 +148,33 @@ const XFundPage = () => {
   // );
 
 
+
+  // 监控交易状态并更新进度消息
+  useEffect(() => {
+    if (!showProgress) return;
+    
+    switch (marsContract.status) {
+      case 'building':
+        setProgressMessage('Building transaction...');
+        break;
+      case 'signing':
+        setProgressMessage('Waiting for wallet confirmation...');
+        break;
+      case 'sending':
+        setProgressMessage('Sending transaction to network...');
+        break;
+      case 'confirming':
+        setProgressMessage('Confirming transaction...');
+        break;
+      case 'success':
+        // 成功消息在 handler 中设置
+        break;
+      case 'error':
+        setProgressMessage(marsContract.error || 'Transaction failed');
+        setTimeout(() => setShowProgress(false), 6000);
+        break;
+    }
+  }, [marsContract.status, marsContract.error, showProgress]);
 
   // Get real Mars opportunities data
   const getCurrentOpportunity = () => {
@@ -330,268 +199,154 @@ const XFundPage = () => {
     return getSolanaBalance(token) || '0';
   };
 
-  // Handle deposit action
+  // Handle deposit action - 使用 Mars 合约直接存款
   const handleDeposit = async () => {
-    if (!isWalletConnected || !userWalletAddress || !depositAmount || !currentOpportunity) {
+    if (!isWalletConnected || !userWalletAddress || !depositAmount) {
       console.error('❌ Missing data for deposit');
+      setShowProgress(true);
+      setProgressTitle('Validation Error');
+      setProgressMessage('Please connect wallet and enter deposit amount');
+      setTotalTxSteps(0);
+      setTimeout(() => setShowProgress(false), 6000);
+      return;
+    }
+
+    // 仅支持 PYUSD（可以后续扩展）
+    if (selectedToken !== 'PYUSD') {
+      setShowProgress(true);
+      setProgressTitle('Validation Error');
+      setProgressMessage('Currently only PYUSD deposits are supported');
+      setTotalTxSteps(0);
+      setTimeout(() => setShowProgress(false), 6000);
       return;
     }
 
     try {
-      const depositRequest = {
-        userAddress: userWalletAddress,
-        asset: selectedToken,
-        amount: parseFloat(depositAmount),
-        riskProfile: 'moderate' as const
-      };
-
-      console.log('🚀 Creating deposit:', depositRequest);
+      console.log('🚀 开始 PYUSD 存款并质押到 Farm...');
       
-      const result = await deposit(depositRequest);
+      // 显示进度提示
+      setShowProgress(true);
+      setProgressTitle('Depositing PYUSD into the vault');
+      setTotalTxSteps(1);
+      setCurrentTxStep(1);
       
-      if (result) {
-        console.log('✅ Deposit result received');
+      const amount = parseFloat(depositAmount);
+      const signature = await marsContract.deposit(amount);
+      
+      if (signature) {
+        console.log('✅ 存款成功!');
+        console.log(`🔗 Solscan: https://solscan.io/tx/${signature}`);
         
-        // Handle transaction signing and sending  
-        try {
-          if (result.transaction?.serializedTx) {
-            
-            // Check wallet connection status
-            
-            if (!sendTransaction) {
-              console.error('❌ No sendTransaction function available');
-              alert('请先连接 Solana 钱包！');
-              return;
-            }
-            
-            // Check if we have Solana wallet via Privy or direct connection
-            if (!solanaPublicKey && solanaWallets.length === 0) {
-              console.error('❌ No Solana wallet connected');
-              alert('请先连接 Solana 钱包！');
-              return;
-            }
-            
-            // Decode transaction parameters from backend
-            const txParams = JSON.parse(atob(result.transaction.serializedTx));
-            
-            // Add user address and ensure type is deposit
-            txParams.userAddress = userWalletAddress;
-            txParams.type = 'deposit';  // Force set to deposit for deposit flow
-            
-            
-            // Build actual transaction based on protocol
-            const userPubKey = solanaPublicKey || new PublicKey(userWalletAddress);
-            const transaction = await buildProtocolTransaction(txParams, userPubKey);
-            
-            if (transaction) {
-              setIsProcessing(true);
-              updateTransactionStatus('building');
-              
-              try {
-                updateTransactionStatus('signing');
-                
-                // Use Privy Solana wallet if available, otherwise use direct wallet
-                let signature;
-                if (solanaWallets.length > 0) {
-                  const privySolanaWallet = solanaWallets[0];
-                  
-                  // Get recent blockhash for the transaction
-                  const { blockhash } = await connection.getLatestBlockhash();
-                  transaction.recentBlockhash = blockhash;
-                  transaction.feePayer = new PublicKey(userWalletAddress);
-                  
-                  // Sign and send transaction with Privy wallet
-                  const txBytes = transaction.serialize({ requireAllSignatures: false });
-                  const signedTx = await privySolanaWallet.signTransaction({
-                    transaction: txBytes
-                  });
-                  
-                  updateTransactionStatus('sending');
-                  signature = await connection.sendRawTransaction(signedTx.signedTransaction);
-                  
-                } else if (sendTransaction) {
-                  updateTransactionStatus('sending');
-                  signature = await sendTransaction(transaction, connection);
-                } else {
-                  console.error('❌ No wallet available for signing');
-                  updateTransactionStatus('failed', undefined, 'No wallet available for signing');
-                  setIsProcessing(false);
-                  return;
-                }
-                
-                
-                // Wait for confirmation
-                const confirmed = await waitForConfirmation(signature, connection);
-                
-                if (confirmed) {
-                  // Clear form on success
-                  setDepositAmount('');
-                }
-                
-              } catch (error) {
-                console.error('❌ Transaction processing error:', error);
-                updateTransactionStatus('failed', undefined, error instanceof Error ? error.message : 'Transaction failed');
-              } finally {
-                setIsProcessing(false);
-              }
-            } else {
-              console.error('❌ Failed to build transaction');
-            }
-            
-          } else if (!result.transaction?.serializedTx) {
-          } else {
-            console.warn('⚠️ Wallet not available for transaction signing');
-          }
-        } catch (txError) {
-          console.error('❌ Transaction processing failed:', txError);
-        }
+        // 更新为成功状态
+        setProgressMessage(`Transaction confirmed! View on Solscan: ${signature.slice(0, 8)}...`);
+        
+        // 清空表单
+        setDepositAmount('');
+        
+        // 6秒后隐藏进度提示
+        setTimeout(() => {
+          setShowProgress(false);
+        }, 6000);
       }
     } catch (error) {
       console.error('❌ Deposit failed:', error);
+      setProgressMessage(error instanceof Error ? error.message : '未知错误');
+      
+      // 6秒后隐藏错误提示
+      setTimeout(() => {
+        setShowProgress(false);
+      }, 6000);
     }
   };
 
-  // Handle withdraw action
+  // Handle withdraw action - 使用 Mars 合约直接取款
   const handleWithdraw = async () => {
-    if (!isWalletConnected || !userWalletAddress || !withdrawAmount || !currentOpportunity) {
-      console.error('Missing required data for withdrawal:', {
-        isWalletConnected,
-        userWalletAddress,
-        withdrawAmount,
-        currentOpportunity: !!currentOpportunity
-      });
+    if (!isWalletConnected || !userWalletAddress || !withdrawAmount) {
+      console.error('❌ Missing data for withdrawal');
+      setShowProgress(true);
+      setProgressTitle('Validation Error');
+      setProgressMessage('Please connect wallet and enter withdrawal amount');
+      setTotalTxSteps(0);
+      setTimeout(() => setShowProgress(false), 6000);
+      return;
+    }
+
+    // 仅支持 PYUSD（可以后续扩展）
+    if (selectedToken !== 'PYUSD') {
+      setShowProgress(true);
+      setProgressTitle('Validation Error');
+      setProgressMessage('Currently only PYUSD withdrawals are supported');
+      setTotalTxSteps(0);
+      setTimeout(() => setShowProgress(false), 6000);
       return;
     }
 
     try {
-      const withdrawRequest = {
-        userAddress: userWalletAddress,
-        asset: selectedToken,
-        amount: parseFloat(withdrawAmount) // Use specific amount or support 'max' later
-      };
-
-      console.log('🚀 Creating withdrawal with Mars API:', withdrawRequest);
+      console.log('🚀 开始 PYUSD 取款流程（3笔交易）...');
       
-      const result = await withdraw(withdrawRequest);
+      const amount = parseFloat(withdrawAmount);
       
-      if (result) {
-        console.log('✅ Withdrawal created successfully:', result);
-        console.log('🔍 Debug - serializedTx exists:', !!result.transaction?.serializedTx);
+      // 确认用户了解需要3笔交易
+      const confirmed = window.confirm(
+        `取款需要执行 3 笔交易：\n\n` +
+        `1. 发起取消质押请求\n` +
+        `2. 从 Farm 提取已取消质押的 shares\n` +
+        `3. 从 Vault 取款\n\n` +
+        `请确保每笔交易都确认，整个流程约需 15-30 秒。\n\n` +
+        `是否继续？`
+      );
+      
+      if (!confirmed) {
+        console.log('❌ 用户取消取款');
+        return;
+      }
+      
+      // 显示进度提示
+      setShowProgress(true);
+      setProgressTitle('Withdrawing PYUSD from the vault');
+      setTotalTxSteps(3);
+      setCurrentTxStep(0);
+      setProgressMessage('Starting withdrawal process...');
+      
+      const signatures = await marsContract.withdraw(amount, (step, txName) => {
+        setCurrentTxStep(step);
+        setProgressMessage(`Processing: ${txName}...`);
+      });
+      
+      if (signatures && signatures.length > 0) {
+        console.log('✅ 取款成功! 完成了 3 笔交易');
+        signatures.forEach((sig: string, index: number) => {
+          console.log(`  交易 ${index + 1}: https://solscan.io/tx/${sig}`);
+        });
         
-        // Handle transaction signing and sending  
-        try {
-          if (result.transaction?.serializedTx) {
-            console.log('📝 Processing withdraw transaction from backend...');
-            
-            // Check wallet connection status
-            
-            if (!sendTransaction) {
-              console.error('❌ No sendTransaction function available');
-              alert('请先连接 Solana 钱包！');
-              return;
-            }
-            
-            // Check if we have Solana wallet via Privy or direct connection
-            if (!solanaPublicKey && solanaWallets.length === 0) {
-              console.error('❌ No Solana wallet connected');
-              alert('请先连接 Solana 钱包！');
-              return;
-            }
-            
-            // Decode transaction parameters from backend
-            const txParams = JSON.parse(atob(result.transaction.serializedTx));
-            console.log('� Backend withdrawal transaction params:', txParams);
-            console.log('🔄 Transaction type:', txParams.type);
-            
-            // Add user address and ensure type is withdraw
-            txParams.userAddress = userWalletAddress;
-            txParams.type = 'withdraw';
-            
-            // Build actual transaction based on protocol
-            const userPubKey = solanaPublicKey || new PublicKey(userWalletAddress);
-            const transaction = await buildProtocolTransaction(txParams, userPubKey);
-            
-            if (transaction) {
-              console.log('📋 Withdraw transaction built, requesting signature...');
-              setIsProcessing(true);
-              updateTransactionStatus('building');
-              
-              try {
-                updateTransactionStatus('signing');
-                
-                // Use Privy Solana wallet if available, otherwise use direct wallet
-                let signature;
-                if (solanaWallets.length > 0) {
-                  console.log('🔗 Using Privy Solana wallet for withdraw signing...');
-                  const privySolanaWallet = solanaWallets[0];
-                  
-                  // Get recent blockhash for the transaction
-                  const { blockhash } = await connection.getLatestBlockhash();
-                  transaction.recentBlockhash = blockhash;
-                  transaction.feePayer = new PublicKey(userWalletAddress);
-                  
-                  // Sign and send transaction with Privy wallet
-                  const txBytes = transaction.serialize({ requireAllSignatures: false });
-                  const signedTx = await privySolanaWallet.signTransaction({
-                    transaction: txBytes
-                  });
-                  
-                  updateTransactionStatus('sending');
-                  signature = await connection.sendRawTransaction(signedTx.signedTransaction);
-                  
-                } else if (sendTransaction) {
-                  console.log('🔗 Using direct Solana wallet for withdraw signing...');
-                  updateTransactionStatus('sending');
-                  signature = await sendTransaction(transaction, connection);
-                } else {
-                  console.error('❌ No wallet available for signing');
-                  updateTransactionStatus('failed', undefined, 'No wallet available for signing');
-                  setIsProcessing(false);
-                  return;
-                }
-                
-                console.log('🎉 Withdraw transaction signed and sent:', signature);
-                
-                // Wait for confirmation
-                const confirmed = await waitForConfirmation(signature, connection);
-                
-                if (confirmed) {
-                  // Clear form on success
-                  setWithdrawAmount('');
-                  console.log('✅ Withdrawal completed successfully!');
-                }
-                
-              } catch (error) {
-                console.error('❌ Withdraw transaction processing error:', error);
-                updateTransactionStatus('failed', undefined, error instanceof Error ? error.message : 'Transaction failed');
-              } finally {
-                setIsProcessing(false);
-              }
-            } else {
-              console.error('❌ Failed to build withdraw transaction');
-            }
-            
-          } else if (!result.transaction?.serializedTx) {
-            console.log('ℹ️ Withdraw preview created, no transaction to sign');
-          } else {
-            console.warn('⚠️ Wallet not available for transaction signing');
-          }
-        } catch (txError) {
-          console.error('❌ Withdraw transaction processing failed:', txError);
-        }
+        // 更新为成功状态
+        setCurrentTxStep(3);
+        setProgressMessage(`All transactions confirmed! View on Solscan: ${signatures[0].slice(0, 8)}...`);
+        
+        // 清空表单
+        setWithdrawAmount('');
+        
+        // 6秒后隐藏进度提示
+        setTimeout(() => {
+          setShowProgress(false);
+        }, 6000);
       }
     } catch (error) {
       console.error('❌ Withdrawal failed:', error);
-      alert(`Withdrawal failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setProgressMessage(error instanceof Error ? error.message : '未知错误');
+      
+      // 6秒后隐藏错误提示
+      setTimeout(() => {
+        setShowProgress(false);
+      }, 6000);
     }
   };
+
 
   const tokenConfigs = {
     USDC: { symbol: 'USDC', name: 'USD Coin', color: '#2775ca' },
     USDT: { symbol: 'USDT', name: 'Tether USD', color: '#26a17b' },
-    DAI: { symbol: 'DAI', name: 'DAI Stablecoin', color: '#f4b731' },
-    BUSD: { symbol: 'BUSD', name: 'Binance USD', color: '#f0b90b' },
-    FRAX: { symbol: 'FRAX', name: 'Frax', color: '#000000' }
+    PYUSD: { symbol: 'PYUSD', name: 'PayPal USD', color: '#0070ba' },
   };
 
   const getCurrentToken = () => tokenConfigs[selectedToken as keyof typeof tokenConfigs];
@@ -1337,7 +1092,7 @@ const XFundPage = () => {
                 variant="contained"
                 disabled={
                   !isWalletConnected || 
-                  isProcessing || 
+                  marsContract.isProcessing || 
                   (activeTab === 0 ? !depositAmount : !withdrawAmount)
                 }
                 onClick={activeTab === 0 ? handleDeposit : handleWithdraw}
@@ -1357,14 +1112,14 @@ const XFundPage = () => {
                   }
                 }}
               >
-                {isProcessing ? (
+                {marsContract.isProcessing ? (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <CircularProgress size={16} sx={{ color: 'white' }} />
                     <span>
-                      {transactionStatus.status === 'building' && 'Building Transaction...'}
-                      {transactionStatus.status === 'signing' && 'Signing Transaction...'}
-                      {transactionStatus.status === 'sending' && 'Sending Transaction...'}
-                      {transactionStatus.status === 'pending' && 'Confirming...'}
+                      {marsContract.status === 'building' && 'Building Transaction...'}
+                      {marsContract.status === 'signing' && 'Signing Transaction...'}
+                      {marsContract.status === 'sending' && 'Sending Transaction...'}
+                      {marsContract.status === 'confirming' && 'Confirming...'}
                     </span>
                   </Box>
                 ) : !isWalletConnected ? (
@@ -1377,11 +1132,11 @@ const XFundPage = () => {
               </Button>
 
               {/* Transaction Status Display */}
-              {transactionStatus.hash && (
+              {marsContract.currentSignature && (
                 <Alert 
                   severity={
-                    transactionStatus.status === 'confirmed' ? 'success' :
-                    transactionStatus.status === 'failed' ? 'error' : 'info'
+                    marsContract.status === 'success' ? 'success' :
+                    marsContract.status === 'error' ? 'error' : 'info'
                   }
                   sx={{ 
                     mt: 2, 
@@ -1391,14 +1146,14 @@ const XFundPage = () => {
                 >
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      {transactionStatus.status === 'confirmed' && '✅ Transaction Confirmed!'}
-                      {transactionStatus.status === 'pending' && '⏳ Transaction Pending...'}
-                      {transactionStatus.status === 'failed' && `❌ Transaction Failed: ${transactionStatus.error}`}
+                      {marsContract.status === 'success' && '✅ Transaction Confirmed!'}
+                      {marsContract.status === 'confirming' && '⏳ Transaction Confirming...'}
+                      {marsContract.status === 'error' && `❌ Transaction Failed: ${marsContract.error}`}
                     </Typography>
                     <Typography 
                       variant="caption" 
                       component="a"
-                      href={`https://solscan.io/tx/${transactionStatus.hash}`}
+                      href={`https://solscan.io/tx/${marsContract.currentSignature}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       sx={{ 
@@ -1407,7 +1162,7 @@ const XFundPage = () => {
                         '&:hover': { color: '#16a34a' }
                       }}
                     >
-                      View on Solscan: {transactionStatus.hash.slice(0, 8)}...{transactionStatus.hash.slice(-8)}
+                      View on Solscan: {marsContract.currentSignature.slice(0, 8)}...{marsContract.currentSignature.slice(-8)}
                     </Typography>
                   </Box>
                 </Alert>
@@ -1592,9 +1347,28 @@ const XFundPage = () => {
 
 
               {/* Error Display */}
-              {depositError && (
+              {marsContract.error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
-                  {depositError}
+                  {marsContract.error}
+                </Alert>
+              )}
+
+              {/* Status Display */}
+              {marsContract.status !== 'idle' && marsContract.status !== 'success' && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Status: {marsContract.status}
+                  {marsContract.currentSignature && (
+                    <Box sx={{ mt: 1 }}>
+                      <a 
+                        href={`https://solscan.io/tx/${marsContract.currentSignature}?cluster=mainnet`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#3b82f6', textDecoration: 'underline' }}
+                      >
+                        View on Solscan
+                      </a>
+                    </Box>
+                  )}
                 </Alert>
               )}
 
@@ -1602,7 +1376,7 @@ const XFundPage = () => {
               <Button
                 fullWidth
                 variant="contained"
-                disabled={!isWalletConnected || !depositAmount || depositLoading || !currentOpportunity}
+                disabled={!isWalletConnected || !depositAmount || marsContract.isProcessing || !currentOpportunity}
                 sx={{
                   mt: 2,
                   py: 1.5,
@@ -1622,10 +1396,13 @@ const XFundPage = () => {
                 }}
                 onClick={handleDeposit}
               >
-                {depositLoading ? (
+                {marsContract.isProcessing ? (
                   <>
                     <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
-                    Creating Deposit...
+                    {marsContract.status === 'building' && 'Building Transaction...'}
+                    {marsContract.status === 'signing' && 'Waiting for Signature...'}
+                    {marsContract.status === 'sending' && 'Sending Transaction...'}
+                    {marsContract.status === 'confirming' && 'Confirming...'}
                   </>
                 ) : (
                   'Deposit'
@@ -2206,6 +1983,17 @@ const XFundPage = () => {
         </Box>
       </Container>
     </Box>
+
+    {/* Transaction Progress Indicator */}
+    <TransactionProgress
+      open={showProgress}
+      status={marsContract.status}
+      title={progressTitle}
+      message={progressMessage}
+      currentStep={currentTxStep}
+      totalSteps={totalTxSteps}
+      error={marsContract.error}
+    />
   </Box>
   );
 };

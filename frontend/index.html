@@ -5,6 +5,30 @@
     <link rel="icon" type="image/svg+xml" href="/mars-liquid-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mars Liquid</title>
+    <script>
+      // Polyfills for CommonJS modules
+      window.global = window;
+      window.exports = {};
+      window.module = { exports: {} };
+      // Basic require polyfill - return empty object for unknown modules
+      window.require = function(module) {
+        if (module === 'buffer') {
+          return { Buffer: window.Buffer };
+        }
+        // Return empty object with proxy to handle any property access
+        return new Proxy({}, {
+          get: function(target, prop) {
+            if (prop === 'default') return {};
+            return function() { return {}; };
+          }
+        });
+      };
+    </script>
+    <script type="module">
+      import { Buffer } from 'buffer';
+      window.Buffer = Buffer;
+      globalThis.Buffer = Buffer;
+    </script>
   </head>
   <body>
     <div id="root"></div>

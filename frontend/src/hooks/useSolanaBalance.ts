@@ -21,8 +21,10 @@ export const useSolanaBalance = (walletAddress?: string) => {
 
   // Constants
   const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  const PYUSD_MINT = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo'; // Token-2022
   const SOL_DECIMALS = 9;
   const USDC_DECIMALS = 6;
+  const PYUSD_DECIMALS = 6;
   const REQUEST_TIMEOUT = 8000;
 
   // Helper functions
@@ -127,6 +129,48 @@ export const useSolanaBalance = (walletAddress?: string) => {
     };
   };
 
+  const fetchPYUSDBalance = async (walletPublicKey: PublicKey): Promise<BalanceResult> => {
+    const connection = getRpcConnection();
+    
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT)
+    );
+
+    // PYUSD uses Token-2022 program
+    const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+    
+    const pyusdPromise = connection.getTokenAccountsByOwner(walletPublicKey, {
+      mint: new PublicKey(PYUSD_MINT),
+      programId: TOKEN_2022_PROGRAM_ID
+    });
+
+    const tokenAccountsResult = await Promise.race([pyusdPromise, timeoutPromise]);
+
+    if (!tokenAccountsResult.value || tokenAccountsResult.value.length === 0) {
+      console.log('💰 PYUSD balance: 0.00 (no token account)');
+      return {
+        success: true,
+        data: createDefaultBalance('PYUSD', PYUSD_DECIMALS)
+      };
+    }
+
+    const accountInfo = await connection.getTokenAccountBalance(
+      tokenAccountsResult.value[0].pubkey
+    );
+    
+    const pyusdBalance = accountInfo.value.uiAmountString || '0';
+    console.log('💰 PYUSD balance:', pyusdBalance);
+
+    return {
+      success: true,
+      data: {
+        symbol: 'PYUSD',
+        balance: pyusdBalance,
+        decimals: PYUSD_DECIMALS,
+      }
+    };
+  };
+
   const fetchAllBalances = async () => {
     if (!walletAddress) {
       setBalances({});
@@ -177,6 +221,21 @@ export const useSolanaBalance = (walletAddress?: string) => {
     } else {
       console.error('❌ USDC balance error:', usdcResult.error);
       newBalances['USDC'] = createDefaultBalance('USDC', USDC_DECIMALS);
+    }
+
+    console.log('💰 Fetching PYUSD balance...');
+    // Fetch PYUSD balance (Token-2022)
+    const pyusdResult = await fetchPYUSDBalance(walletPublicKey).catch(err => ({
+      success: false as const,
+      error: err instanceof Error ? err.message : 'Failed to fetch PYUSD balance'
+    }));
+
+    if (pyusdResult.success && pyusdResult.data) {
+      newBalances[pyusdResult.data.symbol] = pyusdResult.data;
+      console.log('✅ PYUSD balance loaded successfully');
+    } else {
+      console.error('❌ PYUSD balance error:', pyusdResult.error);
+      newBalances['PYUSD'] = createDefaultBalance('PYUSD', PYUSD_DECIMALS);
     }
 
     console.log('🎉 Balance fetch completed:', newBalances);
