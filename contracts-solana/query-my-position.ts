@@ -33,9 +33,8 @@ async function main() {
   const vault = new KaminoVault(VAULT_ADDRESS as any);
   const vaultState = await vault.getState(rpc);
 
-  // 获取用户份额
-  const userSharesAllVaults = await kaminoManager.getUserSharesBalanceAllVaults(USER_ADDRESS as any);
-  const userSharesForVault = userSharesAllVaults.get(VAULT_ADDRESS as any);
+  // 获取用户在特定 Vault 的份额（使用 SingleVault 方法避免查询所有 vaults）
+  const userSharesForVault = await kaminoManager.getUserSharesBalanceSingleVault(USER_ADDRESS as any, vault);
   
   if (!userSharesForVault || userSharesForVault.totalShares.isZero()) {
     console.log("❌ 用户在该 Vault 中没有持仓\n");

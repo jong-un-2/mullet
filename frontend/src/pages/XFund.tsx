@@ -769,8 +769,10 @@ const XFundPage = () => {
                   color: chartView === 'APY' ? '#60a5fa' : 'white',
                   transition: 'color 0.3s ease'
                 }}>
-                  {marsDataLoading ? (
+                  {userVaultPosition.loading ? (
                     <CircularProgress size={24} sx={{ color: '#60a5fa' }} />
+                  ) : userVaultPosition.totalAPY > 0 ? (
+                    formatPercentage(userVaultPosition.totalAPY)
                   ) : marsApyData?.bestApy ? (
                     formatPercentage(marsApyData.bestApy / 100)
                   ) : currentOpportunity ? (
@@ -811,12 +813,14 @@ const XFundPage = () => {
                   color: '#60a5fa',
                   transition: 'color 0.3s ease'
                 }}>
-                  {marsDataLoading ? (
+                  {userVaultPosition.loading ? (
                     <CircularProgress size={24} sx={{ color: '#60a5fa' }} />
+                  ) : userVaultPosition.dailyInterestUSD > 0 ? (
+                    formatCurrency(userVaultPosition.dailyInterestUSD, 'USD')
                   ) : marsUserEarnings?.dailyEarnings ? (
                     formatCurrency(marsUserEarnings.dailyEarnings, 'USD')
                   ) : (
-                    '$0.42'
+                    '$0.00'
                   )}
                 </Typography>
                 <Typography variant="body2" sx={{ 
