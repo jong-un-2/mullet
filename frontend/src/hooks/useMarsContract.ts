@@ -139,38 +139,66 @@ export const useMarsContract = () => {
       );
 
       const signatures: string[] = [];
+      const errors: string[] = [];
 
       for (let i = 0; i < transactions.length; i++) {
         const txName = ['Start Unstake', 'Unstake', 'Withdraw'][i];
         console.log(`第 ${i + 1}/3 步: ${txName}`);
 
-        // 通知进度更新
-        if (onStepChange) {
-          onStepChange(i + 1, txName);
-        }
+        try {
+          // 通知进度更新
+          if (onStepChange) {
+            onStepChange(i + 1, txName);
+          }
 
-        setStatus('signing');
-        console.log('等待签名...');
+          setStatus('signing');
+          console.log('等待签名...');
 
-        setStatus('sending');
-        const signature = await sendTransaction(transactions[i], connection);
-        signatures.push(signature);
-        setCurrentSignature(signature);
-        console.log(`${txName} 交易已发送:`, signature);
+          setStatus('sending');
+          const signature = await sendTransaction(transactions[i], connection);
+          signatures.push(signature);
+          setCurrentSignature(signature);
+          console.log(`${txName} 交易已发送:`, signature);
 
-        setStatus('confirming');
-        console.log('等待确认...');
-        await connection.confirmTransaction(signature, 'confirmed');
-        console.log(`${txName} 确认成功!`);
+          setStatus('confirming');
+          console.log('等待确认...');
+          await connection.confirmTransaction(signature, 'confirmed');
+          console.log(`${txName} 确认成功!`);
 
-        if (i < 2) {
-          console.log('等待 5 秒后继续...');
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          if (i < 2) {
+            console.log('等待 5 秒后继续...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        } catch (stepError: any) {
+          // 记录错误但继续执行下一步
+          const errorMsg = `第 ${i + 1} 步 (${txName}) 失败: ${stepError.message || '未知错误'}`;
+          console.error(`❌ ${errorMsg}`);
+          errors.push(errorMsg);
+          
+          // 即使失败也要等待，避免太快
+          if (i < 2) {
+            console.log('⚠️ 步骤失败，等待 5 秒后继续下一步...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
         }
       }
 
-      setStatus('success');
-      console.log('取款完成! 所有 3 个交易:', signatures);
+      // 检查是否有成功的交易
+      if (signatures.length > 0) {
+        setStatus('success');
+        console.log('取款流程完成!');
+        console.log(`✅ 成功: ${signatures.length}/3 步`);
+        console.log('成功的交易:', signatures);
+        
+        if (errors.length > 0) {
+          console.warn('⚠️ 部分步骤失败:', errors);
+        }
+      } else {
+        setStatus('error');
+        const errorMessage = '所有步骤都失败了:\n' + errors.join('\n');
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
       
       return signatures;
 

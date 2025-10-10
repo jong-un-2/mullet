@@ -39,8 +39,9 @@ export const config = createConfig({
   chains: [mainnet, sepolia],
   connectors,
   transports: {
-    [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
-    [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
+    // Use public RPC endpoints to avoid CORS issues
+    [mainnet.id]: http('https://eth.llamarpc.com'),
+    [sepolia.id]: http('https://ethereum-sepolia-rpc.publicnode.com'),
   },
   ssr: true,
 });

@@ -9,12 +9,7 @@ import {
   KaminoManager, 
   KaminoVault 
 } from '@kamino-finance/klend-sdk';
-import { 
-  createDefaultRpcTransport, 
-  createRpc, 
-  createSolanaRpcApi 
-} from '@solana/kit';
-import { PublicKey, AccountMeta } from '@solana/web3.js';
+import { PublicKey, AccountMeta, Connection } from '@solana/web3.js';
 
 /**
  * Vault 账户接口
@@ -56,7 +51,7 @@ export interface DepositAndStakeInfo {
  * Kamino SDK Helper 类 - 前端版本
  */
 export class KaminoSDKHelper {
-  private rpc: any;
+  private connection: Connection;
   private manager: KaminoManager | null = null;
   private initialized = false;
   private userPublicKey: PublicKey;
@@ -64,9 +59,8 @@ export class KaminoSDKHelper {
   constructor(rpcUrl: string, userPublicKey: PublicKey) {
     this.userPublicKey = userPublicKey;
     
-    // 初始化 RPC
-    const transport = createDefaultRpcTransport({ url: rpcUrl });
-    this.rpc = createRpc({ api: createSolanaRpcApi(), transport });
+    // 使用标准的 Connection 对象，Kamino SDK 期望这个格式
+    this.connection = new Connection(rpcUrl, 'confirmed');
   }
 
   /**
@@ -79,7 +73,7 @@ export class KaminoSDKHelper {
     
     console.log('⏳ 初始化 Kamino SDK Manager...');
     const slotDuration = await getMedianSlotDurationInMsFromLastEpochs();
-    this.manager = new KaminoManager(this.rpc, slotDuration);
+    this.manager = new KaminoManager(this.connection as any, slotDuration);
     this.initialized = true;
     console.log('✅ Kamino SDK Manager 初始化完成');
   }
@@ -103,7 +97,7 @@ export class KaminoSDKHelper {
     this.ensureInitialized();
 
     const user = {
-      address: this.userPublicKey as any,
+      address: this.userPublicKey.toBase58() as any,
       signAndSendTransactions: async () => [] as any,
     };
 
@@ -162,7 +156,7 @@ export class KaminoSDKHelper {
     this.ensureInitialized();
 
     const user = {
-      address: this.userPublicKey as any,
+      address: this.userPublicKey.toBase58() as any,
       signAndSendTransactions: async () => [] as any,
     };
 
@@ -238,15 +232,15 @@ export class KaminoSDKHelper {
     this.ensureInitialized();
 
     const user = {
-      address: this.userPublicKey as any,
+      address: this.userPublicKey.toBase58() as any,
       signAndSendTransactions: async () => [] as any,
     };
 
     const vault = new KaminoVault(vaultAddress as any);
     
     // 获取取款指令（包含 unstake 指令）
-    const currentSlot = await this.rpc.getSlot().send();
-    const withdrawIxs = await this.manager!.withdrawFromVaultIxs(user, vault, sharesToWithdraw, currentSlot as bigint);
+    const currentSlot = await this.connection.getSlot();
+    const withdrawIxs = await this.manager!.withdrawFromVaultIxs(user, vault, sharesToWithdraw, BigInt(currentSlot));
 
     if (withdrawIxs.unstakeFromFarmIfNeededIxs.length === 0) {
       throw new Error('没有找到取消质押指令');
@@ -293,15 +287,15 @@ export class KaminoSDKHelper {
     this.ensureInitialized();
 
     const user = {
-      address: this.userPublicKey as any,
+      address: this.userPublicKey.toBase58() as any,
       signAndSendTransactions: async () => [] as any,
     };
 
     const vault = new KaminoVault(vaultAddress as any);
     
     // 获取取款指令
-    const currentSlot = await this.rpc.getSlot().send();
-    const withdrawIxs = await this.manager!.withdrawFromVaultIxs(user, vault, sharesToWithdraw, currentSlot as bigint);
+    const currentSlot = await this.connection.getSlot();
+    const withdrawIxs = await this.manager!.withdrawFromVaultIxs(user, vault, sharesToWithdraw, BigInt(currentSlot));
 
     if (withdrawIxs.withdrawIxs.length === 0) {
       throw new Error('没有找到取款指令');
