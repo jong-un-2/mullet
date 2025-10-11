@@ -25,42 +25,55 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 
-// 支持的代币化股票
+// 支持的代币化股票 (Solana 地址)
 const TOKENIZED_STOCKS = [
   { 
-    symbol: 'TSLA', 
-    name: 'Tesla', 
+    symbol: 'TSLAx', 
+    name: 'Tesla xStock', 
     logo: '🚗',
-    address: '0x...', // 实际的代币地址
+    address: 'XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB', // Solana TSLAx 代币地址
+    decimals: 9, // Solana token decimals
     description: 'Electric vehicles and clean energy'
   },
   { 
-    symbol: 'AAPL', 
-    name: 'Apple', 
+    symbol: 'AAPLx', 
+    name: 'Apple xStock', 
     logo: '🍎',
-    address: '0x...',
+    address: 'XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp', // Solana AAPLx 代币地址
+    decimals: 9,
     description: 'Technology and consumer electronics'
   },
   { 
-    symbol: 'GOOGL', 
-    name: 'Google', 
+    symbol: 'GOOGLx', 
+    name: 'Alphabet xStock', 
     logo: '🔍',
-    address: '0x...',
+    address: 'XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN', // Solana GOOGLx 代币地址
+    decimals: 9,
     description: 'Search engine and cloud services'
   },
   { 
-    symbol: 'AMZN', 
-    name: 'Amazon', 
+    symbol: 'AMZNx', 
+    name: 'Amazon xStock', 
     logo: '📦',
-    address: '0x...',
+    address: 'Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg', // Solana AMZNx 代币地址
+    decimals: 9,
     description: 'E-commerce and cloud computing'
   },
   { 
-    symbol: 'MSFT', 
-    name: 'Microsoft', 
+    symbol: 'MSFTx', 
+    name: 'Microsoft xStock', 
     logo: '💻',
-    address: '0x...',
+    address: 'XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX', // Solana MSFTx 代币地址
+    decimals: 9,
     description: 'Software and cloud services'
+  },
+  { 
+    symbol: 'NVDAx', 
+    name: 'NVIDIA xStock', 
+    logo: '🎮',
+    address: 'Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh', // Solana NVDAx 代币地址
+    decimals: 9,
+    description: 'Graphics processing and AI chips'
   },
 ];
 
@@ -144,14 +157,8 @@ const XStockPage = () => {
         user: userAddress
       });
 
-      // Map payment token to Solana equivalent
-      const SOLANA_TOKEN_ADDRESSES: Record<string, string> = {
-        'USDC': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-        'USDT': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
-        'ETH': 'So11111111111111111111111111111111111111112', // SOL as fallback
-      };
-
-      const toToken = SOLANA_TOKEN_ADDRESSES[paymentToken.symbol] || SOLANA_TOKEN_ADDRESSES['USDC'];
+      // 使用选中股票的 Solana 代币地址作为目标代币
+      const toToken = selectedStock.address;
 
       // 检查是否有 Solana 地址
       if (!solanaAddress) {
@@ -180,9 +187,19 @@ const XStockPage = () => {
 
       setQuote(response);
       
-      // 估算可获得的股票份额（这里简化处理）
-      const estimatedAmount = (parseFloat(amount) / 200).toFixed(4); // 假设股票价格 $200
-      setEstimatedShares(estimatedAmount);
+      // 从 LiFi 报价中获取实际能收到的代币数量
+      // toAmount 是以最小单位返回的，需要除以 decimals
+      const toTokenDecimals = selectedStock.decimals; // 使用股票代币的 decimals
+      const receivedAmount = parseFloat(response.route.toAmount) / Math.pow(10, toTokenDecimals);
+      
+      console.log('📊 Received token amount:', {
+        stock: selectedStock.symbol,
+        toAmount: response.route.toAmount,
+        decimals: toTokenDecimals,
+        receivedAmount,
+      });
+      
+      setEstimatedShares(receivedAmount.toFixed(6)); // 使用 6 位小数显示更精确
       
     } catch (err: any) {
       console.error('Failed to fetch quote:', err);
@@ -575,6 +592,44 @@ const XStockPage = () => {
                       
                       <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
                       
+                      {/* 汇率信息 */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        mb: 1.5,
+                        p: 1.5,
+                        bgcolor: 'rgba(59, 130, 246, 0.1)',
+                        borderRadius: 1,
+                        border: '1px solid rgba(59, 130, 246, 0.2)'
+                      }}>
+                        <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                          📊 Exchange Rate
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                          1 {paymentToken.symbol} ≈ {(parseFloat(estimatedShares) / parseFloat(amount || '1')).toFixed(4)} {selectedStock.symbol}
+                        </Typography>
+                      </Box>
+
+                      {/* 你支付的金额 */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                        <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                          💸 You Pay
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                          {amount} {paymentToken.symbol} (${quote.route.fromAmountUSD || amount})
+                        </Typography>
+                      </Box>
+
+                      {/* 你接收的金额 */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                        <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                          📥 You Receive
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#34d399', fontWeight: 600 }}>
+                          {estimatedShares} {selectedStock.symbol} (${quote.route.toAmountUSD || (parseFloat(estimatedShares) * 200).toFixed(2)})
+                        </Typography>
+                      </Box>
+                      
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography variant="body2" sx={{ color: '#94a3b8' }}>
@@ -582,7 +637,9 @@ const XStockPage = () => {
                           </Typography>
                         </Box>
                         <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
-                          ~{Math.floor(quote.estimatedTime / 60)} min
+                          {quote.estimatedTime < 60 
+                            ? `~${quote.estimatedTime} sec` 
+                            : `~${Math.floor(quote.estimatedTime / 60)} min`}
                         </Typography>
                       </Box>
                       
