@@ -52,23 +52,7 @@ export interface CrossChainWithdrawParams {
   marsProtocol?: string;
 }
 
-export interface ExecuteDepositParams {
-  userAddress: string;
-  fromChain: number;
-  fromToken: string;
-  fromAmount: string;
-  transactionHash: string;
-  marsProtocol?: string;
-}
-
-export interface ExecuteWithdrawParams {
-  userAddress: string;
-  toAddress: string; // 改为toAddress，自动判断目标链
-  toToken: string;
-  fromAmount: string;
-  transactionHash: string;
-  marsProtocol?: string;
-}
+// Execute interfaces removed - transactions are now executed directly via LiFi SDK in frontend
 
 class MarsLiFiService {
   private baseUrl = `${getApiBaseUrl()}/v1/api/mars/lifi`;
@@ -179,69 +163,8 @@ class MarsLiFiService {
     }
   }
 
-  /**
-   * 执行跨链存款
-   */
-  async executeDeposit(params: ExecuteDepositParams): Promise<{ success: boolean; transactionHash: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/execute/deposit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to execute deposit: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(`Deposit execution failed: ${data.error}`);
-      }
-
-      return {
-        success: data.success,
-        transactionHash: data.transactionHash,
-      };
-    } catch (error) {
-      console.error('Failed to execute deposit:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 执行跨链提款
-   */
-  async executeWithdraw(params: ExecuteWithdrawParams): Promise<{ success: boolean; transactionHash: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/execute/withdraw`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to execute withdraw: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(`Withdraw execution failed: ${data.error}`);
-      }
-
-      return {
-        success: data.success,
-        transactionHash: data.transactionHash,
-      };
-    } catch (error) {
-      console.error('Failed to execute withdraw:', error);
-      throw error;
-    }
-  }
+  // Execute methods removed - transactions are now executed directly via LiFi SDK in frontend
+  // This service now only provides quote endpoints
 
   /**
    * 检查地址是否为EVM地址

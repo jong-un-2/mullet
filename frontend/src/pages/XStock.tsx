@@ -20,10 +20,15 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import Navigation from '../components/Navigation';
+import { TransactionProgress } from '../components/TransactionProgress';
 import { marsLiFiService, SUPPORTED_CHAINS } from '../services/marsLiFiService';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
+import { createConfig, executeRoute, EVM, Solana } from '@lifi/sdk';
+import type { Route, ExecutionOptions } from '@lifi/sdk';
+import { createWalletClient, custom } from 'viem';
+import { mainnet } from 'viem/chains';
 
 // 支持的代币化股票 (Solana 地址)
 const TOKENIZED_STOCKS = [
@@ -75,6 +80,166 @@ const TOKENIZED_STOCKS = [
     decimals: 8,
     description: 'Graphics processing and AI chips'
   },
+  { 
+    symbol: 'CRCLx', 
+    name: 'Circle xStock', 
+    logo: '⭕',
+    address: 'XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1', // Solana CRCLx 代币地址
+    decimals: 8,
+    description: 'Digital currency and payment infrastructure'
+  },
+  { 
+    symbol: 'COINx', 
+    name: 'Coinbase xStock', 
+    logo: '🪙',
+    address: 'Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu', // Solana COINx 代币地址
+    decimals: 8,
+    description: 'Cryptocurrency exchange platform'
+  },
+  { 
+    symbol: 'METAx', 
+    name: 'Meta xStock', 
+    logo: '📱',
+    address: 'Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu', // Solana METAx 代币地址
+    decimals: 8,
+    description: 'Social media and virtual reality'
+  },
+  { 
+    symbol: 'MSTRx', 
+    name: 'MicroStrategy xStock', 
+    logo: '₿',
+    address: 'XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ', // Solana MSTRx 代币地址
+    decimals: 8,
+    description: 'Bitcoin treasury and business intelligence'
+  },
+  { 
+    symbol: 'QQQx', 
+    name: 'Invesco QQQ xStock', 
+    logo: '📈',
+    address: 'Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ', // Solana QQQx 代币地址
+    decimals: 8,
+    description: 'Nasdaq-100 Index ETF'
+  },
+  { 
+    symbol: 'SPYx', 
+    name: 'SPDR S&P 500 xStock', 
+    logo: '🏛️',
+    address: 'XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W', // Solana SPYx 代币地址
+    decimals: 8,
+    description: 'S&P 500 Index ETF'
+  },
+  { 
+    symbol: 'GMEx', 
+    name: 'GameStop xStock', 
+    logo: '🎮',
+    address: 'Xsf9mBktVB9BSU5kf4nHxPq5hCBJ2j2ui3ecFGxPRGc', // Solana GMEx 代币地址
+    decimals: 8,
+    description: 'Video game retailer'
+  },
+  { 
+    symbol: 'PMx', 
+    name: 'Philip Morris xStock', 
+    logo: '🚬',
+    address: 'Xsba6tUnSjDae2VcopDB6FGGDaxRrewFCDa5hKn5vT3', // Solana PMx 代币地址
+    decimals: 8,
+    description: 'Tobacco and smoke-free products'
+  },
+  { 
+    symbol: 'MRVLx', 
+    name: 'Marvell Technology xStock', 
+    logo: '🔧',
+    address: 'XsuxRGDzbLjnJ72v74b7p9VY6N66uYgTCyfwwRjVCJA', // Solana MRVLx 代币地址
+    decimals: 8,
+    description: 'Semiconductor and infrastructure solutions'
+  },
+  { 
+    symbol: 'INTCx', 
+    name: 'Intel xStock', 
+    logo: '🖥️',
+    address: 'XshPgPdXFRWB8tP1j82rebb2Q9rPgGX37RuqzohmArM', // Solana INTCx 代币地址
+    decimals: 8,
+    description: 'Semiconductor chip manufacturer'
+  },
+  { 
+    symbol: 'IBMx', 
+    name: 'IBM xStock', 
+    logo: '💼',
+    address: 'XspwhyYPdWVM8XBHZnpS9hgyag9MKjLRyE3tVfmCbSr', // Solana IBMx 代币地址
+    decimals: 8,
+    description: 'Cloud computing and enterprise solutions'
+  },
+  { 
+    symbol: 'NFLXx', 
+    name: 'Netflix xStock', 
+    logo: '🎬',
+    address: 'XsEH7wWfJJu2ZT3UCFeVfALnVA6CP5ur7Ee11KmzVpL', // Solana NFLXx 代币地址
+    decimals: 8,
+    description: 'Streaming entertainment service'
+  },
+  { 
+    symbol: 'MCDx', 
+    name: "McDonald's xStock", 
+    logo: '🍔',
+    address: 'XsqE9cRRpzxcGKDXj1BJ7Xmg4GRhZoyY1KpmGSxAWT2', // Solana MCDx 代币地址
+    decimals: 8,
+    description: 'Fast food restaurant chain'
+  },
+  { 
+    symbol: 'ORCLx', 
+    name: 'Oracle xStock', 
+    logo: '🗄️',
+    address: 'XsjFwUPiLofddX5cWFHW35GCbXcSu1BCUGfxoQAQjeL', // Solana ORCLx 代币地址
+    decimals: 8,
+    description: 'Database and enterprise software'
+  },
+  { 
+    symbol: 'KOx', 
+    name: 'Coca-Cola xStock', 
+    logo: '🥤',
+    address: 'XsaBXg8dU5cPM6ehmVctMkVqoiRG2ZjMo1cyBJ3AykQ', // Solana KOx 代币地址
+    decimals: 8,
+    description: 'Beverage and soft drink manufacturer'
+  },
+  { 
+    symbol: 'WMTx', 
+    name: 'Walmart xStock', 
+    logo: '🛒',
+    address: 'Xs151QeqTCiuKtinzfRATnUESM2xTU6V9Wy8Vy538ci', // Solana WMTx 代币地址
+    decimals: 8,
+    description: 'Retail and supermarket chain'
+  },
+  { 
+    symbol: 'PEPx', 
+    name: 'PepsiCo xStock', 
+    logo: '🥤',
+    address: 'Xsv99frTRUeornyvCfvhnDesQDWuvns1M852Pez91vF', // Solana PEPx 代币地址
+    decimals: 8,
+    description: 'Beverage and snack food manufacturer'
+  },
+  { 
+    symbol: 'CVXx', 
+    name: 'Chevron xStock', 
+    logo: '⛽',
+    address: 'XsNNMt7WTNA2sV3jrb1NNfNgapxRF5i4i6GcnTRRHts', // Solana CVXx 代币地址
+    decimals: 8,
+    description: 'Oil and gas energy company'
+  },
+  { 
+    symbol: 'Vx', 
+    name: 'Visa xStock', 
+    logo: '💳',
+    address: 'XsqgsbXwWogGJsNcVZ3TyVouy2MbTkfCFhCGGGcQZ2p', // Solana Vx 代币地址
+    decimals: 8,
+    description: 'Global payments technology company'
+  },
+  { 
+    symbol: 'MAx', 
+    name: 'Mastercard xStock', 
+    logo: '💳',
+    address: 'XsApJFV9MAktqnAc6jqzsHVujxkGm9xcSUffaBoYLKC', // Solana MAx 代币地址
+    decimals: 8,
+    description: 'Payment processing and technology'
+  },
 ];
 
 // 支付代币选项
@@ -116,6 +281,14 @@ const XStockPage = () => {
   const [quote, setQuote] = useState<any>(null);
   const [userAddress, setUserAddress] = useState(''); // EVM 地址
   const [solanaAddress, setSolanaAddress] = useState(''); // Solana 地址
+  
+  // 进度提示状态
+  const [showProgress, setShowProgress] = useState(false);
+  const [progressTitle, setProgressTitle] = useState('');
+  const [progressMessage, setProgressMessage] = useState('');
+  const [txSignature, setTxSignature] = useState<string>();
+  const [currentTxStep, setCurrentTxStep] = useState(0);
+  const [totalTxSteps, setTotalTxSteps] = useState(0);
 
   useEffect(() => {
     if (authenticated && wallets.length > 0) {
@@ -209,37 +382,170 @@ const XStockPage = () => {
     }
   };
 
-  // 执行购买
+  // 执行购买 - 使用 LiFi SDK 执行跨链交易
   const handleBuy = async () => {
-    if (!quote) {
+    if (!quote || !quote.route) {
       setError('Please get a quote first');
       return;
     }
 
-    setLoading(true);
-    setError('');
+    if (!authenticated || !wallets.length) {
+      setError('Please connect your EVM wallet');
+      return;
+    }
+
+    // 检查输入金额
+    const inputAmount = parseFloat(amount);
+    if (inputAmount <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
 
     try {
-      // 执行跨链 swap
-      const result = await marsLiFiService.executeDeposit({
-        userAddress,
-        fromChain: paymentToken.chainId,
-        fromToken: paymentToken.symbol,
-        fromAmount: amount,
-        transactionHash: '', // 实际交易哈希
-      });
-
-      if (result.success) {
-        alert(`Successfully purchased ${estimatedShares} ${selectedStock.symbol} shares!`);
-        setAmount('');
-        setQuote(null);
+      console.log('🚀 Starting cross-chain purchase...');
+      console.log('📊 Input amount:', amount, paymentToken.symbol);
+      console.log('📊 Expected output:', estimatedShares, selectedStock.symbol);
+      
+      // 获取 EVM wallet provider
+      const evmWallet = wallets[0];
+      const provider = await evmWallet.getEthereumProvider();
+      
+      if (!provider) {
+        throw new Error('Failed to get EVM wallet provider');
       }
+      
+      // 将 Privy 的 EIP1193Provider 转换为 Viem WalletClient
+      const walletClient = createWalletClient({
+        account: evmWallet.address as `0x${string}`,
+        chain: mainnet,
+        transport: custom(provider)
+      });
+      
+      // 配置 EVM provider
+      const evmProvider = EVM({ 
+        getWalletClient: async () => walletClient 
+      });
+      
+      // 获取 Solana wallet adapter
+      const solanaWallet = solanaWallets[0];
+      if (!solanaWallet) {
+        throw new Error('Solana wallet not found');
+      }
+      
+      // 配置 Solana provider
+      const solanaProvider = Solana({
+        getWalletAdapter: async () => {
+          // Privy Solana wallet 已经实现了 SignerWalletAdapter 接口
+          return solanaWallet as any;
+        }
+      });
+      
+      // 初始化 LiFi SDK 同时支持 EVM 和 Solana
+      createConfig({
+        integrator: 'MarsLiquid',
+        apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+        providers: [evmProvider, solanaProvider],
+      });
+      
+      // 确保钱包已连接
+      console.log('🔌 Connected EVM wallet:', evmWallet.address);
+      console.log('🔌 Connected Solana wallet:', solanaWallet.address);
+      console.log('🔌 Multi-chain providers configured (EVM + Solana)');
+      
+      // 显示进度提示
+      setShowProgress(true);
+      setProgressTitle(`Buying ${selectedStock.symbol}`);
+      setProgressMessage('Preparing transaction...');
+      setTotalTxSteps(3);
+      setCurrentTxStep(1);
+      
+      console.log('📝 Executing route with LiFi SDK...');
+      setProgressMessage('Please sign the transaction in your wallet...');
+      setCurrentTxStep(2);
+      
+      // 执行路由的配置
+      const executionOptions: ExecutionOptions = {
+        updateRouteHook: (route: Route) => {
+          console.log('🔄 Route updated:', route);
+        },
+        executeInBackground: false,
+      };
+      
+      // 使用 LiFi SDK 执行跨链交易
+      const result = await executeRoute(quote.route, {
+        ...executionOptions,
+        updateRouteHook: () => {
+          console.log('🔄 Route updated during execution');
+          setProgressMessage('Transaction in progress...');
+          setCurrentTxStep(2);
+        },
+      });
+      
+      console.log('✅ Transaction completed:', result);
+      
+      // 更新为成功状态
+      setCurrentTxStep(3);
+      setProgressMessage('Purchase completed successfully!');
+      
+      // 获取交易哈希（如果有）
+      if (result.steps && result.steps.length > 0) {
+        const firstStep = result.steps[0];
+        if (firstStep.execution?.process && firstStep.execution.process.length > 0) {
+          const txHash = firstStep.execution.process[0].txHash;
+          if (txHash) {
+            setTxSignature(txHash);
+            console.log(`🔗 Transaction: https://etherscan.io/tx/${txHash}`);
+          }
+        }
+      }
+      
+      // 清空表单
+      setAmount('');
+      setQuote(null);
+      setEstimatedShares('0');
+      
+      // 6秒后隐藏进度提示
+      setTimeout(() => {
+        setShowProgress(false);
+        setTxSignature(undefined);
+      }, 6000);
+      
     } catch (err: any) {
-      console.error('Failed to execute purchase:', err);
-      setError(err.message || 'Failed to execute purchase');
-    } finally {
-      setLoading(false);
+      console.error('❌ Purchase failed:', err);
+      console.log('📋 Quote details for execution:', quote);
+      
+      // 提取更有用的错误信息
+      let errorMessage = 'Transaction failed';
+      
+      if (err.message) {
+        if (err.message.includes('User rejected') || err.message.includes('User denied')) {
+          errorMessage = 'Transaction was rejected';
+        } else if (err.message.includes('insufficient funds') || err.message.includes('Insufficient balance')) {
+          errorMessage = 'Insufficient funds for transaction';
+        } else if (err.message.includes('internal error')) {
+          errorMessage = 'Transaction failed. Please check your USDC balance and approval.';
+        } else {
+          errorMessage = err.message.substring(0, 100);
+        }
+      }
+      
+      setProgressMessage(errorMessage);
+      setTotalTxSteps(0);
+      setError(errorMessage);
+      
+      // 6秒后隐藏错误提示
+      setTimeout(() => {
+        setShowProgress(false);
+      }, 6000);
     }
+    
+    console.log('📋 Quote details for execution:', {
+      route: quote.route,
+      fromAmount: amount,
+      toAmount: estimatedShares,
+      totalFees: quote.totalFees,
+      estimatedTime: quote.estimatedTime,
+    });
   };
 
   return (
@@ -310,68 +616,110 @@ const XStockPage = () => {
           <Grid container spacing={3}>
             {/* Left: Stock Selection */}
             <Grid size={{ xs: 12, md: 4 }}>
+              {/* Stock count header */}
+              <Box sx={{ 
+                mb: 2, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                px: 1
+              }}>
+                <Typography variant="body1" sx={{ color: '#94a3b8', fontWeight: 600 }}>
+                  Available Stocks
+                </Typography>
+                <Chip 
+                  label={`${TOKENIZED_STOCKS.length} stocks`}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)', 
+                    color: '#60a5fa',
+                    fontWeight: 600,
+                    fontSize: '0.75rem'
+                  }}
+                />
+              </Box>
               <Box sx={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(1, 1fr)',
-                gap: 2,
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 1.5,
+                maxHeight: '600px',
+                overflowY: 'auto',
+                pr: 1,
+                '&::-webkit-scrollbar': {
+                  width: '6px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '3px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(59, 130, 246, 0.3)',
+                  borderRadius: '3px',
+                  '&:hover': {
+                    background: 'rgba(59, 130, 246, 0.5)',
+                  },
+                },
               }}>
                 {TOKENIZED_STOCKS.map((stock) => (
                   <Card
                     key={stock.symbol}
                     onClick={() => setSelectedStock(stock)}
                     sx={{ 
-                      p: 2.5, 
+                      p: 2, 
                       cursor: 'pointer',
                       background: selectedStock.symbol === stock.symbol
                         ? 'rgba(59, 130, 246, 0.15)' 
                         : 'rgba(255, 255, 255, 0.1)',
                       backdropFilter: 'blur(10px)',
                       border: selectedStock.symbol === stock.symbol
-                        ? '1px solid rgba(59, 130, 246, 0.3)'
+                        ? '2px solid rgba(59, 130, 246, 0.5)'
                         : '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: 3,
+                      borderRadius: 2,
                       boxShadow: selectedStock.symbol === stock.symbol
                         ? '0 8px 32px rgba(59, 130, 246, 0.2)'
-                        : '0 8px 32px rgba(0, 0, 0, 0.3)',
-                      transition: 'all 0.3s ease',
+                        : '0 4px 16px rgba(0, 0, 0, 0.2)',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 12px 40px rgba(59, 130, 246, 0.3)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)',
                         background: 'rgba(59, 130, 246, 0.2)',
                         border: '1px solid rgba(59, 130, 246, 0.4)',
                       }
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <Box sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '12px',
+                        width: 36,
+                        height: 36,
+                        borderRadius: '8px',
                         background: 'rgba(59, 130, 246, 0.1)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        mr: 2,
-                        fontSize: '24px'
+                        mr: 1.5,
+                        fontSize: '20px'
                       }}>
                         {stock.logo}
                       </Box>
-                      <Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography sx={{ 
                           color: 'white', 
                           fontWeight: 700,
-                          fontSize: '1.1rem'
+                          fontSize: '0.95rem'
                         }}>
                           {stock.symbol}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                        <Typography variant="caption" sx={{ 
+                          color: '#94a3b8',
+                          display: 'block',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
                           {stock.name}
                         </Typography>
                       </Box>
                     </Box>
-                    <Typography variant="caption" sx={{ color: '#cbd5e1', lineHeight: 1.4 }}>
-                      {stock.description}
-                    </Typography>
                   </Card>
                 ))}
               </Box>
@@ -489,8 +837,18 @@ const XStockPage = () => {
                   label="Amount"
                   type="number"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // 防止负数输入
+                    if (value === '' || parseFloat(value) >= 0) {
+                      setAmount(value);
+                    }
+                  }}
                   placeholder="0.00"
+                  inputProps={{
+                    min: 0,
+                    step: 0.01,
+                  }}
                   sx={{
                     mb: 3,
                     input: { 
@@ -713,6 +1071,17 @@ const XStockPage = () => {
           </Grid>
         </Container>
       </Box>
+      
+      {/* Transaction Progress Indicator */}
+      <TransactionProgress
+        open={showProgress}
+        status={loading ? 'building' : 'success'}
+        title={progressTitle}
+        message={progressMessage}
+        currentStep={currentTxStep}
+        totalSteps={totalTxSteps}
+        txSignature={txSignature}
+      />
     </Box>
   );
 };

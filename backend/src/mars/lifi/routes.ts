@@ -1,5 +1,4 @@
 import { lifiService } from './index';
-import { MarsTransactionManager } from '../transactions/manager';
 import { MARS_CHAIN_IDS } from './constants';
 
 /**
@@ -23,11 +22,7 @@ export async function handleLiFiRoutes(request: Request, env: any): Promise<Resp
       case '/quote/withdraw':
         return handleWithdrawQuote(request);
       
-      case '/execute/deposit':
-        return handleExecuteDeposit(request, env);
-      
-      case '/execute/withdraw':
-        return handleExecuteWithdraw(request, env);
+      // Execute routes removed - frontend now uses LiFi SDK directly
       
       default:
         return new Response('Not found', { status: 404 });
@@ -175,140 +170,5 @@ async function handleWithdrawQuote(request: Request): Promise<Response> {
   );
 }
 
-/**
- * 执行跨链存款
- */
-async function handleExecuteDeposit(request: Request, env: any): Promise<Response> {
-  if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
-
-  const body = await request.json() as any;
-  const { 
-    userAddress, 
-    fromChain, 
-    fromToken, 
-    fromAmount, 
-    transactionHash,
-    marsProtocol = 'default'
-  } = body;
-
-  if (!userAddress || !fromChain || !fromToken || !fromAmount || !transactionHash) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required parameters' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // 记录Mars交易
-  // 创建简化的交易管理器实例用于LI.FI集成
-  const transactionManager = new MarsTransactionManager(
-    null as any, // Jupiter client (not needed for LI.FI)
-    null as any, // Kamino client (not needed for LI.FI)  
-    null as any, // Cache (not needed for LI.FI)
-    env
-  );
-  
-  await transactionManager.recordLiFiTransaction({
-    userAddress,
-    transactionType: 'cross_chain_deposit',
-    asset: fromToken,
-    amount: parseFloat(fromAmount),
-    transactionHash,
-    protocol: marsProtocol,
-    chainId: fromChain,
-    status: 'pending',
-    metadata: {
-      lifiIntegration: true,
-      sourceChain: fromChain,
-      targetChain: MARS_CHAIN_IDS.SOLANA,
-      bridgeProvider: 'lifi',
-    },
-  });
-
-  return new Response(
-    JSON.stringify({
-      success: true,
-      message: 'Cross-chain deposit initiated via LI.FI',
-      transactionHash,
-      status: 'pending',
-    }),
-    { headers: { 'Content-Type': 'application/json' } }
-  );
-}
-
-/**
- * 执行跨链提款
- */
-async function handleExecuteWithdraw(request: Request, env: any): Promise<Response> {
-  if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
-
-  const body = await request.json() as any;
-  const { 
-    userAddress, 
-    toAddress, 
-    toToken, 
-    fromAmount, 
-    transactionHash,
-    marsProtocol = 'default'
-  } = body;
-
-  if (!userAddress || !toAddress || !toToken || !fromAmount || !transactionHash) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required parameters: userAddress, toAddress, toToken, fromAmount, transactionHash' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // 获取目标链ID
-  const getChainIdFromAddress = (address: string): number => {
-    // EVM地址: 0x开头，42字符长度
-    if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      return MARS_CHAIN_IDS.ETHEREUM;
-    }
-    // Solana地址: base58编码，32-44字符长度  
-    if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
-      return MARS_CHAIN_IDS.SOLANA;
-    }
-    return MARS_CHAIN_IDS.ETHEREUM; // 默认以太坊
-  };
-  
-  const targetChainId = getChainIdFromAddress(toAddress);
-
-  // 记录Mars交易
-  const transactionManager = new MarsTransactionManager(
-    null as any, // Jupiter client (not needed for LI.FI)
-    null as any, // Kamino client (not needed for LI.FI)  
-    null as any, // Cache (not needed for LI.FI)
-    env
-  );
-  
-  await transactionManager.recordLiFiTransaction({
-    userAddress,
-    transactionType: 'cross_chain_withdraw',
-    asset: toToken,
-    amount: parseFloat(fromAmount),
-    transactionHash,
-    protocol: marsProtocol,
-    chainId: targetChainId,
-    status: 'pending',
-    metadata: {
-      sourceChain: MARS_CHAIN_IDS.SOLANA,
-      targetChain: targetChainId,
-      bridgeProvider: 'lifi',
-      toAddress,
-    },
-  });
-
-  return new Response(
-    JSON.stringify({
-      success: true,
-      message: 'Cross-chain withdraw initiated via LI.FI',
-      transactionHash,
-      status: 'pending',
-    }),
-    { headers: { 'Content-Type': 'application/json' } }
-  );
-}
+// Execute functions removed - frontend now uses LiFi SDK directly to execute transactions
+// Backend only provides quote endpoints for cross-chain operations

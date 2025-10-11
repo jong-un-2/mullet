@@ -31,6 +31,7 @@
     "@lb-xyz/sdk": "^5.0.14",
     "@lb-xyz/sdk-core": "^2.0.13",
     "@lb-xyz/sdk-v2": "^3.0.28",
+    "@lifi/sdk": "^3.12.14",
     "@mui/icons-material": "^7.3.2",
     "@mui/lab": "^7.0.0-beta.17",
     "@mui/material": "^7.3.2",
