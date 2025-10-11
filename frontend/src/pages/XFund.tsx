@@ -61,10 +61,11 @@ const XFundPage = () => {
   const [activeTab, setActiveTab] = useState(0); // 0 = Deposit, 1 = Withdraw (default to Deposit)
   const [historyView, setHistoryView] = useState<'earning' | 'history'>('earning');
   
-  // Calendar state management
-  const [selectedYear, setSelectedYear] = useState('2025');
-  const [selectedMonth, setSelectedMonth] = useState('09');
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  // Calendar state management - Default to today's date
+  const today = new Date();
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState((today.getMonth() + 1).toString().padStart(2, '0'));
+  const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
 
   // Transaction progress state
   const [showProgress, setShowProgress] = useState(false);
@@ -1683,6 +1684,30 @@ const XFundPage = () => {
                     
                     {/* Date Selector */}
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          const now = new Date();
+                          setSelectedYear(now.getFullYear().toString());
+                          setSelectedMonth((now.getMonth() + 1).toString().padStart(2, '0'));
+                          setSelectedDay(now.getDate());
+                        }}
+                        sx={{
+                          color: '#f59e0b',
+                          borderColor: '#f59e0b',
+                          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          px: 2,
+                          '&:hover': {
+                            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                            borderColor: '#fbbf24',
+                          }
+                        }}
+                        variant="outlined"
+                      >
+                        Today
+                      </Button>
                       <Select
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(e.target.value)}
@@ -1811,6 +1836,11 @@ const XFundPage = () => {
                         
                         // Add actual days of the month
                         for (let day = 1; day <= daysInMonth; day++) {
+                          // Check if this day is today
+                          const isToday = today.getDate() === day && 
+                                         today.getMonth() + 1 === parseInt(selectedMonth) && 
+                                         today.getFullYear() === parseInt(selectedYear);
+                          
                           // Sample earning data (only for September 2025)
                           const hasEarning = selectedYear === '2025' && selectedMonth === '09' && [27, 28, 29].includes(day);
                           const earnings = hasEarning ? 
@@ -1824,37 +1854,64 @@ const XFundPage = () => {
                               sx={{
                                 minHeight: 60,
                                 p: 1,
-                                border: `1px solid ${isSelected ? '#60a5fa' : 'rgba(255, 255, 255, 0.1)'}`,
+                                border: isSelected 
+                                  ? '2px solid #60a5fa' 
+                                  : isToday 
+                                  ? '2px solid #f59e0b' 
+                                  : '1px solid rgba(255, 255, 255, 0.1)',
                                 borderRadius: 1,
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: 'pointer',
+                                position: 'relative',
                                 backgroundColor: isSelected 
                                   ? 'rgba(96, 165, 250, 0.2)' 
+                                  : isToday 
+                                  ? 'rgba(245, 158, 11, 0.1)' 
                                   : hasEarning 
                                   ? 'rgba(52, 211, 153, 0.1)' 
                                   : 'transparent',
                                 '&:hover': {
                                   background: isSelected 
                                     ? 'rgba(96, 165, 250, 0.3)'
+                                    : isToday 
+                                    ? 'rgba(245, 158, 11, 0.2)' 
                                     : hasEarning 
                                     ? 'rgba(52, 211, 153, 0.2)' 
                                     : 'rgba(255, 255, 255, 0.05)'
                                 }
                               }}
                             >
+                              {isToday && (
+                                <Typography 
+                                  variant="caption" 
+                                  sx={{ 
+                                    position: 'absolute',
+                                    top: 2,
+                                    right: 4,
+                                    color: '#f59e0b',
+                                    fontSize: '0.5rem',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase'
+                                  }}
+                                >
+                                  Today
+                                </Typography>
+                              )}
                               <Typography 
                                 variant="body2" 
                                 sx={{ 
                                   color: isSelected 
                                     ? '#60a5fa' 
+                                    : isToday 
+                                    ? '#f59e0b' 
                                     : hasEarning 
                                     ? '#34d399' 
                                     : '#f1f5f9',
                                   fontSize: '0.875rem',
-                                  fontWeight: isSelected || hasEarning ? 600 : 400,
+                                  fontWeight: isSelected || isToday || hasEarning ? 700 : 400,
                                   mb: hasEarning ? 0.5 : 0
                                 }}
                               >
