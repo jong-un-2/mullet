@@ -23,6 +23,7 @@ import Navigation from '../components/Navigation';
 import { marsLiFiService, SUPPORTED_CHAINS } from '../services/marsLiFiService';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth';
+import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 
 // 支持的代币化股票
 const TOKENIZED_STOCKS = [
@@ -65,14 +66,33 @@ const TOKENIZED_STOCKS = [
 
 // 支付代币选项
 const PAYMENT_TOKENS = [
-  { symbol: 'USDC', name: 'USD Coin', chainId: SUPPORTED_CHAINS.ETHEREUM },
-  { symbol: 'USDT', name: 'Tether', chainId: SUPPORTED_CHAINS.ETHEREUM },
-  { symbol: 'ETH', name: 'Ethereum', chainId: SUPPORTED_CHAINS.ETHEREUM },
+  { 
+    symbol: 'USDC', 
+    name: 'USD Coin', 
+    chainId: SUPPORTED_CHAINS.ETHEREUM,
+    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // 正确的 Ethereum USDC 地址
+    decimals: 6
+  },
+  { 
+    symbol: 'USDT', 
+    name: 'Tether', 
+    chainId: SUPPORTED_CHAINS.ETHEREUM,
+    address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    decimals: 6
+  },
+  { 
+    symbol: 'ETH', 
+    name: 'Ethereum', 
+    chainId: SUPPORTED_CHAINS.ETHEREUM,
+    address: '0x0000000000000000000000000000000000000000',
+    decimals: 18
+  },
 ];
 
 const XStockPage = () => {
   const { authenticated } = usePrivy();
-  const { wallets } = useWallets();
+  const { wallets } = useWallets(); // EVM 钱包 (用于 fromAddress)
+  const { wallets: solanaWallets } = useSolanaWallets(); // Solana 钱包 (用于 toAddress)
   
   const [selectedStock, setSelectedStock] = useState(TOKENIZED_STOCKS[0]);
   const [paymentToken, setPaymentToken] = useState(PAYMENT_TOKENS[0]);
@@ -81,13 +101,17 @@ const XStockPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [quote, setQuote] = useState<any>(null);
-  const [userAddress, setUserAddress] = useState('');
+  const [userAddress, setUserAddress] = useState(''); // EVM 地址
+  const [solanaAddress, setSolanaAddress] = useState(''); // Solana 地址
 
   useEffect(() => {
     if (authenticated && wallets.length > 0) {
       setUserAddress(wallets[0].address);
     }
-  }, [authenticated, wallets]);
+    if (authenticated && solanaWallets.length > 0) {
+      setSolanaAddress(solanaWallets[0].address);
+    }
+  }, [authenticated, wallets, solanaWallets]);
 
   // 获取报价
   const fetchQuote = async () => {
@@ -105,23 +129,54 @@ const XStockPage = () => {
     setError('');
     
     try {
-      // 使用 LiFi 获取跨链 swap 报价
-      const quoteParams = {
-        fromChain: paymentToken.chainId,
-        fromToken: paymentToken.symbol,
-        fromAmount: amount,
-        fromAddress: userAddress,
-        toToken: selectedStock.address,
-        toChain: SUPPORTED_CHAINS.ETHEREUM, // 假设股票代币在以太坊
+      // 转换金额为最小单位（wei）
+      // USDC/USDT 是 6 decimals，ETH 是 18 decimals
+      const decimals = paymentToken.symbol === 'ETH' ? 18 : 6;
+      const fromAmount = (parseFloat(amount) * Math.pow(10, decimals)).toString();
+
+      console.log('🔵 Fetching quote with:', {
+        amount,
+        fromAmount,
+        decimals,
+        paymentToken: paymentToken.symbol,
+        paymentTokenAddress: paymentToken.address,
+        stock: selectedStock.symbol,
+        user: userAddress
+      });
+
+      // Map payment token to Solana equivalent
+      const SOLANA_TOKEN_ADDRESSES: Record<string, string> = {
+        'USDC': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        'USDT': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+        'ETH': 'So11111111111111111111111111111111111111112', // SOL as fallback
       };
 
+      const toToken = SOLANA_TOKEN_ADDRESSES[paymentToken.symbol] || SOLANA_TOKEN_ADDRESSES['USDC'];
+
+      // 检查是否有 Solana 地址
+      if (!solanaAddress) {
+        setError('Please connect your Solana wallet first. You need both EVM and Solana wallets connected.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('🔵 Using addresses:', {
+        fromAddress: userAddress,
+        toAddress: solanaAddress,
+      });
+
+      // 使用 LiFi 获取跨链 swap 报价
       // 调用 LiFi API 获取报价
       const response = await marsLiFiService.getDepositQuote({
-        fromChain: quoteParams.fromChain,
-        fromToken: quoteParams.fromToken,
-        fromAmount: quoteParams.fromAmount,
-        fromAddress: quoteParams.fromAddress,
+        fromChain: paymentToken.chainId,
+        fromToken: paymentToken.address, // 使用代币地址而不是符号
+        toToken, // Solana上的对应代币地址
+        fromAmount, // 使用最小单位
+        fromAddress: userAddress, // EVM 地址（付款地址）
+        toAddress: solanaAddress, // Solana 地址（接收地址）
       });
+
+      console.log('✅ Quote received:', response);
 
       setQuote(response);
       

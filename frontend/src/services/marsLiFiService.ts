@@ -37,8 +37,10 @@ export interface LiFiQuote {
 export interface CrossChainDepositParams {
   fromChain: number;
   fromToken: string;
+  toToken: string; // 目标链上的代币地址
   fromAmount: string;
   fromAddress: string;
+  toAddress?: string; // 目标地址（可选，用于跨链到 Solana 等非 EVM 链）
   marsProtocol?: string;
 }
 
@@ -116,6 +118,8 @@ class MarsLiFiService {
    */
   async getDepositQuote(params: CrossChainDepositParams): Promise<LiFiQuote> {
     try {
+      console.log('🔵 Calling getDepositQuote with params:', params);
+      
       const response = await fetch(`${this.baseUrl}/quote/deposit`, {
         method: 'POST',
         headers: {
@@ -124,13 +128,19 @@ class MarsLiFiService {
         body: JSON.stringify(params),
       });
 
+      console.log('🔵 Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error(`Failed to get deposit quote: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('🔴 Response error:', errorText);
+        throw new Error(`Failed to get deposit quote: ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('🔵 Response data:', data);
+      
       if (!data.success) {
-        throw new Error(`Quote failed: ${data.error}`);
+        throw new Error(`Quote failed: ${data.error || 'Unknown error'}`);
       }
 
       return data.quote;

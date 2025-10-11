@@ -69,6 +69,7 @@ class MarsLiFiHelper {
     const depositParams: CrossChainDepositParams = {
       fromChain: sourceChain,
       fromToken: this.getTokenAddress(asset, sourceChain),
+      toToken: this.getTokenAddress(asset, targetChain), // 目标链上的代币地址
       fromAmount: amount,
       fromAddress: userAddress,
       marsProtocol: marsProtocol || 'default',

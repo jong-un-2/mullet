@@ -128,21 +128,37 @@ export class LiFiService {
   async getBestDepositRoute(params: {
     fromChain: number;
     fromToken: string;
+    toToken: string; // 目标链上的代币地址
     fromAmount: string;
     fromAddress: string;
+    toAddress?: string; // 目标Solana地址（可选）
     marsProtocol: string; // 目标Mars协议
   }) {
     // Mars deposit目标都是Solana
     const toChain = MARS_CHAIN_IDS.SOLANA;
-    const toToken = params.fromToken; // 保持同样的代币
+    
+    // 如果没有提供toAddress，使用一个默认的Solana地址用于报价
+    // 注意：实际执行时需要用户提供真实的Solana地址
+    const toAddress = params.toAddress || 'HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH'; // Mars协议地址或用户地址
+
+    console.log('📊 LiFi getBestDepositRoute params:', {
+      fromChain: params.fromChain,
+      toChain,
+      fromToken: params.fromToken,
+      toToken: params.toToken,
+      fromAmount: params.fromAmount,
+      fromAddress: params.fromAddress,
+      toAddress,
+    });
 
     const routes = await this.getQuote({
       fromChain: params.fromChain,
       toChain,
       fromToken: params.fromToken,
-      toToken,
+      toToken: params.toToken,
       fromAmount: params.fromAmount,
       fromAddress: params.fromAddress,
+      toAddress,
     });
 
     if (routes.length === 0) {
@@ -155,10 +171,23 @@ export class LiFiService {
       throw new Error('No valid route found');
     }
     
+    // 计算总费用（转换为美元）
+    let totalFeesUSD = 0;
+    for (const step of bestRoute.steps) {
+      if (step.estimate.feeCosts) {
+        for (const feeCost of step.estimate.feeCosts) {
+          // LiFi 返回的 feeCosts 包含 amountUSD 字段
+          if (feeCost.amountUSD) {
+            totalFeesUSD += parseFloat(feeCost.amountUSD);
+          }
+        }
+      }
+    }
+    
     return {
       route: bestRoute,
       estimatedTime: bestRoute.steps.reduce((acc, step) => acc + (step.estimate.executionDuration || 0), 0),
-      totalFees: bestRoute.steps.reduce((acc, step) => acc + parseFloat(step.estimate.feeCosts?.[0]?.amount || '0'), 0),
+      totalFees: totalFeesUSD, // 美元金额
     };
   }
 

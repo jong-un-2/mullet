@@ -89,32 +89,54 @@ async function handleDepositQuote(request: Request): Promise<Response> {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  const body = await request.json() as any;
-  const { fromChain, fromToken, fromAmount, fromAddress, marsProtocol } = body;
+  try {
+    const body = await request.json() as any;
+    console.log('📥 Deposit quote request:', body);
+    
+    const { fromChain, fromToken, toToken, fromAmount, fromAddress, toAddress, marsProtocol } = body;
 
-  if (!fromChain || !fromToken || !fromAmount || !fromAddress) {
+    if (!fromChain || !fromToken || !toToken || !fromAmount || !fromAddress) {
+      console.error('❌ Missing required parameters:', { fromChain, fromToken, toToken, fromAmount, fromAddress });
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Missing required parameters: fromChain, fromToken, toToken, fromAmount, fromAddress' 
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('🔄 Getting best deposit route...');
+    const quote = await lifiService.getBestDepositRoute({
+      fromChain: parseInt(fromChain),
+      fromToken,
+      toToken,
+      fromAmount,
+      fromAddress,
+      toAddress, // 可选的Solana目标地址
+      marsProtocol: marsProtocol || 'default',
+    });
+
+    console.log('✅ Quote generated successfully');
     return new Response(
-      JSON.stringify({ error: 'Missing required parameters' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        success: true,
+        quote,
+        type: 'deposit',
+      }),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('❌ Deposit quote error:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: String(error)
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-
-  const quote = await lifiService.getBestDepositRoute({
-    fromChain: parseInt(fromChain),
-    fromToken,
-    fromAmount,
-    fromAddress,
-    marsProtocol: marsProtocol || 'default',
-  });
-
-  return new Response(
-    JSON.stringify({
-      success: true,
-      quote,
-      type: 'deposit',
-    }),
-    { headers: { 'Content-Type': 'application/json' } }
-  );
 }
 
 /**

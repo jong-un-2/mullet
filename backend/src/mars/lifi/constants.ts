@@ -1,10 +1,12 @@
 /**
  * Mars协议链ID常量
  * 统一管理所有链ID，避免硬编码
+ * 
+ * 注意: LiFi SDK 中 Solana 的 chainId 是 1151111081099710，不是标准的 101
  */
 
 export const MARS_CHAIN_IDS = {
-  SOLANA: 101, // Mars主链
+  SOLANA: 1151111081099710, // LiFi SDK 中的 Solana chainId
   ETHEREUM: 1,
   BSC: 56,
   POLYGON: 137,
@@ -14,7 +16,7 @@ export const MARS_CHAIN_IDS = {
 
 export const MARS_TOKEN_ADDRESSES = {
   [MARS_CHAIN_IDS.ETHEREUM]: {
-    'USDC': '0xA0b86a33E6441a695a7e9B72b67B0a82f0913A50',
+    'USDC': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // 正确的 Ethereum USDC 地址
     'USDT': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     'ETH': '0x0000000000000000000000000000000000000000',
   },
