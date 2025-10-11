@@ -32,7 +32,7 @@ const TOKENIZED_STOCKS = [
     name: 'Tesla xStock', 
     logo: '🚗',
     address: 'XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB', // Solana TSLAx 代币地址
-    decimals: 9, // Solana token decimals
+    decimals: 8, // xStock tokens use 8 decimals
     description: 'Electric vehicles and clean energy'
   },
   { 
@@ -40,7 +40,7 @@ const TOKENIZED_STOCKS = [
     name: 'Apple xStock', 
     logo: '🍎',
     address: 'XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp', // Solana AAPLx 代币地址
-    decimals: 9,
+    decimals: 8,
     description: 'Technology and consumer electronics'
   },
   { 
@@ -48,7 +48,7 @@ const TOKENIZED_STOCKS = [
     name: 'Alphabet xStock', 
     logo: '🔍',
     address: 'XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN', // Solana GOOGLx 代币地址
-    decimals: 9,
+    decimals: 8,
     description: 'Search engine and cloud services'
   },
   { 
@@ -56,7 +56,7 @@ const TOKENIZED_STOCKS = [
     name: 'Amazon xStock', 
     logo: '📦',
     address: 'Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg', // Solana AMZNx 代币地址
-    decimals: 9,
+    decimals: 8,
     description: 'E-commerce and cloud computing'
   },
   { 
@@ -64,7 +64,7 @@ const TOKENIZED_STOCKS = [
     name: 'Microsoft xStock', 
     logo: '💻',
     address: 'XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX', // Solana MSFTx 代币地址
-    decimals: 9,
+    decimals: 8,
     description: 'Software and cloud services'
   },
   { 
@@ -72,7 +72,7 @@ const TOKENIZED_STOCKS = [
     name: 'NVIDIA xStock', 
     logo: '🎮',
     address: 'Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh', // Solana NVDAx 代币地址
-    decimals: 9,
+    decimals: 8,
     description: 'Graphics processing and AI chips'
   },
 ];

@@ -171,23 +171,27 @@ export class LiFiService {
       throw new Error('No valid route found');
     }
     
-    // 计算总费用（转换为美元）
-    let totalFeesUSD = 0;
-    for (const step of bestRoute.steps) {
-      if (step.estimate.feeCosts) {
-        for (const feeCost of step.estimate.feeCosts) {
-          // LiFi 返回的 feeCosts 包含 amountUSD 字段
-          if (feeCost.amountUSD) {
-            totalFeesUSD += parseFloat(feeCost.amountUSD);
-          }
-        }
-      }
-    }
+    // 直接使用 LiFi route 中的字段
+    const gasCostUSD = bestRoute.gasCostUSD ? parseFloat(bestRoute.gasCostUSD) : 0;
+    
+    // LiFi 在 steps[0].estimate 中有 executionDuration（秒）
+    // 我们也可以直接累加，但通常第一个 step 的时间就是总时间
+    const estimatedTime = bestRoute.steps.reduce((acc, step) => 
+      acc + (step.estimate.executionDuration || 0), 0
+    );
+    
+    console.log('📊 LiFi Route details:', {
+      gasCostUSD: bestRoute.gasCostUSD,
+      fromAmountUSD: bestRoute.fromAmountUSD,
+      toAmountUSD: bestRoute.toAmountUSD,
+      estimatedTime: estimatedTime,
+      stepsCount: bestRoute.steps.length,
+    });
     
     return {
       route: bestRoute,
-      estimatedTime: bestRoute.steps.reduce((acc, step) => acc + (step.estimate.executionDuration || 0), 0),
-      totalFees: totalFeesUSD, // 美元金额
+      estimatedTime: estimatedTime, // 秒为单位
+      totalFees: gasCostUSD,
     };
   }
 
