@@ -43,6 +43,7 @@ import type { RoutesRequest } from '@lifi/sdk';
 import { createWalletClient, custom } from 'viem';
 import { mainnet } from 'viem/chains';
 import { useWallets as useEvmWallets } from '@privy-io/react-auth';
+import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
 
 // Register Chart.js components
 ChartJS.register(
@@ -320,20 +321,71 @@ const XFundPage = () => {
       setCurrentTxStep(2);
 
       // Configure LiFi SDK providers
-      if (useSolana) {
-        // Use Solana wallet
+      const providers: any[] = [];
+      
+      // Always add Solana provider if available (for receiving PYUSD)
+      if (solanaWallets.length > 0) {
         const solanaWallet = solanaWallets[0];
+        
+        // Create a wrapper adapter that implements all required SignerWalletAdapter methods
+        const walletAdapter = {
+          publicKey: new PublicKey(solanaWallet.address),
+          signTransaction: async (transaction: Transaction | VersionedTransaction) => {
+            // Serialize transaction to bytes for Privy
+            const serializedTx = transaction.serialize({
+              requireAllSignatures: false,
+              verifySignatures: false,
+            });
+            
+            // Sign with Privy wallet
+            const result = await solanaWallet.signTransaction({ transaction: serializedTx });
+            
+            // Parse the signed transaction back
+            if ('version' in transaction) {
+              return VersionedTransaction.deserialize(new Uint8Array(result.signedTransaction));
+            } else {
+              return Transaction.from(new Uint8Array(result.signedTransaction));
+            }
+          },
+          signAllTransactions: async (transactions: (Transaction | VersionedTransaction)[]) => {
+            // Sign transactions one by one since Privy doesn't have signAllTransactions
+            const signedTxs = await Promise.all(
+              transactions.map(async (tx) => {
+                const serializedTx = tx.serialize({
+                  requireAllSignatures: false,
+                  verifySignatures: false,
+                });
+                const result = await solanaWallet.signTransaction({ transaction: serializedTx });
+                
+                if ('version' in tx) {
+                  return VersionedTransaction.deserialize(new Uint8Array(result.signedTransaction));
+                } else {
+                  return Transaction.from(new Uint8Array(result.signedTransaction));
+                }
+              })
+            );
+            return signedTxs;
+          },
+          signMessage: async (message: Uint8Array) => {
+            const result = await solanaWallet.signMessage({ message });
+            return result.signature;
+          },
+          // These properties are required by some wallet adapters
+          toString: () => solanaWallet.address,
+          toJSON: () => solanaWallet.address,
+        };
+        
         const solanaProvider = Solana({
-          getWalletAdapter: async () => solanaWallet as any
+          getWalletAdapter: async () => {
+            return walletAdapter as any;
+          }
         });
         
-        createConfig({
-          integrator: 'MarsLiquid',
-          apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
-          providers: [solanaProvider],
-        });
-      } else {
-        // Use EVM wallet
+        providers.push(solanaProvider);
+      }
+      
+      // Add EVM provider if using Ethereum
+      if (!useSolana && evmWallets.length > 0) {
         const evmWallet = evmWallets[0];
         const provider = await evmWallet.getEthereumProvider();
         
@@ -351,17 +403,14 @@ const XFundPage = () => {
           getWalletClient: async () => walletClient 
         });
         
-        const solanaWallet = solanaWallets[0];
-        const solanaProvider = Solana({
-          getWalletAdapter: async () => solanaWallet as any
-        });
-        
-        createConfig({
-          integrator: 'MarsLiquid',
-          apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
-          providers: [evmProvider, solanaProvider],
-        });
+        providers.push(evmProvider);
       }
+      
+      createConfig({
+        integrator: 'MarsLiquid',
+        apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+        providers: providers,
+      });
 
       // Execute swap
       const result = await executeRoute(route, {
@@ -419,33 +468,32 @@ const XFundPage = () => {
       return;
     }
 
-    // 仅支持 PYUSD（可以后续扩展）
-    if (selectedToken !== 'PYUSD') {
+    // 只支持提现为 USDC 或 USDT
+    if (selectedToken !== 'USDC' && selectedToken !== 'USDT') {
       setShowProgress(true);
       setProgressTitle('Validation Error');
-      setProgressMessage('Currently only PYUSD withdrawals are supported');
+      setProgressMessage('Please select USDC or USDT as withdrawal target');
       setTotalTxSteps(0);
       setTimeout(() => setShowProgress(false), 6000);
       return;
     }
 
     try {
-      console.log('🚀 开始 PYUSD 取款流程（批量交易）...');
+      console.log('🚀 Starting withdrawal and swap process...');
+      console.log(`  Withdraw PYUSD from vault → Swap to ${selectedToken}`);
       
       const amount = parseFloat(withdrawAmount);
       
-      // 显示进度提示
+      // Step 1: Withdraw PYUSD from vault
       setShowProgress(true);
-      setProgressTitle('Withdrawing PYUSD from the vault');
-      setTotalTxSteps(1);
+      setProgressTitle(`Withdrawing to ${selectedToken}`);
+      setTotalTxSteps(2);
       setCurrentTxStep(0);
-      setProgressMessage('Preparing batch transaction (Start Unstake + Unstake + Withdraw)...');
+      setProgressMessage('Step 1: Withdrawing PYUSD from vault...');
       
-      // 添加超时处理 (60秒，批量交易)
       const WITHDRAW_TIMEOUT = 60000; // 60 seconds
-      const withdrawPromise = marsContract.withdraw(amount, (step, txName) => {
-        setCurrentTxStep(step);
-        setProgressMessage(`Processing: ${txName}...`);
+      const withdrawPromise = marsContract.withdraw(amount, (_step, txName) => {
+        setProgressMessage(`Step 1: ${txName}...`);
       });
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Withdrawal timeout after 60 seconds')), WITHDRAW_TIMEOUT)
@@ -453,29 +501,128 @@ const XFundPage = () => {
       
       const signatures = await Promise.race([withdrawPromise, timeoutPromise]);
       
-      if (signatures && signatures.length > 0) {
-        console.log('✅ 批量取款成功!');
-        console.log(`  交易签名: https://solscan.io/tx/${signatures[0]}`);
-        
-        // 更新为成功状态
-        setCurrentTxStep(1);
-        setTxSignature(signatures[0]);
-        setProgressMessage(`Transaction confirmed!`);
-        
-        // 清空表单
-        setWithdrawAmount('');
-        
-        // 6秒后隐藏进度提示
-        setTimeout(() => {
-          setShowProgress(false);
-          setTxSignature(undefined);
-        }, 6000);
+      if (!signatures || signatures.length === 0) {
+        throw new Error('Withdrawal failed - no signatures received');
       }
-    } catch (error) {
-      console.error('❌ Withdrawal failed:', error);
-      setProgressMessage(error instanceof Error ? error.message : '未知错误');
+
+      console.log('✅ PYUSD withdrawn from vault');
+      console.log(`  Transaction: https://solscan.io/tx/${signatures[0]}`);
+      setTxSignature(signatures[0]);
       
-      // 6秒后隐藏错误提示
+      // Step 2: Swap PYUSD to target token (USDC or USDT)
+      setCurrentTxStep(1);
+      setProgressMessage(`Step 2: Swapping PYUSD to ${selectedToken}...`);
+      
+      // Token addresses on Solana
+      const tokenAddresses = {
+        PYUSD: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',
+        USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+      };
+
+      const fromToken = tokenAddresses.PYUSD;
+      const toToken = tokenAddresses[selectedToken as 'USDC' | 'USDT'];
+      
+      // Request LiFi swap route
+      const routesRequest: RoutesRequest = {
+        fromChainId: 1151111081099710, // Solana
+        toChainId: 1151111081099710,   // Solana
+        fromTokenAddress: fromToken,
+        toTokenAddress: toToken,
+        fromAddress: solanaWallets[0].address,
+        toAddress: solanaWallets[0].address,
+        fromAmount: (amount * 1_000_000).toString(), // PYUSD uses 6 decimals
+      };
+
+      console.log('📡 Requesting LiFi swap route (PYUSD → ' + selectedToken + ')...');
+      const routesResponse = await getRoutes(routesRequest);
+      
+      if (!routesResponse || !routesResponse.routes || routesResponse.routes.length === 0) {
+        throw new Error('No swap routes found for PYUSD → ' + selectedToken);
+      }
+
+      const route = routesResponse.routes[0];
+      console.log('✅ Got LiFi swap route:', route);
+
+      // Configure LiFi SDK for Solana
+      const solanaWallet = solanaWallets[0];
+      const walletAdapter = {
+        publicKey: new PublicKey(solanaWallet.address),
+        signTransaction: async (transaction: Transaction | VersionedTransaction) => {
+          const serializedTx = transaction.serialize({
+            requireAllSignatures: false,
+            verifySignatures: false,
+          });
+          const result = await solanaWallet.signTransaction({ transaction: serializedTx });
+          if ('version' in transaction) {
+            return VersionedTransaction.deserialize(new Uint8Array(result.signedTransaction));
+          } else {
+            return Transaction.from(new Uint8Array(result.signedTransaction));
+          }
+        },
+        signAllTransactions: async (transactions: (Transaction | VersionedTransaction)[]) => {
+          const signedTxs = await Promise.all(
+            transactions.map(async (tx) => {
+              const serializedTx = tx.serialize({
+                requireAllSignatures: false,
+                verifySignatures: false,
+              });
+              const result = await solanaWallet.signTransaction({ transaction: serializedTx });
+              if ('version' in tx) {
+                return VersionedTransaction.deserialize(new Uint8Array(result.signedTransaction));
+              } else {
+                return Transaction.from(new Uint8Array(result.signedTransaction));
+              }
+            })
+          );
+          return signedTxs;
+        },
+        signMessage: async (message: Uint8Array) => {
+          const result = await solanaWallet.signMessage({ message });
+          return result.signature;
+        },
+        toString: () => solanaWallet.address,
+        toJSON: () => solanaWallet.address,
+      };
+
+      const solanaProvider = Solana({
+        getWalletAdapter: async () => walletAdapter as any
+      });
+
+      createConfig({
+        integrator: 'MarsLiquid',
+        apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+        providers: [solanaProvider],
+      });
+
+      // Execute swap
+      console.log('🔄 Executing swap...');
+      const swapResult = await executeRoute(route, {
+        updateRouteHook: () => {
+          console.log('🔄 Swap in progress...');
+        },
+        executeInBackground: false,
+      });
+
+      console.log('✅ Swap completed:', swapResult);
+      
+      // Success!
+      setCurrentTxStep(2);
+      setProgressMessage(`Successfully withdrawn and swapped to ${selectedToken}!`);
+      
+      // Clear form
+      setWithdrawAmount('');
+      
+      // Hide progress after 6 seconds
+      setTimeout(() => {
+        setShowProgress(false);
+        setTxSignature(undefined);
+      }, 6000);
+      
+    } catch (error) {
+      console.error('❌ Withdrawal/Swap failed:', error);
+      setProgressMessage(error instanceof Error ? error.message : 'Unknown error');
+      
       setTimeout(() => {
         setShowProgress(false);
       }, 6000);
@@ -1045,7 +1192,12 @@ const XFundPage = () => {
                     {activeTab === 0 ? 'You Deposit' : 'You Withdraw'}
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                    ~$0.00
+                    {activeTab === 0 
+                      ? '~$0.00' 
+                      : isWalletConnected && userVaultPosition.totalSupplied > 0
+                        ? `${userVaultPosition.totalSupplied.toFixed(4)} PYUSD`
+                        : '0 PYUSD'
+                    }
                   </Typography>
                 </Box>
                 
@@ -1110,7 +1262,9 @@ const XFundPage = () => {
                         },
                       }}
                     >
-                      {Object.entries(tokenConfigs).map(([key, config]) => (
+                      {Object.entries(tokenConfigs)
+                        .filter(([key]) => activeTab === 0 || key === 'USDC' || key === 'USDT')
+                        .map(([key, config]) => (
                         <MenuItem key={key} value={key} sx={{ color: 'white' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Box
@@ -1162,17 +1316,15 @@ const XFundPage = () => {
                   />
                 </Box>
                 
-                <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1.5, fontSize: '0.85rem' }}>
-                  {activeTab === 0 ? 'Available' : 'Deposited'}: {isWalletConnected ? 
-                    (balanceLoading || userVaultPosition.loading) ? 
-                      'Loading...' : 
-                      activeTab === 0 
-                        ? `${getWalletBalance(selectedToken)} ${selectedToken}`
-                        : selectedToken === 'PYUSD' && userVaultPosition.totalSupplied > 0
-                          ? `${userVaultPosition.totalSupplied.toFixed(4)} ${selectedToken}`
-                          : `0 ${selectedToken}`
-                    : '0'}
-                </Typography>
+                {activeTab === 0 && (
+                  <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1.5, fontSize: '0.85rem' }}>
+                    Available: {isWalletConnected ? 
+                      (balanceLoading || userVaultPosition.loading) ? 
+                        'Loading...' : 
+                        `${getWalletBalance(selectedToken)} ${selectedToken}`
+                      : '0'}
+                  </Typography>
+                )}
 
                 <Box sx={{ display: 'flex', gap: 0.75 }}>
                   <Button
