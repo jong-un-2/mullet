@@ -468,32 +468,31 @@ const XFundPage = () => {
       return;
     }
 
-    // 只支持提现为 USDC 或 USDT
-    if (selectedToken !== 'USDC' && selectedToken !== 'USDT') {
-      setShowProgress(true);
-      setProgressTitle('Validation Error');
-      setProgressMessage('Please select USDC or USDT as withdrawal target');
-      setTotalTxSteps(0);
-      setTimeout(() => setShowProgress(false), 6000);
-      return;
-    }
-
     try {
-      console.log('🚀 Starting withdrawal and swap process...');
-      console.log(`  Withdraw PYUSD from vault → Swap to ${selectedToken}`);
-      
       const amount = parseFloat(withdrawAmount);
+      const needsSwap = selectedToken !== 'PYUSD'; // 如果不是 PYUSD，需要 swap
       
-      // Step 1: Withdraw PYUSD from vault
+      console.log('🚀 Starting withdrawal process...');
+      if (needsSwap) {
+        console.log(`  Withdraw PYUSD from vault → Swap to ${selectedToken}`);
+      } else {
+        console.log('  Withdraw PYUSD from vault (no swap needed)');
+      }
+      
+      // Withdraw from vault has multiple steps
       setShowProgress(true);
-      setProgressTitle(`Withdrawing to ${selectedToken}`);
-      setTotalTxSteps(2);
+      setProgressTitle(`Withdrawing ${selectedToken}`);
+      setTotalTxSteps(0); // Will be updated dynamically
       setCurrentTxStep(0);
-      setProgressMessage('Step 1: Withdrawing PYUSD from vault...');
+      setProgressMessage('Preparing withdrawal from vault...');
       
       const WITHDRAW_TIMEOUT = 60000; // 60 seconds
-      const withdrawPromise = marsContract.withdraw(amount, (_step, txName) => {
-        setProgressMessage(`Step 1: ${txName}...`);
+      const withdrawPromise = marsContract.withdraw(amount, (step, txName) => {
+        // Update total steps dynamically (vault steps + swap step)
+        const totalSteps = 4; // Typically: approve, withdraw, confirm + swap
+        setTotalTxSteps(totalSteps);
+        setCurrentTxStep(step);
+        setProgressMessage(`Step ${step} of ${totalSteps}: ${txName}...`);
       });
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Withdrawal timeout after 60 seconds')), WITHDRAW_TIMEOUT)
@@ -509,9 +508,29 @@ const XFundPage = () => {
       console.log(`  Transaction: https://solscan.io/tx/${signatures[0]}`);
       setTxSignature(signatures[0]);
       
-      // Step 2: Swap PYUSD to target token (USDC or USDT)
-      setCurrentTxStep(1);
-      setProgressMessage(`Step 2: Swapping PYUSD to ${selectedToken}...`);
+      // 如果选择的是 PYUSD，则不需要 swap，直接完成
+      if (!needsSwap) {
+        console.log('✅ Withdrawal completed (no swap needed)');
+        setCurrentTxStep(3);
+        setTotalTxSteps(3);
+        setProgressMessage(`✅ Successfully withdrawn ${amount} PYUSD!`);
+        
+        // Clear form
+        setWithdrawAmount('');
+        
+        // Hide progress after 6 seconds
+        setTimeout(() => {
+          setShowProgress(false);
+          setTxSignature(undefined);
+        }, 6000);
+        
+        return; // 提前返回，不执行 swap
+      }
+      
+      // 需要 swap 的情况：继续执行 swap 逻辑
+      const finalStep = 4; // Last step is the swap
+      setCurrentTxStep(finalStep);
+      setProgressMessage(`Step ${finalStep} of ${finalStep}: Swapping PYUSD to ${selectedToken}...`);
       
       // Token addresses on Solana
       const tokenAddresses = {
@@ -607,8 +626,10 @@ const XFundPage = () => {
       console.log('✅ Swap completed:', swapResult);
       
       // Success!
-      setCurrentTxStep(2);
-      setProgressMessage(`Successfully withdrawn and swapped to ${selectedToken}!`);
+      const completedStep = 4;
+      setCurrentTxStep(completedStep);
+      setTotalTxSteps(completedStep);
+      setProgressMessage(`✅ Successfully withdrawn and swapped to ${selectedToken}!`);
       
       // Clear form
       setWithdrawAmount('');
@@ -1263,7 +1284,6 @@ const XFundPage = () => {
                       }}
                     >
                       {Object.entries(tokenConfigs)
-                        .filter(([key]) => activeTab === 0 || key === 'USDC' || key === 'USDT')
                         .map(([key, config]) => (
                         <MenuItem key={key} value={key} sx={{ color: 'white' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
