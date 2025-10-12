@@ -38,6 +38,11 @@ import { useMarsProtocolData } from '../hooks/useMarsData';
 import { useMarsContract } from '../hooks/useMarsContract';
 import { useUserVaultPosition } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
+import { createConfig, getRoutes, executeRoute, EVM, Solana } from '@lifi/sdk';
+import type { RoutesRequest } from '@lifi/sdk';
+import { createWalletClient, custom } from 'viem';
+import { mainnet } from 'viem/chains';
+import { useWallets as useEvmWallets } from '@privy-io/react-auth';
 
 // Register Chart.js components
 ChartJS.register(
@@ -98,6 +103,7 @@ const XFundPage = () => {
   const { authenticated, user } = usePrivy();
   const { isConnected: ethConnected, address: ethAddress } = useAccount();
   const { wallets: solanaWallets } = useWallets();
+  const { wallets: evmWallets } = useEvmWallets(); // For LiFi cross-chain swaps
   
   // Safely get Solana wallet adapter context
   let solanaPublicKey: any = null;
@@ -203,7 +209,7 @@ const XFundPage = () => {
     return getSolanaBalance(token) || '0';
   };
 
-  // Handle deposit action - 使用 Mars 合约直接存款
+  // Handle deposit action - 支持 USDT/USDC 自动兑换成 PYUSD
   const handleDeposit = async () => {
     if (!isWalletConnected || !userWalletAddress || !depositAmount) {
       console.error('❌ Missing data for deposit');
@@ -215,66 +221,186 @@ const XFundPage = () => {
       return;
     }
 
-    // 仅支持 PYUSD（可以后续扩展）
-    if (selectedToken !== 'PYUSD') {
-      setShowProgress(true);
-      setProgressTitle('Validation Error');
-      setProgressMessage('Currently only PYUSD deposits are supported');
-      setTotalTxSteps(0);
-      setTimeout(() => setShowProgress(false), 6000);
-      return;
-    }
+    const amount = parseFloat(depositAmount);
 
     try {
-      console.log('🚀 开始 PYUSD 存款并质押到 Farm...');
-      console.log('📊 存款金额:', depositAmount);
-      console.log('👛 钱包地址:', userWalletAddress);
-      console.log('🔗 钱包已连接:', isWalletConnected);
-      console.log('🔧 marsContract 对象:', marsContract);
-      console.log('🔧 marsContract.deposit 函数:', typeof marsContract.deposit);
+      // 如果选择 PYUSD，直接存款
+      if (selectedToken === 'PYUSD') {
+        console.log('🚀 开始 PYUSD 存款并质押到 Farm...');
+        
+        setShowProgress(true);
+        setProgressTitle('Depositing PYUSD');
+        setTotalTxSteps(1);
+        setCurrentTxStep(1);
+        setProgressMessage('Processing deposit...');
+        
+        const DEPOSIT_TIMEOUT = 60000;
+        const depositPromise = marsContract.deposit(amount);
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Transaction timeout after 60 seconds')), DEPOSIT_TIMEOUT)
+        );
+        
+        const signature = await Promise.race([depositPromise, timeoutPromise]);
+        
+        if (signature) {
+          console.log('✅ 存款成功!');
+          setTxSignature(signature);
+          setProgressMessage(`Transaction confirmed!`);
+          setDepositAmount('');
+          
+          setTimeout(() => {
+            setShowProgress(false);
+            setTxSignature(undefined);
+          }, 6000);
+        }
+        return;
+      }
+
+      // 如果选择 USDT/USDC，需要通过 LiFi 兑换成 PYUSD
+      console.log(`� 开始 ${selectedToken} → PYUSD 兑换并存款...`);
       
-      // 显示进度提示
       setShowProgress(true);
-      setProgressTitle('Depositing PYUSD into the vault');
-      setTotalTxSteps(1);
+      setProgressTitle(`Converting ${selectedToken} to PYUSD`);
+      setTotalTxSteps(2);
       setCurrentTxStep(1);
+      setProgressMessage('Step 1: Getting swap quote...');
+
+      // Token addresses
+      const TOKEN_ADDRESSES: Record<string, { solana: string; ethereum: string; decimals: number }> = {
+        USDC: {
+          solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+          ethereum: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+          decimals: 6
+        },
+        USDT: {
+          solana: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+          ethereum: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+          decimals: 6
+        },
+        PYUSD: {
+          solana: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',
+          ethereum: '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8',
+          decimals: 6
+        }
+      };
+
+      // 优先使用 Solana，其次 Ethereum
+      const useSolana = solanaWallets.length > 0;
+      const fromChainId = useSolana ? 1151111081099710 : 1; // Solana or Ethereum
+      const toChainId = 1151111081099710; // PYUSD on Solana
       
-      const amount = parseFloat(depositAmount);
-      console.log('💰 开始调用 marsContract.deposit, 金额:', amount);
+      const fromToken = useSolana ? TOKEN_ADDRESSES[selectedToken].solana : TOKEN_ADDRESSES[selectedToken].ethereum;
+      const toToken = TOKEN_ADDRESSES.PYUSD.solana;
+      const fromAmount = (amount * Math.pow(10, TOKEN_ADDRESSES[selectedToken].decimals)).toString();
       
-      // 添加超时处理 (60秒)
-      const DEPOSIT_TIMEOUT = 60000; // 60 seconds
+      console.log(`� From: ${selectedToken} on ${useSolana ? 'Solana' : 'Ethereum'}`);
+      console.log(`� To: PYUSD on Solana`);
+      console.log(`� Amount: ${amount}`);
+
+      // Get route from LiFi
+      const routeRequest: RoutesRequest = {
+        fromChainId: fromChainId,
+        toChainId: toChainId,
+        fromTokenAddress: fromToken,
+        toTokenAddress: toToken,
+        fromAmount: fromAmount,
+        fromAddress: userWalletAddress,
+        toAddress: userWalletAddress,
+      };
+
+      const routesResponse = await getRoutes(routeRequest);
+      
+      if (!routesResponse || !routesResponse.routes || routesResponse.routes.length === 0) {
+        throw new Error('Failed to get swap route');
+      }
+
+      const route = routesResponse.routes[0]; // Use the best route
+      console.log('✅ Got LiFi route:', route);
+      setProgressMessage('Step 2: Executing swap...');
+      setCurrentTxStep(2);
+
+      // Configure LiFi SDK providers
+      if (useSolana) {
+        // Use Solana wallet
+        const solanaWallet = solanaWallets[0];
+        const solanaProvider = Solana({
+          getWalletAdapter: async () => solanaWallet as any
+        });
+        
+        createConfig({
+          integrator: 'MarsLiquid',
+          apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+          providers: [solanaProvider],
+        });
+      } else {
+        // Use EVM wallet
+        const evmWallet = evmWallets[0];
+        const provider = await evmWallet.getEthereumProvider();
+        
+        if (!provider) {
+          throw new Error('Failed to get EVM wallet provider');
+        }
+        
+        const walletClient = createWalletClient({
+          account: evmWallet.address as `0x${string}`,
+          chain: mainnet,
+          transport: custom(provider)
+        });
+        
+        const evmProvider = EVM({ 
+          getWalletClient: async () => walletClient 
+        });
+        
+        const solanaWallet = solanaWallets[0];
+        const solanaProvider = Solana({
+          getWalletAdapter: async () => solanaWallet as any
+        });
+        
+        createConfig({
+          integrator: 'MarsLiquid',
+          apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+          providers: [evmProvider, solanaProvider],
+        });
+      }
+
+      // Execute swap
+      const result = await executeRoute(route, {
+        updateRouteHook: () => {
+          console.log('🔄 Swap in progress...');
+        },
+        executeInBackground: false,
+      });
+
+      console.log('✅ Swap completed:', result);
+      
+      // Now deposit the swapped PYUSD
+      setProgressTitle('Depositing PYUSD');
+      setProgressMessage('Processing deposit to vault...');
+      
+      const DEPOSIT_TIMEOUT = 60000;
       const depositPromise = marsContract.deposit(amount);
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Transaction timeout after 60 seconds')), DEPOSIT_TIMEOUT)
+        setTimeout(() => reject(new Error('Deposit timeout after 60 seconds')), DEPOSIT_TIMEOUT)
       );
       
       const signature = await Promise.race([depositPromise, timeoutPromise]);
       
-      console.log('✅ marsContract.deposit 返回结果:', signature);
-      
       if (signature) {
         console.log('✅ 存款成功!');
-        console.log(`🔗 Solscan: https://solscan.io/tx/${signature}`);
-        
-        // 更新为成功状态
         setTxSignature(signature);
         setProgressMessage(`Transaction confirmed!`);
-        
-        // 清空表单
         setDepositAmount('');
         
-        // 6秒后隐藏进度提示
         setTimeout(() => {
           setShowProgress(false);
           setTxSignature(undefined);
         }, 6000);
       }
+      
     } catch (error) {
-      console.error('❌ Deposit failed:', error);
+      console.error('❌ Deposit/Swap failed:', error);
       setProgressMessage(error instanceof Error ? error.message : '未知错误');
       
-      // 6秒后隐藏错误提示
       setTimeout(() => {
         setShowProgress(false);
       }, 6000);
