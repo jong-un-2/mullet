@@ -230,7 +230,7 @@ const XFundPage = () => {
         console.log('🚀 开始 PYUSD 存款并质押到 Farm...');
         
         setShowProgress(true);
-        setProgressTitle('Depositing PYUSD');
+        setProgressTitle(`Depositing ${amount} PYUSD`);
         setTotalTxSteps(1);
         setCurrentTxStep(1);
         setProgressMessage('Processing deposit...');
@@ -261,7 +261,7 @@ const XFundPage = () => {
       console.log(`� 开始 ${selectedToken} → PYUSD 兑换并存款...`);
       
       setShowProgress(true);
-      setProgressTitle(`Converting ${selectedToken} to PYUSD`);
+      setProgressTitle(`Depositing ${amount} ${selectedToken}`);
       setTotalTxSteps(2);
       setCurrentTxStep(1);
       setProgressMessage('Step 1: Getting swap quote...');
@@ -481,16 +481,16 @@ const XFundPage = () => {
       
       // Withdraw from vault has multiple steps
       setShowProgress(true);
-      setProgressTitle(`Withdrawing ${selectedToken}`);
-      setTotalTxSteps(0); // Will be updated dynamically
-      setCurrentTxStep(0);
-      setProgressMessage('Preparing withdrawal from vault...');
+      setProgressTitle(`Withdrawing ${amount} ${selectedToken}`);
+      // Set initial steps based on whether we need swap
+      const totalSteps = needsSwap ? 4 : 3; // vault steps (3) + optional swap step (1)
+      setTotalTxSteps(totalSteps);
+      setCurrentTxStep(1);
+      setProgressMessage('Step 1: Preparing withdrawal from vault...');
       
       const WITHDRAW_TIMEOUT = 60000; // 60 seconds
       const withdrawPromise = marsContract.withdraw(amount, (step, txName) => {
-        // Update total steps dynamically (vault steps + swap step)
-        const totalSteps = 4; // Typically: approve, withdraw, confirm + swap
-        setTotalTxSteps(totalSteps);
+        // Update progress as vault transaction progresses
         setCurrentTxStep(step);
         setProgressMessage(`Step ${step} of ${totalSteps}: ${txName}...`);
       });
@@ -511,8 +511,7 @@ const XFundPage = () => {
       // 如果选择的是 PYUSD，则不需要 swap，直接完成
       if (!needsSwap) {
         console.log('✅ Withdrawal completed (no swap needed)');
-        setCurrentTxStep(3);
-        setTotalTxSteps(3);
+        setCurrentTxStep(totalSteps);
         setProgressMessage(`✅ Successfully withdrawn ${amount} PYUSD!`);
         
         // Clear form
