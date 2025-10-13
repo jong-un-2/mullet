@@ -962,12 +962,8 @@ const XFundPage = () => {
                 }}>
                   {userVaultPosition.totalSuppliedUSD > 0 ? (
                     `$${userVaultPosition.totalSuppliedUSD.toFixed(2)}`
-                  ) : marsDataLoading ? (
-                    <CircularProgress size={24} sx={{ color: '#34d399' }} />
-                  ) : marsTvlData?.totalTvlUsd ? (
-                    formatCurrency(marsTvlData.totalTvlUsd / 1_000_000, 'USD').replace('$', '$') + 'M'
                   ) : (
-                    '$0.00'
+                    '-'
                   )}
                 </Typography>
                 <Typography variant="body2" sx={{ 
@@ -1004,10 +1000,8 @@ const XFundPage = () => {
                 }}>
                   {userVaultPosition.interestEarned > 0 ? (
                     `$${userVaultPosition.interestEarned.toFixed(4)}`
-                  ) : marsUserEarnings?.totalEarningsUsd ? (
-                    formatCurrency(marsUserEarnings.totalEarningsUsd, 'USD')
                   ) : (
-                    '$0.00'
+                    '-'
                   )}
                 </Typography>
                 <Typography variant="body2" sx={{ 
@@ -1055,12 +1049,8 @@ const XFundPage = () => {
                 }}>
                   {userVaultPosition.totalAPY > 0 ? (
                     formatPercentage(userVaultPosition.totalAPY * 100)
-                  ) : marsApyData?.bestApy ? (
-                    formatPercentage(marsApyData.bestApy / 100)
-                  ) : currentOpportunity ? (
-                    formatPercentage(currentOpportunity.apy)
                   ) : (
-                    '8.5%'
+                    '-'
                   )}
                 </Typography>
                 <Typography variant="body2" sx={{ 
@@ -1097,10 +1087,8 @@ const XFundPage = () => {
                 }}>
                   {userVaultPosition.dailyInterestUSD > 0 ? (
                     `$${userVaultPosition.dailyInterestUSD.toFixed(4)}`
-                  ) : marsUserEarnings?.dailyEarnings ? (
-                    formatCurrency(marsUserEarnings.dailyEarnings, 'USD')
                   ) : (
-                    '$0.00'
+                    '-'
                   )}
                 </Typography>
                 <Typography variant="body2" sx={{ 
