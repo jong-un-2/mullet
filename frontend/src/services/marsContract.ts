@@ -37,41 +37,63 @@ export const KAMINO_FARMS_PROGRAM = new PublicKey("FarmsPZpWu9i7Kky8tPN37rs2TpmM
 /**
  * 创建 Claim Rewards 交易
  * 从 Kamino Farm 领取所有 pending rewards
+ * 
+ * 暂时注释掉，不在 withdraw 时自动 claim rewards
  */
-async function createClaimRewardsTransaction(
-  userPublicKey: PublicKey,
-  connection: Connection,
-  sdkHelper: KaminoSDKHelper
-): Promise<Transaction | null> {
-  try {
-    // 获取 vault farm 信息
-    const claimInstructions = await sdkHelper.getClaimRewardsInstructions(PYUSD_VAULT);
-    
-    if (!claimInstructions || claimInstructions.length === 0) {
-      console.log('ℹ️  没有 rewards 可领取');
-      return null;
-    }
+// async function createClaimRewardsTransaction(
+//   userPublicKey: PublicKey,
+//   connection: Connection,
+//   sdkHelper: KaminoSDKHelper
+// ): Promise<Transaction | null> {
+//   try {
+//     // 获取 vault farm 信息
+//     const claimInstructions = await sdkHelper.getClaimRewardsInstructions(PYUSD_VAULT);
+//     
+//     if (!claimInstructions || claimInstructions.length === 0) {
+//       console.log('ℹ️  没有 rewards 可领取');
+//       return null;
+//     }
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-    const claimTx = new Transaction();
-    
-    // 添加 compute budget
-    claimTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
-    
-    // 添加所有 claim 指令
-    claimInstructions.forEach((ix: any) => claimTx.add(ix));
-    
-    claimTx.recentBlockhash = blockhash;
-    claimTx.lastValidBlockHeight = lastValidBlockHeight;
-    claimTx.feePayer = userPublicKey;
-    
-    console.log(`✅ Claim Rewards 交易构建完成 (${claimInstructions.length} 个指令)`);
-    return claimTx;
-  } catch (error: any) {
-    console.warn('⚠️  创建 claim rewards 交易失败:', error.message);
-    return null;
-  }
-}
+//     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+//     const claimTx = new Transaction();
+//     
+//     // 添加 compute budget
+//     claimTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
+//     
+//     // 添加所有 claim 指令（转换为标准 TransactionInstruction）
+//     claimInstructions.forEach((ix: any) => {
+//       // Kamino SDK 返回的指令格式可能是 { programId, keys, data } 或自定义格式
+//       if (ix.programId && ix.keys && ix.data) {
+//         // 已经是标准格式
+//         claimTx.add(ix);
+//       } else if (ix.programAddress && ix.accounts && ix.data) {
+//         // Kamino SDK 自定义格式，需要转换
+//         const standardIx = new TransactionInstruction({
+//           programId: new PublicKey(ix.programAddress),
+//           keys: ix.accounts.map((acc: any) => ({
+//             pubkey: new PublicKey(acc.address),
+//             isSigner: acc.role === 2 || acc.role === 3, // 2=signer, 3=signer+writable
+//             isWritable: acc.role === 1 || acc.role === 3, // 1=writable, 3=signer+writable
+//           })),
+//           data: Buffer.from(ix.data),
+//         });
+//         claimTx.add(standardIx);
+//       } else {
+//         console.warn('⚠️  未知的指令格式:', ix);
+//       }
+//     });
+//     
+//     claimTx.recentBlockhash = blockhash;
+//     claimTx.lastValidBlockHeight = lastValidBlockHeight;
+//     claimTx.feePayer = userPublicKey;
+//     
+//     console.log(`✅ Claim Rewards 交易构建完成 (${claimInstructions.length} 个指令)`);
+//     return claimTx;
+//   } catch (error: any) {
+//     console.warn('⚠️  创建 claim rewards 交易失败:', error.message);
+//     return null;
+//   }
+// }
 
 /**
  * 获取用户的 PYUSD ATA
@@ -286,18 +308,18 @@ export async function createUnstakeAndWithdrawTransactions(
   const transactions: Transaction[] = [];
   
   // === 步骤 1: 尝试领取 Farm Rewards（如果有） ===
-  try {
-    console.log('💰 检查是否有 pending rewards...');
-    const claimTx = await createClaimRewardsTransaction(userPublicKey, connection, sdkHelper);
-    if (claimTx) {
-      console.log('✅ 添加 Claim Rewards 交易');
-      transactions.push(claimTx);
-    } else {
-      console.log('ℹ️  没有 pending rewards 可领取');
-    }
-  } catch (error: any) {
-    console.warn('⚠️  无法创建 claim rewards 交易，继续 withdraw 流程:', error.message);
-  }
+  // try {
+  //   console.log('💰 检查是否有 pending rewards...');
+  //   const claimTx = await createClaimRewardsTransaction(userPublicKey, connection, sdkHelper);
+  //   if (claimTx) {
+  //     console.log('✅ 添加 Claim Rewards 交易');
+  //     transactions.push(claimTx);
+  //   } else {
+  //     console.log('ℹ️  没有 pending rewards 可领取');
+  //   }
+  // } catch (error: any) {
+  //   console.warn('⚠️  无法创建 claim rewards 交易，继续 withdraw 流程:', error.message);
+  // }
 
   // 转换金额为 lamports (6 decimals for shares)
   const amountLamports = Math.floor(sharesAmount * 1_000_000);

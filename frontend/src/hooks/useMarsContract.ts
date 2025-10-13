@@ -165,31 +165,43 @@ export const useMarsContract = () => {
         connection
       );
 
-      // 现在只有一个批量交易
-      console.log('📦 批量交易（包含 3 个指令）');
+      console.log(`📦 准备发送 ${transactions.length} 个交易`);
+      
+      const signatures: string[] = [];
+      
+      // 依次发送所有交易
+      for (let i = 0; i < transactions.length; i++) {
+        const tx = transactions[i];
+        const stepNum = i + 1;
+        const stepName = i === 0 && transactions.length > 1 
+          ? 'Claim Rewards' 
+          : 'Unstake & Withdraw';
 
-      if (onStepChange) {
-        onStepChange(1, 'Start Unstake + Unstake + Withdraw');
+        if (onStepChange) {
+          onStepChange(stepNum, stepName);
+        }
+
+        console.log(`📤 发送交易 ${stepNum}/${transactions.length}: ${stepName}`);
+        setStatus('signing');
+        
+        setStatus('sending');
+        const signature = await sendTransaction(tx, connection);
+        setCurrentSignature(signature);
+        console.log(`✅ 交易 ${stepNum} 已发送:`, signature);
+
+        setStatus('confirming');
+        console.log(`⏳ 等待交易 ${stepNum} 确认...`);
+        await connection.confirmTransaction(signature, 'confirmed');
+        console.log(`✅ 交易 ${stepNum} 确认成功!`);
+        
+        signatures.push(signature);
       }
 
-      setStatus('signing');
-      console.log('等待签名...');
-
-      setStatus('sending');
-      const signature = await sendTransaction(transactions[0], connection);
-      setCurrentSignature(signature);
-      console.log('批量交易已发送:', signature);
-
-      setStatus('confirming');
-      console.log('等待确认...');
-      await connection.confirmTransaction(signature, 'confirmed');
-      console.log('批量交易确认成功!');
-
       setStatus('success');
-      console.log('取款流程完成!');
-      console.log('成功的交易:', [signature]);
+      console.log('✅ 取款流程完成!');
+      console.log('所有交易签名:', signatures);
 
-      return [signature];
+      return signatures;
     } catch (err: any) {
       const errorMessage = err.message || '取款失败';
       console.error('❌ 取款失败:', err);
