@@ -141,31 +141,26 @@ const XFundPage = () => {
   
   // Mars Data hooks - 新的数据API集成
   const {
-    tvl: marsTvlData,
-    apy: marsApyData,
-    userEarnings: marsUserEarnings,
     performance: marsPerformanceData,
     transactions: marsTransactionsData,
-    loading: marsDataLoading,
   } = useMarsProtocolData(userWalletAddress, selectedToken);
   
   // Calendar data for earnings - using real Neon database
-  const VAULT_ADDRESS = 'A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK';
+  // Don't specify vault address to get all user transactions across all vaults
   const { 
     data: calendarData,
     loading: calendarLoading 
   } = useVaultCalendar(
     userWalletAddress,
     parseInt(selectedYear),
-    parseInt(selectedMonth),
-    VAULT_ADDRESS
+    parseInt(selectedMonth)
   );
 
   // Transaction history - using real Neon database
+  // Don't specify vault address to get all user transactions
   const {
-    data: vaultTransactionsData,
-    loading: vaultTransactionsLoading
-  } = useVaultTransactions(userWalletAddress, VAULT_ADDRESS);
+    data: vaultTransactionsData
+  } = useVaultTransactions(userWalletAddress);
 
 
 

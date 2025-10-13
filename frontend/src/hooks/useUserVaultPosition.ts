@@ -199,8 +199,8 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
         console.log('🎁 [useUserVaultPosition] Incentives APY:', totalIncentivesAPY);
         console.log('💰 [useUserVaultPosition] Total APY:', totalCombinedAPY);
         
-        // 9. 计算每日利息（基于 lending APY，只有用户有持仓时才计算）
-        const dailyInterestRate = lendingAPY / 365;
+        // 9. 计算每日利息（基于总 APY，包含 lending + incentives）
+        const dailyInterestRate = totalCombinedAPY / 365;
         const dailyInterestUSD = totalSuppliedUSD * dailyInterestRate;
         
         console.log('📈 [useUserVaultPosition] User position - Total Supplied USD:', totalSuppliedUSD, 'Interest Earned:', safeInterestEarned, 'Daily Interest:', dailyInterestUSD);
