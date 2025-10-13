@@ -31,6 +31,48 @@ const DISCRIMINATOR_START_UNSTAKE = Buffer.from([69, 169, 100, 27, 224, 93, 160,
 const DISCRIMINATOR_UNSTAKE = Buffer.from([147, 182, 155, 59, 74, 113, 23, 203]);
 const DISCRIMINATOR_WITHDRAW = Buffer.from([199, 101, 41, 45, 213, 98, 224, 200]);
 
+// Kamino Farms Program (用于 claim rewards)
+export const KAMINO_FARMS_PROGRAM = new PublicKey("FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr");
+
+/**
+ * 创建 Claim Rewards 交易
+ * 从 Kamino Farm 领取所有 pending rewards
+ */
+async function createClaimRewardsTransaction(
+  userPublicKey: PublicKey,
+  connection: Connection,
+  sdkHelper: KaminoSDKHelper
+): Promise<Transaction | null> {
+  try {
+    // 获取 vault farm 信息
+    const claimInstructions = await sdkHelper.getClaimRewardsInstructions(PYUSD_VAULT);
+    
+    if (!claimInstructions || claimInstructions.length === 0) {
+      console.log('ℹ️  没有 rewards 可领取');
+      return null;
+    }
+
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+    const claimTx = new Transaction();
+    
+    // 添加 compute budget
+    claimTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
+    
+    // 添加所有 claim 指令
+    claimInstructions.forEach((ix: any) => claimTx.add(ix));
+    
+    claimTx.recentBlockhash = blockhash;
+    claimTx.lastValidBlockHeight = lastValidBlockHeight;
+    claimTx.feePayer = userPublicKey;
+    
+    console.log(`✅ Claim Rewards 交易构建完成 (${claimInstructions.length} 个指令)`);
+    return claimTx;
+  } catch (error: any) {
+    console.warn('⚠️  创建 claim rewards 交易失败:', error.message);
+    return null;
+  }
+}
+
 /**
  * 获取用户的 PYUSD ATA
  */
@@ -227,6 +269,7 @@ function createDepositAndStakeInstruction(
 
 /**
  * 创建取消质押和取款的批量交易（一次签名）
+ * 包含前置步骤：Claim Rewards（如果有 pending rewards）
  */
 export async function createUnstakeAndWithdrawTransactions(
   userPublicKey: PublicKey,
@@ -239,6 +282,22 @@ export async function createUnstakeAndWithdrawTransactions(
   const rpcUrl = connection.rpcEndpoint;
   const sdkHelper = new KaminoSDKHelper(rpcUrl, userPublicKey);
   await sdkHelper.initialize();
+
+  const transactions: Transaction[] = [];
+  
+  // === 步骤 1: 尝试领取 Farm Rewards（如果有） ===
+  try {
+    console.log('💰 检查是否有 pending rewards...');
+    const claimTx = await createClaimRewardsTransaction(userPublicKey, connection, sdkHelper);
+    if (claimTx) {
+      console.log('✅ 添加 Claim Rewards 交易');
+      transactions.push(claimTx);
+    } else {
+      console.log('ℹ️  没有 pending rewards 可领取');
+    }
+  } catch (error: any) {
+    console.warn('⚠️  无法创建 claim rewards 交易，继续 withdraw 流程:', error.message);
+  }
 
   // 转换金额为 lamports (6 decimals for shares)
   const amountLamports = Math.floor(sharesAmount * 1_000_000);
@@ -338,7 +397,19 @@ export async function createUnstakeAndWithdrawTransactions(
 
   const instructionCount = needUnstake ? 3 : 1;
   console.log(`✅ 批量取款交易构建完成（${instructionCount} 个指令）`);
-  return [batchTx];
+  
+  // === 步骤 2: 添加 Withdraw 交易 ===
+  transactions.push(batchTx);
+  
+  console.log(`✅ 总共 ${transactions.length} 个交易需要签名`);
+  if (transactions.length > 1) {
+    console.log('  1️⃣ Claim Rewards (领取奖励)');
+    console.log('  2️⃣ Unstake & Withdraw (取消质押并提款)');
+  } else {
+    console.log('  1️⃣ Unstake & Withdraw (取消质押并提款)');
+  }
+  
+  return transactions;
 }
 
 /**

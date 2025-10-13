@@ -402,4 +402,55 @@ export class KaminoSDKHelper {
       },
     };
   }
+
+  /**
+   * 获取 Claim Rewards 指令
+   * 从 Kamino Farm 领取所有 pending rewards
+   */
+  async getClaimRewardsInstructions(vaultAddress: PublicKey): Promise<any[] | null> {
+    this.ensureInitialized();
+
+    try {
+      // 导入 Farms SDK
+      const { Farms } = await import('@kamino-finance/farms-sdk');
+      const farmsClient = new Farms(this.rpc);
+
+      // 获取 vault 状态
+      const vault = new KaminoVault(vaultAddress.toBase58() as any);
+      const vaultState = await vault.getState(this.rpc);
+
+      // 检查 vault 是否有 farm
+      if (!vaultState.vaultFarm || vaultState.vaultFarm.toString() === '11111111111111111111111111111111') {
+        console.log('ℹ️  Vault 没有关联 Farm，无需 claim rewards');
+        return null;
+      }
+
+      const user = {
+        address: this.userPublicKey.toBase58() as any,
+        signAndSendTransactions: async () => [] as any,
+      };
+
+      console.log('🔍 检查 pending rewards...');
+      console.log(`  - Farm: ${vaultState.vaultFarm.toString()}`);
+      console.log(`  - Vault: ${vault.address.toString()}`);
+
+      // 尝试获取 claim 指令
+      const claimIxs = await farmsClient.claimForUserForFarmAllRewardsIx(
+        user,
+        vaultState.vaultFarm,
+        true  // claimAll = true
+      );
+
+      if (!claimIxs || claimIxs.length === 0) {
+        console.log('ℹ️  没有 pending rewards 可领取');
+        return null;
+      }
+
+      console.log(`✅ 找到 ${claimIxs.length} 个 claim rewards 指令`);
+      return claimIxs;
+    } catch (error: any) {
+      console.warn('⚠️  获取 claim rewards 指令失败:', error.message);
+      return null;
+    }
+  }
 }
