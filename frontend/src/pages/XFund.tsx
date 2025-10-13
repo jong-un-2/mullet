@@ -1000,12 +1000,12 @@ const XFundPage = () => {
                   color: '#34d399',
                   transition: 'color 0.3s ease'
                 }}>
-                  {marsDataLoading ? (
-                    <CircularProgress size={24} sx={{ color: '#34d399' }} />
+                  {userVaultPosition.interestEarned > 0 ? (
+                    formatCurrency(userVaultPosition.interestEarned, 'USD')
                   ) : marsUserEarnings?.totalEarningsUsd ? (
                     formatCurrency(marsUserEarnings.totalEarningsUsd, 'USD')
                   ) : (
-                    '$1.32'
+                    '$0.00'
                   )}
                 </Typography>
                 <Typography variant="body2" sx={{ 
@@ -1051,9 +1051,7 @@ const XFundPage = () => {
                   color: chartView === 'APY' ? '#60a5fa' : 'white',
                   transition: 'color 0.3s ease'
                 }}>
-                  {userVaultPosition.loading ? (
-                    <CircularProgress size={24} sx={{ color: '#60a5fa' }} />
-                  ) : userVaultPosition.totalAPY > 0 ? (
+                  {userVaultPosition.totalAPY > 0 ? (
                     formatPercentage(userVaultPosition.totalAPY)
                   ) : marsApyData?.bestApy ? (
                     formatPercentage(marsApyData.bestApy / 100)
@@ -1095,9 +1093,7 @@ const XFundPage = () => {
                   color: '#60a5fa',
                   transition: 'color 0.3s ease'
                 }}>
-                  {userVaultPosition.loading ? (
-                    <CircularProgress size={24} sx={{ color: '#60a5fa' }} />
-                  ) : userVaultPosition.dailyInterestUSD > 0 ? (
+                  {userVaultPosition.dailyInterestUSD > 0 ? (
                     formatCurrency(userVaultPosition.dailyInterestUSD, 'USD')
                   ) : marsUserEarnings?.dailyEarnings ? (
                     formatCurrency(marsUserEarnings.dailyEarnings, 'USD')
@@ -1338,7 +1334,7 @@ const XFundPage = () => {
                 {activeTab === 0 && (
                   <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1.5, fontSize: '0.85rem' }}>
                     Available: {isWalletConnected ? 
-                      (balanceLoading || userVaultPosition.loading) ? 
+                      balanceLoading ? 
                         'Loading...' : 
                         `${getWalletBalance(selectedToken)} ${selectedToken}`
                       : '0'}
