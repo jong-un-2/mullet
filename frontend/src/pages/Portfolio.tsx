@@ -1,22 +1,16 @@
 import {
-  Refresh as RefreshIcon,
   AccountBalanceWallet as WalletIcon,
 } from '@mui/icons-material';
 import {
   Box,
   Container,
-  IconButton,
-  LinearProgress,
   Typography,
 } from '@mui/material';
-import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
 import { useWallet } from '@solana/wallet-adapter-react';
 import Navigation from '../components/Navigation';
-import MarsPositions from '../components/MarsPositions';
-import { useWalletData, useWalletSummary } from '../dex/hooks/useWalletData';
 
 import { getUserWalletAddress } from '../hooks/useMarsApi';
 
@@ -39,20 +33,6 @@ const PortfolioPage = () => {
     userWalletAddress,
     isAnyWalletConnected: address || authenticated || solanaWallets.length > 0 || !!solanaPublicKey
   });
-
-  // Use real wallet data instead of mock data
-  const { loading, refetch } = useWalletData();
-  const walletSummary = useWalletSummary();
-
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
-
-
 
   // Check if ANY wallet is connected (ETH, Solana, or Privy)
   const isAnyWalletConnected = address || authenticated || solanaWallets.length > 0 || !!solanaPublicKey;
@@ -113,7 +93,9 @@ const PortfolioPage = () => {
         </Box>
       </Box>
     );
-  }  return (
+  }
+  
+  return (
     <Box sx={{ 
       minHeight: '100vh', 
       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
@@ -137,55 +119,69 @@ const PortfolioPage = () => {
       
       <Box sx={{ position: 'relative', zIndex: 1 }}>
         <Navigation />
-        <Container maxWidth="xl" sx={{ py: 4 }}>
-  
-
-        {/* Portfolio Header */}
-        <Box sx={{ 
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: 3,
-          p: 3,
-          mb: 3,
-          color: 'white',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-        }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h4" fontWeight={700} sx={{ color: 'white', mb: 1 }}>
-                Portfolio
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1 }}>
-                Your total portfolio value
-              </Typography>
-              <Typography variant="h3" fontWeight={800} sx={{ color: 'white' }}>
-                {loading ? <LinearProgress sx={{ width: 200, borderRadius: 1 }} /> : walletSummary.totalValue}
-              </Typography>
-            </Box>
-            <IconButton 
-              onClick={handleRefresh} 
-              disabled={refreshing}
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          {/* Coming Soon */}
+          <Box sx={{ 
+            textAlign: 'center', 
+            py: 12,
+            px: 3
+          }}>
+            <Typography 
+              variant="h2" 
+              fontWeight={700} 
               sx={{ 
-                color: 'white',
-                bgcolor: 'rgba(59, 130, 246, 0.2)',
-                '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.3)' },
-                width: 48,
-                height: 48
+                mb: 3, 
+                color: '#ffffff',
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                textShadow: '0 4px 20px rgba(59, 130, 246, 0.3)'
               }}
             >
-              <RefreshIcon />
-            </IconButton>
+              Portfolio
+            </Typography>
+            <Typography 
+              variant="h4" 
+              fontWeight={600} 
+              sx={{ 
+                mb: 2, 
+                color: '#60a5fa',
+                fontSize: { xs: '1.5rem', md: '2rem' }
+              }}
+            >
+              Coming Soon
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 4, 
+                color: '#94a3b8',
+                maxWidth: 600,
+                mx: 'auto',
+                fontSize: { xs: '0.95rem', md: '1.1rem' },
+                lineHeight: 1.6
+              }}
+            >
+              We're building a comprehensive portfolio management system. Track all your DeFi positions, earnings, and assets in one place.
+            </Typography>
+            <Box sx={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: 2,
+              p: 3,
+              background: 'rgba(59, 130, 246, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: 3,
+              border: '2px solid rgba(59, 130, 246, 0.3)',
+              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.2)'
+            }}>
+              <WalletIcon sx={{ fontSize: 32, color: '#60a5fa' }} />
+              <Typography variant="body1" sx={{ color: '#e2e8f0', fontWeight: 500 }}>
+                Stay tuned for updates
+              </Typography>
+            </Box>
           </Box>
-        </Box>
-
-        {/* Mars Positions - Full width without token holdings */}
-        <MarsPositions userAddress={userWalletAddress} />
-      </Container>
+        </Container>
+      </Box>
     </Box>
-  </Box>
   );
 };
 
