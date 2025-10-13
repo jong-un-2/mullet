@@ -35,6 +35,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useMarsOpportunities, getUserWalletAddress, formatCurrency, formatPercentage } from '../hooks/useMarsApi';
 import { useSolanaBalance } from '../hooks/useSolanaBalance';
 import { useMarsProtocolData } from '../hooks/useMarsData';
+import { useVaultCalendar, useVaultTransactions } from '../hooks/useVaultData';
 import { useMarsContract } from '../hooks/useMarsContract';
 import { useUserVaultPosition } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
@@ -148,14 +149,23 @@ const XFundPage = () => {
     loading: marsDataLoading,
   } = useMarsProtocolData(userWalletAddress, selectedToken);
   
-  // Calendar data for earnings - TODO: integrate with calendar rendering
-  // const { 
-  //   data: calendarData 
-  // } = useMarsUserCalendar(
-  //   userWalletAddress,
-  //   parseInt(selectedYear),
-  //   parseInt(selectedMonth)
-  // );
+  // Calendar data for earnings - using real Neon database
+  const VAULT_ADDRESS = 'A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK';
+  const { 
+    data: calendarData,
+    loading: calendarLoading 
+  } = useVaultCalendar(
+    userWalletAddress,
+    parseInt(selectedYear),
+    parseInt(selectedMonth),
+    VAULT_ADDRESS
+  );
+
+  // Transaction history - using real Neon database
+  const {
+    data: vaultTransactionsData,
+    loading: vaultTransactionsLoading
+  } = useVaultTransactions(userWalletAddress, VAULT_ADDRESS);
 
 
 
@@ -747,8 +757,19 @@ const XFundPage = () => {
 
   const currentChartData = chartView === 'APY' ? chartDataSets.apy : chartDataSets.tvl;
 
-  // Transaction history from Mars API or fallback to mock data
+  // Transaction history from Neon database or fallback to mock data
   const getTransactionHistory = () => {
+    // Use real Neon data if available
+    if (vaultTransactionsData?.transactions && vaultTransactionsData.transactions.length > 0) {
+      return vaultTransactionsData.transactions.map(tx => ({
+        date: tx.date,
+        type: tx.type,
+        tokens: `${tx.asset} ${tx.amount}`,
+        value: `$${tx.amountUsd.toFixed(2)}`
+      }));
+    }
+    
+    // Fallback to mock data if no real data
     if (marsTransactionsData?.transactions && marsTransactionsData.transactions.length > 0) {
       return marsTransactionsData.transactions.map(tx => ({
         date: tx.date,
@@ -758,15 +779,8 @@ const XFundPage = () => {
       }));
     }
     
-    // Fallback mock data
-    return [
-      {
-        date: 'Sep 29, 14:32',
-        type: 'deposit',
-        tokens: 'USDC 20.12K',
-        value: '20.12K'
-      }
-    ];
+    // Empty state
+    return [];
   };
 
   const transactionHistory = getTransactionHistory();
@@ -2059,7 +2073,13 @@ const XFundPage = () => {
                         {getMonthName(selectedMonth)} {selectedYear} Total Earnings
                       </Typography>
                       <Typography variant="h4" fontWeight={700} sx={{ color: '#34d399' }}>
-                        +$1.32
+                        {calendarLoading ? (
+                          <CircularProgress size={24} sx={{ color: '#34d399' }} />
+                        ) : calendarData?.totalEarnings ? (
+                          `+$${calendarData.totalEarnings.toFixed(2)}`
+                        ) : (
+                          '+$0.00'
+                        )}
                       </Typography>
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
@@ -2067,7 +2087,13 @@ const XFundPage = () => {
                         Active Days
                       </Typography>
                       <Typography variant="h5" fontWeight={600} sx={{ color: '#60a5fa' }}>
-                        3 days
+                        {calendarLoading ? (
+                          <CircularProgress size={20} sx={{ color: '#60a5fa' }} />
+                        ) : calendarData?.activeDays ? (
+                          `${calendarData.activeDays} days`
+                        ) : (
+                          '0 days'
+                        )}
                       </Typography>
                     </Box>
                   </Box>
@@ -2124,10 +2150,11 @@ const XFundPage = () => {
                                          today.getMonth() + 1 === parseInt(selectedMonth) && 
                                          today.getFullYear() === parseInt(selectedYear);
                           
-                          // Sample earning data (only for September 2025)
-                          const hasEarning = selectedYear === '2025' && selectedMonth === '09' && [27, 28, 29].includes(day);
-                          const earnings = hasEarning ? 
-                            (day === 27 ? '+$0.52' : day === 28 ? '+$0.38' : '+$0.42') : null;
+                          // Get earning data from backend
+                          const dateStr = `${selectedYear}-${selectedMonth}-${day.toString().padStart(2, '0')}`;
+                          const dayEarning = calendarData?.dailyBreakdown?.find(d => d.date === dateStr);
+                          const hasEarning = !!dayEarning && dayEarning.earnings > 0;
+                          const earnings = hasEarning ? `+$${dayEarning.earnings.toFixed(2)}` : null;
                           const isSelected = selectedDay === day;
                           
                           calendarDays.push(

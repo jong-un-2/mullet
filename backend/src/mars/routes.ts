@@ -15,6 +15,7 @@ import { createMarsTransactionManager } from './transactions/manager';
 import { createMarsWithdrawManager } from './transactions/withdraw';
 import { createWalletConnectionManager } from './wallet/manager';
 import { marsDataRoutes } from './data/routes';
+import { marsVaultRoutes } from './vault/routes';
 import { handleLiFiRoutes } from './lifi/routes';
 
 import type { 
@@ -591,8 +592,11 @@ export function createMarsRoutes() {
   });
 
   // ==================== 数据API端点 ====================
-  // 挂载Mars数据API routes
+  // 挂载Mars数据API routes (mock data from D1)
   app.route('/data', marsDataRoutes);
+  
+  // 挂载Mars Vault API routes (real data from Neon PostgreSQL)
+  app.route('/vault', marsVaultRoutes);
 
   // ==================== LI.FI跨链桥接端点 ====================
   app.all('/lifi/*', async (c) => {

@@ -366,8 +366,8 @@ class MarsApiService {
     return this.fetchDataApi<MarsPerformanceData[]>(`/performance?${params}`);
   }
 
-  // 获取交易历史
-  async getUserTransactions(userAddress: string): Promise<{
+  // 获取交易历史（从 Neon PostgreSQL 读取真实数据）
+  async getUserTransactions(userAddress: string, vaultAddress?: string): Promise<{
     transactions: MarsTransactionHistory[];
     total: number;
     page: number;
@@ -375,8 +375,107 @@ class MarsApiService {
   }> {
     return this.fetchDataApi('/user/transactions', {
       method: 'POST',
-      body: JSON.stringify({ userAddress }),
+      body: JSON.stringify({ userAddress, vaultAddress }),
     });
+  }
+
+  // 从 Neon 数据库获取真实的交易历史
+  async getVaultTransactions(userAddress: string, vaultAddress?: string): Promise<{
+    transactions: MarsTransactionHistory[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    try {
+      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userAddress, vaultAddress }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result: ApiResponse<{
+        transactions: MarsTransactionHistory[];
+        total: number;
+        page: number;
+        limit: number;
+      }> = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error?.message || 'API request failed');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Vault transactions API Error:', error);
+      throw error;
+    }
+  }
+
+  // 从 Neon 数据库获取真实的日历数据
+  async getVaultCalendar(
+    userAddress: string,
+    year: number,
+    month: number,
+    vaultAddress?: string
+  ): Promise<MarsCalendarData> {
+    try {
+      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/calendar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userAddress, year, month, vaultAddress }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result: ApiResponse<MarsCalendarData> = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error?.message || 'API request failed');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Vault calendar API Error:', error);
+      throw error;
+    }
+  }
+
+  // 从 Neon 数据库获取真实的收益数据
+  async getVaultEarnings(userAddress: string, vaultAddress?: string): Promise<MarsUserEarnings> {
+    try {
+      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/earnings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userAddress, vaultAddress }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result: ApiResponse<MarsUserEarnings> = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error?.message || 'API request failed');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Vault earnings API Error:', error);
+      throw error;
+    }
   }
 }
 
