@@ -25,6 +25,7 @@ import {
 } from "@kamino-finance/klend-sdk";
 import { Farms } from "@kamino-finance/farms-sdk";
 import { Decimal } from "decimal.js";
+import { getCachedData, setCachedData } from './useVaultDataCache';
 
 // Kamino Vault 配置
 const VAULT_ADDRESS = "A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK";
@@ -75,6 +76,14 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
     let isCancelled = false;
 
     const fetchUserPosition = async () => {
+      // 1. 检查缓存
+      const cachedData = getCachedData(userAddress);
+      if (cachedData) {
+        console.log('✅ [useUserVaultPosition] Using cached data');
+        setPosition(cachedData);
+        return;
+      }
+
       // 后台静默刷新，不显示 loading 状态
       // setPosition(prev => ({ ...prev, loading: true, error: undefined }));
 
@@ -245,6 +254,10 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
         };
         
         console.log('✅ [useUserVaultPosition] Final position:', finalPosition);
+        
+        // 保存到缓存
+        setCachedData(userAddress, finalPosition);
+        
         setPosition(finalPosition);
 
       } catch (error) {
