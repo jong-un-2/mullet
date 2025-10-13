@@ -71,11 +71,7 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
   const [position, setPosition] = useState<UserVaultPosition>(EMPTY_POSITION);
 
   useEffect(() => {
-    if (!userAddress) {
-      setPosition(EMPTY_POSITION);
-      return;
-    }
-
+    // 不管是否有用户地址，都要获取 Vault 的整体数据（APY, rewards 等）
     let isCancelled = false;
 
     const fetchUserPosition = async () => {
@@ -83,6 +79,8 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
       // setPosition(prev => ({ ...prev, loading: true, error: undefined }));
 
       try {
+        console.log('🔍 [useUserVaultPosition] Starting fetch, userAddress:', userAddress);
+        
         // 1. 初始化 RPC 和 Kamino Manager
         const rpc = createRpc({
           api: createSolanaRpcApi(),
@@ -95,59 +93,51 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
         // 2. 获取 Vault 状态
         const vault = new KaminoVault(VAULT_ADDRESS as any);
         const vaultState = await vault.getState(rpc);
+        console.log('📦 [useUserVaultPosition] Vault state loaded');
 
-        // 3. 获取用户在特定 Vault 的份额（使用 SingleVault 方法避免 RPC 限制）
-        const userSharesForVault = await kaminoManager.getUserSharesBalanceSingleVault(
-          userAddress as any,
-          vault
-        );
-
-        if (isCancelled) return;
-
-        // 4. 检查用户是否有持仓
-        if (!userSharesForVault || userSharesForVault.totalShares.isZero()) {
-          setPosition({
-            ...EMPTY_POSITION,
-            loading: false,
-          });
-          return;
-        }
-
-        // 5. 获取当前 slot
+        // 3. 获取当前 slot
         const currentSlot = await rpc.getSlot({ commitment: 'confirmed' }).send();
-
-        // 6. 获取当前 tokensPerShare（计算 shares 的实际价值）
-        const tokensPerShare = await kaminoManager.getTokensPerShareSingleVault(vault, currentSlot);
+        console.log('🎰 [useUserVaultPosition] Current slot:', currentSlot);
         
-        // 7. 计算关键指标
+        // 4. 初始化共用变量
         const tokenPrice = new Decimal(1.0); // PYUSD 价格约为 $1
-        const userSharesNum = userSharesForVault.totalShares.toNumber();
         
-        // 用户实际持有的 token 数量 = shares × tokensPerShare
-        const actualTokens = new Decimal(userSharesNum).mul(tokensPerShare);
-        const totalSuppliedUSD = actualTokens.toNumber() * tokenPrice.toNumber();
+        // 5. 计算用户持仓数据（如果有用户地址）
+        let userSharesNum = 0;
+        let actualTokens = new Decimal(0);
+        let totalSuppliedUSD = 0;
+        let safeInterestEarned = 0;
         
-        // 8. 计算 Interest Earned（与 Kamino 逻辑一致）
-        // ============================================================
-        // Kamino 的 Interest Earned 计算原理：
-        // 1. 用户存款时获得 shares（数量由当时的 tokensPerShare 决定）
-        // 2. 随着时间推移，vault 赚取利息，tokensPerShare 增长
-        // 3. Interest Earned = (当前 shares × 当前 tokensPerShare) - (初始存款金额)
-        //
-        // 简化假设：
-        // - 假设用户在 tokensPerShare = 1.0 时存入（vault 初始状态）
-        // - 这适用于大多数用户（早期存款者）
-        // - 如果需要精确计算，需要从链上交易历史获取存款时的 tokensPerShare
-        // ============================================================
-        const initialTokensPerShare = new Decimal(1.0);
-        const initialValue = new Decimal(userSharesNum).mul(initialTokensPerShare).mul(tokenPrice);
-        const currentValue = actualTokens.mul(tokenPrice);
-        const interestEarned = currentValue.sub(initialValue).toNumber();
+        if (userAddress) {
+          // 获取用户在特定 Vault 的份额
+          const userSharesForVault = await kaminoManager.getUserSharesBalanceSingleVault(
+            userAddress as any,
+            vault
+          );
+
+          if (isCancelled) return;
+
+          // 如果用户有持仓，计算详细数据
+          if (userSharesForVault && !userSharesForVault.totalShares.isZero()) {
+            // 获取当前 tokensPerShare
+            const tokensPerShare = await kaminoManager.getTokensPerShareSingleVault(vault, currentSlot);
+            
+            userSharesNum = userSharesForVault.totalShares.toNumber();
+            
+            // 用户实际持有的 token 数量 = shares × tokensPerShare
+            actualTokens = new Decimal(userSharesNum).mul(tokensPerShare);
+            totalSuppliedUSD = actualTokens.toNumber() * tokenPrice.toNumber();
+            
+            // 计算 Interest Earned
+            const initialTokensPerShare = new Decimal(1.0);
+            const initialValue = new Decimal(userSharesNum).mul(initialTokensPerShare).mul(tokenPrice);
+            const currentValue = actualTokens.mul(tokenPrice);
+            const interestEarned = currentValue.sub(initialValue).toNumber();
+            safeInterestEarned = Math.max(0, interestEarned);
+          }
+        }
         
-        // 确保 Interest Earned 不为负数（防止晚期加入用户显示负值）
-        const safeInterestEarned = Math.max(0, interestEarned);
-        
-        // 9. 获取 Reserves 详情并计算加权 Lending APY
+        // 6. 获取 Reserves 详情并计算加权 Lending APY（所有用户都需要这个数据）
         const reservesOverview = await kaminoManager.getVaultReservesDetails(vaultState, currentSlot);
         
         let weightedLendingAPY = new Decimal(0);
@@ -160,8 +150,9 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
         });
         
         const lendingAPY = totalSupplied.gt(0) ? weightedLendingAPY.div(totalSupplied).toNumber() : 0;
+        console.log('📊 [useUserVaultPosition] Lending APY:', lendingAPY, 'Total Supplied:', totalSupplied.toString());
 
-        // 10. 获取 Farm Rewards（并行优化）
+        // 7. 获取 Farm Rewards（并行优化）- 所有用户都需要这个数据
         const farmsClient = new Farms(rpc);
         
         const [vaultFarmRewards, ...reserveIncentivesArray] = await Promise.all([
@@ -180,7 +171,7 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
 
         if (isCancelled) return;
 
-        // 11. 处理所有 rewards
+        // 8. 处理所有 rewards
         const allRewardsStats: any[] = [...vaultFarmRewards.incentivesStats];
         let totalReserveFarmAPY = 0;
         
@@ -205,11 +196,16 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
         const totalIncentivesAPY = vaultFarmRewards.totalIncentivesApy + totalReserveFarmAPY;
         const totalCombinedAPY = lendingAPY + totalIncentivesAPY;
         
-        // 12. 计算每日利息（基于 lending APY）
+        console.log('🎁 [useUserVaultPosition] Incentives APY:', totalIncentivesAPY);
+        console.log('💰 [useUserVaultPosition] Total APY:', totalCombinedAPY);
+        
+        // 9. 计算每日利息（基于 lending APY，只有用户有持仓时才计算）
         const dailyInterestRate = lendingAPY / 365;
         const dailyInterestUSD = totalSuppliedUSD * dailyInterestRate;
+        
+        console.log('📈 [useUserVaultPosition] User position - Total Supplied USD:', totalSuppliedUSD, 'Interest Earned:', safeInterestEarned, 'Daily Interest:', dailyInterestUSD);
 
-        // 13. 解析 rewards 信息
+        // 10. 解析 rewards 信息
         const rewards: RewardInfo[] = allRewardsStats
           .filter(r => r.incentivesApy > 0)
           .map(incentive => {
@@ -234,8 +230,8 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
 
         if (isCancelled) return;
 
-        // 14. 更新状态
-        setPosition({
+        // 11. 更新状态（即使没有用户地址，也要显示 Vault 的整体 APY 和 rewards）
+        const finalPosition = {
           totalSupplied: actualTokens.toNumber(), // 实际持有的 token 数量（不是 shares）
           totalSuppliedUSD,
           sharesBalance: userSharesNum,
@@ -246,7 +242,10 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
           totalAPY: totalCombinedAPY,
           rewards,
           loading: false,
-        });
+        };
+        
+        console.log('✅ [useUserVaultPosition] Final position:', finalPosition);
+        setPosition(finalPosition);
 
       } catch (error) {
         console.error('❌ Failed to fetch user vault position:', error);

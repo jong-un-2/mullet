@@ -960,19 +960,21 @@ const XFundPage = () => {
                   color: chartView === 'TVL' ? '#34d399' : 'white',
                   transition: 'color 0.3s ease'
                 }}>
-                  {marsDataLoading ? (
+                  {userVaultPosition.totalSuppliedUSD > 0 ? (
+                    `$${userVaultPosition.totalSuppliedUSD.toFixed(2)}`
+                  ) : marsDataLoading ? (
                     <CircularProgress size={24} sx={{ color: '#34d399' }} />
                   ) : marsTvlData?.totalTvlUsd ? (
                     formatCurrency(marsTvlData.totalTvlUsd / 1_000_000, 'USD').replace('$', '$') + 'M'
                   ) : (
-                    '$125M'
+                    '$0.00'
                   )}
                 </Typography>
                 <Typography variant="body2" sx={{ 
                   color: chartView === 'TVL' ? '#34d399' : '#94a3b8',
                   transition: 'color 0.3s ease'
                 }}>
-                  TVL
+                  Total Supplied
                 </Typography>
               </Card>
 
@@ -1001,7 +1003,7 @@ const XFundPage = () => {
                   transition: 'color 0.3s ease'
                 }}>
                   {userVaultPosition.interestEarned > 0 ? (
-                    formatCurrency(userVaultPosition.interestEarned, 'USD')
+                    `$${userVaultPosition.interestEarned.toFixed(4)}`
                   ) : marsUserEarnings?.totalEarningsUsd ? (
                     formatCurrency(marsUserEarnings.totalEarningsUsd, 'USD')
                   ) : (
@@ -1052,7 +1054,7 @@ const XFundPage = () => {
                   transition: 'color 0.3s ease'
                 }}>
                   {userVaultPosition.totalAPY > 0 ? (
-                    formatPercentage(userVaultPosition.totalAPY)
+                    formatPercentage(userVaultPosition.totalAPY * 100)
                   ) : marsApyData?.bestApy ? (
                     formatPercentage(marsApyData.bestApy / 100)
                   ) : currentOpportunity ? (
@@ -1094,7 +1096,7 @@ const XFundPage = () => {
                   transition: 'color 0.3s ease'
                 }}>
                   {userVaultPosition.dailyInterestUSD > 0 ? (
-                    formatCurrency(userVaultPosition.dailyInterestUSD, 'USD')
+                    `$${userVaultPosition.dailyInterestUSD.toFixed(4)}`
                   ) : marsUserEarnings?.dailyEarnings ? (
                     formatCurrency(marsUserEarnings.dailyEarnings, 'USD')
                   ) : (
