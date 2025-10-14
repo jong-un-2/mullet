@@ -1602,11 +1602,11 @@ const XFundPage = () => {
                           const balance = getWalletBalance(selectedToken).replace(',', '');
                           setDepositAmount(balance);
                         } else {
-                          // For withdraw, use max vault deposited amount
-                          const deposited = selectedToken === 'PYUSD' 
-                            ? userVaultPosition.totalSupplied 
-                            : 0;
-                          setWithdrawAmount(deposited.toString());
+                          // For withdraw, use max vault deposited amount (rounded to 4 decimals)
+                          const deposited = userVaultPosition.totalSupplied;
+                          // Round to 4 decimal places to avoid precision issues
+                          const roundedAmount = Math.floor(deposited * 10000) / 10000;
+                          setWithdrawAmount(roundedAmount.toString());
                         }
                       }
                     }}
