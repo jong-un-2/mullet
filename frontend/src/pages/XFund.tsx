@@ -10,7 +10,6 @@ import {
   MenuItem,
   Select,
   FormControl,
-  IconButton,
   CircularProgress,
   Alert,
 } from '@mui/material';
@@ -27,7 +26,6 @@ import {
   Filler,
 } from 'chart.js';
 import Navigation from '../components/Navigation';
-import { FaInfoCircle } from 'react-icons/fa';
 import { usePrivy } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
 import { useWallets } from '@privy-io/react-auth/solana';
@@ -1873,15 +1871,6 @@ const XFundPage = () => {
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="h6" fontWeight={600} sx={{ color: 'white' }}>
-                    Performance
-                  </Typography>
-                  <IconButton size="small" sx={{ color: '#94a3b8' }}>
-                    <FaInfoCircle />
-                  </IconButton>
-                </Box>
-                
                 {/* Chart View Toggle Buttons */}
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
