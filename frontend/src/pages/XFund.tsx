@@ -236,7 +236,7 @@ const XFundPage = () => {
         ]);
         
         // Initialize helper - use userWalletAddress (works for both Privy and direct Solana wallets)
-        const rpcUrl = import.meta.env.VITE_HELIUS_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=1c12b4cc-c319-4f4c-b48d-cad3e0bc5cda';
+        const rpcUrl = import.meta.env.VITE_SOLANA_MAINNET_RPC || 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
         const walletPublicKey = new PublicKey(userWalletAddress);
         const helper = new KaminoSDKHelper(rpcUrl, walletPublicKey);
         
@@ -755,7 +755,7 @@ const XFundPage = () => {
       }
 
       // 创建连接
-      const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=1c12b4cc-c319-4f4c-b48d-cad3e0bc5cda';
+      const RPC_URL = import.meta.env.VITE_SOLANA_MAINNET_RPC || 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
       const connection = new Connection(RPC_URL, 'confirmed');
 
       // 初始化 Kamino SDK Helper
