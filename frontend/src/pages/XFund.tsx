@@ -1101,7 +1101,7 @@ const XFundPage = () => {
                         {userVaultPosition.rewards && userVaultPosition.rewards[0]?.weeklyAmount ? (
                           <>
                             <Box component="span" sx={{ fontSize: '0.8em', mr: 0.5 }}>Ⓟ</Box>
-                            {userVaultPosition.rewards[0].weeklyAmount.toFixed(4)}
+                            {(userVaultPosition.rewards[0].weeklyAmount / 1_000_000).toFixed(4)}
                           </>
                         ) : (
                           <>
@@ -1111,7 +1111,10 @@ const XFundPage = () => {
                         )}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#64748b' }}>
-                        (&lt;$0.01)
+                        {userVaultPosition.rewards && userVaultPosition.rewards[0]?.weeklyAmount 
+                          ? `($${(userVaultPosition.rewards[0].weeklyAmount / 1_000_000).toFixed(2)})`
+                          : '(<$0.01)'
+                        }
                       </Typography>
                     </Box>
                   </Box>
