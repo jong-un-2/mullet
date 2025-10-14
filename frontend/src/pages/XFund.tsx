@@ -81,6 +81,10 @@ const XFundPage = () => {
   const [currentTxStep, setCurrentTxStep] = useState(0);
   const [totalTxSteps, setTotalTxSteps] = useState(0);
   const [txSignature, setTxSignature] = useState<string | undefined>();
+  
+  // Claim rewards state
+  const [isClaimingRewards, setIsClaimingRewards] = useState(false);
+  const [hasPendingRewards, setHasPendingRewards] = useState(false);
 
   // Calendar helper functions
   const getMonthName = (monthNum: string) => {
@@ -208,6 +212,42 @@ const XFundPage = () => {
   
   // Get user's vault position (Total Supplied)
   const userVaultPosition = useUserVaultPosition(userWalletAddress || null);
+
+  // Check for pending rewards availability
+  useEffect(() => {
+    const checkPendingRewards = async () => {
+      if (!isWalletConnected || !solanaPublicKey) {
+        setHasPendingRewards(false);
+        return;
+      }
+
+      try {
+        // Import required modules dynamically
+        const [{ KaminoSDKHelper }, { PublicKey }] = await Promise.all([
+          import('../services/kaminoSdkHelper'),
+          import('@solana/web3.js')
+        ]);
+        
+        // Initialize helper
+        const rpcUrl = import.meta.env.VITE_HELIUS_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=1c12b4cc-c319-4f4c-b48d-cad3e0bc5cda';
+        const helper = new KaminoSDKHelper(rpcUrl, solanaPublicKey);
+        
+        // Get the PYUSD vault address as PublicKey
+        const PYUSD_VAULT = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK');
+        
+        // Check if there are claimable rewards
+        const instructions = await helper.getClaimRewardsInstructions(PYUSD_VAULT);
+        
+        // If instructions is not null, there are pending rewards
+        setHasPendingRewards(instructions !== null);
+      } catch (error) {
+        console.error('Error checking pending rewards:', error);
+        setHasPendingRewards(false);
+      }
+    };
+
+    checkPendingRewards();
+  }, [isWalletConnected, solanaPublicKey, userVaultPosition.rewards]);
   
   // Get real wallet balance for selected token
   const getWalletBalance = (token: string) => {
@@ -654,6 +694,135 @@ const XFundPage = () => {
     }
   };
 
+  // Handle Claim Rewards action
+  const handleClaimRewards = async () => {
+    if (!isWalletConnected || !userWalletAddress) {
+      console.error('❌ Missing wallet connection');
+      setShowProgress(true);
+      setProgressTitle('Validation Error');
+      setProgressMessage('Please connect wallet');
+      setTotalTxSteps(0);
+      setTimeout(() => setShowProgress(false), 6000);
+      return;
+    }
+
+    if (!solanaPublicKey || !directSolanaConnected) {
+      console.error('❌ Solana wallet not connected');
+      setShowProgress(true);
+      setProgressTitle('Validation Error');
+      setProgressMessage('Please connect Solana wallet');
+      setTotalTxSteps(0);
+      setTimeout(() => setShowProgress(false), 6000);
+      return;
+    }
+
+    try {
+      setIsClaimingRewards(true);
+      setShowProgress(true);
+      setProgressTitle('Claiming Rewards');
+      setTotalTxSteps(1);
+      setCurrentTxStep(1);
+      setProgressMessage('Preparing claim transaction...');
+
+      console.log('🎁 Starting claim rewards process...');
+
+      // 动态导入需要的模块
+      const { Connection, PublicKey, Transaction, ComputeBudgetProgram } = await import('@solana/web3.js');
+      const { useWallet } = await import('@solana/wallet-adapter-react');
+      const { KaminoSDKHelper } = await import('../services/kaminoSdkHelper');
+
+      // 获取钱包上下文
+      const { sendTransaction } = useWallet();
+      
+      if (!sendTransaction) {
+        throw new Error('Wallet does not support sendTransaction');
+      }
+
+      // 创建连接
+      const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=1c12b4cc-c319-4f4c-b48d-cad3e0bc5cda';
+      const connection = new Connection(RPC_URL, 'confirmed');
+
+      // 初始化 Kamino SDK Helper
+      const sdkHelper = new KaminoSDKHelper(RPC_URL, solanaPublicKey);
+      await sdkHelper.initialize();
+
+      // 获取 claim rewards 指令
+      const PYUSD_VAULT = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK');
+      const claimInstructions = await sdkHelper.getClaimRewardsInstructions(PYUSD_VAULT);
+
+      if (!claimInstructions || claimInstructions.length === 0) {
+        console.log('ℹ️  No rewards to claim');
+        setProgressMessage('No rewards available to claim');
+        setTimeout(() => {
+          setShowProgress(false);
+          setIsClaimingRewards(false);
+        }, 3000);
+        return;
+      }
+
+      setProgressMessage(`Building claim transaction (${claimInstructions.length} rewards)...`);
+
+      // 构建交易
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      const claimTx = new Transaction();
+      
+      // 添加 compute budget
+      claimTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
+      
+      // 添加所有 claim 指令
+      for (const ix of claimInstructions) {
+        if (ix.programId && ix.keys && ix.data) {
+          claimTx.add(ix);
+        } else if (ix.programAddress && ix.accounts && ix.data) {
+          const { TransactionInstruction } = await import('@solana/web3.js');
+          const standardIx = new TransactionInstruction({
+            programId: new PublicKey(ix.programAddress),
+            keys: ix.accounts.map((acc: any) => ({
+              pubkey: new PublicKey(acc.address),
+              isSigner: acc.role === 2 || acc.role === 3,
+              isWritable: acc.role === 1 || acc.role === 3,
+            })),
+            data: Buffer.from(ix.data),
+          });
+          claimTx.add(standardIx);
+        }
+      }
+      
+      claimTx.recentBlockhash = blockhash;
+      claimTx.lastValidBlockHeight = lastValidBlockHeight;
+      claimTx.feePayer = solanaPublicKey;
+
+      setProgressMessage('Sending transaction...');
+
+      // 发送交易
+      const signature = await sendTransaction(claimTx, connection);
+      setTxSignature(signature);
+      
+      setProgressMessage('Confirming transaction...');
+      console.log('⏳ Waiting for confirmation...', signature);
+
+      // 等待确认
+      await connection.confirmTransaction(signature, 'confirmed');
+      
+      console.log('✅ Rewards claimed successfully!');
+      setProgressMessage('Rewards claimed successfully!');
+
+      setTimeout(() => {
+        setShowProgress(false);
+        setTxSignature(undefined);
+        setIsClaimingRewards(false);
+      }, 6000);
+
+    } catch (error) {
+      console.error('❌ Claim rewards failed:', error);
+      setProgressMessage(error instanceof Error ? error.message : 'Claim failed');
+      
+      setTimeout(() => {
+        setShowProgress(false);
+        setIsClaimingRewards(false);
+      }, 6000);
+    }
+  };
 
   const tokenConfigs = {
     USDC: { symbol: 'USDC', name: 'USD Coin', color: '#2775ca' },
@@ -925,189 +1094,220 @@ const XFundPage = () => {
           </Box>
 
         <Grid container spacing={3}>
-          {/* Left Side - Stats Cards */}
+          {/* Left Side - My Rewards Section */}
           <Grid size={{ xs: 12, md: 8 }}>
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 2, 
-              maxWidth: 420,
-              mx: 'auto'
+            <Card sx={{ 
+              p: 3, 
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 3,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             }}>
-              {/* TVL Card */}
-              <Card sx={{ 
-                p: 2, 
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                background: chartView === 'TVL' 
-                  ? 'rgba(52, 211, 153, 0.15)' 
-                  : 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: chartView === 'TVL'
-                  ? '1px solid rgba(52, 211, 153, 0.3)'
-                  : '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 3,
-                boxShadow: chartView === 'TVL'
-                  ? '0 8px 32px rgba(52, 211, 153, 0.2)'
-                  : '0 8px 32px rgba(0, 0, 0, 0.3)',
-                aspectRatio: '1.2 / 1',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: chartView === 'TVL'
-                    ? '0 12px 40px rgba(52, 211, 153, 0.3)'
-                    : '0 12px 40px rgba(255, 255, 255, 0.1)',
-                }
-              }}
-              onClick={() => setChartView('TVL')}
-              >
-                <Typography variant="h4" fontWeight={700} sx={{ 
-                  mb: 0.5, 
-                  color: chartView === 'TVL' ? '#34d399' : 'white',
-                  transition: 'color 0.3s ease'
+              {/* Claimable Rewards Section with Claim Button */}
+              {isWalletConnected && hasPendingRewards && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  mb: 2,
+                  p: 2.5,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                 }}>
-                  {userVaultPosition.totalSuppliedUSD > 0 ? (
-                    `$${userVaultPosition.totalSuppliedUSD.toFixed(2)}`
-                  ) : (
-                    '-'
-                  )}
-                </Typography>
-                <Typography variant="body2" sx={{ 
-                  color: chartView === 'TVL' ? '#34d399' : '#94a3b8',
-                  transition: 'color 0.3s ease'
-                }}>
-                  Total Supplied
-                </Typography>
-              </Card>
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1 }}>
+                      Claimable PYUSD
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                      <Typography variant="h4" fontWeight={700} sx={{ color: 'white' }}>
+                        {userVaultPosition.rewards && userVaultPosition.rewards[0]?.weeklyAmount ? (
+                          <>
+                            <Box component="span" sx={{ fontSize: '0.8em', mr: 0.5 }}>Ⓟ</Box>
+                            {userVaultPosition.rewards[0].weeklyAmount.toFixed(4)}
+                          </>
+                        ) : (
+                          <>
+                            <Box component="span" sx={{ fontSize: '0.8em', mr: 0.5 }}>Ⓟ</Box>
+                            0.0000
+                          </>
+                        )}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b' }}>
+                        (&lt;$0.01)
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    disabled={isClaimingRewards}
+                    onClick={handleClaimRewards}
+                    sx={{
+                      backgroundColor: '#60a5fa',
+                      color: 'white',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      minWidth: '140px',
+                      '&:hover': {
+                        backgroundColor: '#3b82f6',
+                      },
+                      '&:disabled': {
+                        backgroundColor: 'rgba(96, 165, 250, 0.3)',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                      }
+                    }}
+                  >
+                    {isClaimingRewards ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} sx={{ color: 'white' }} />
+                        <span>Claiming...</span>
+                      </Box>
+                    ) : (
+                      'Claim Rewards'
+                    )}
+                  </Button>
+                </Box>
+              )}
 
-              {/* Interest Earned Card */}
-              <Card sx={{ 
-                p: 2, 
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                aspectRatio: '1.2 / 1',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 12px 40px rgba(255, 255, 255, 0.1)',
-                }
+              {/* Stats Cards Grid - Bottom Row */}
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 2
               }}>
-                <Typography variant="h4" fontWeight={700} sx={{ 
-                  mb: 0.5, 
-                  color: '#34d399',
-                  transition: 'color 0.3s ease'
-                }}>
-                  {userVaultPosition.interestEarned > 0 ? (
-                    `$${userVaultPosition.interestEarned.toFixed(4)}`
-                  ) : (
-                    '-'
-                  )}
-                </Typography>
-                <Typography variant="body2" sx={{ 
-                  color: '#94a3b8',
-                  transition: 'color 0.3s ease'
-                }}>
-                  Interest Earned
-                </Typography>
-              </Card>
+                {/* Total Supplied Card */}
+                <Card sx={{ 
+                  p: 2.5, 
+                  background: chartView === 'TVL' 
+                    ? 'rgba(52, 211, 153, 0.1)' 
+                    : 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: chartView === 'TVL'
+                    ? '1px solid rgba(52, 211, 153, 0.3)'
+                    : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                  }
+                }}
+                onClick={() => setChartView('TVL')}
+                >
+                  <Typography variant="body2" sx={{ 
+                    color: chartView === 'TVL' ? '#34d399' : '#94a3b8', 
+                    mb: 1 
+                  }}>
+                    Total Supplied
+                  </Typography>
+                  <Typography variant="h4" fontWeight={700} sx={{ 
+                    color: chartView === 'TVL' ? '#34d399' : 'white' 
+                  }}>
+                    {userVaultPosition.totalSuppliedUSD > 0 ? (
+                      `$${userVaultPosition.totalSuppliedUSD.toFixed(2)}`
+                    ) : (
+                      '-'
+                    )}
+                  </Typography>
+                </Card>
 
-              {/* APY Card */}
-              <Card sx={{ 
-                p: 2, 
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                background: chartView === 'APY' 
-                  ? 'rgba(96, 165, 250, 0.15)' 
-                  : 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: chartView === 'APY'
-                  ? '1px solid rgba(96, 165, 250, 0.3)'
-                  : '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 3,
-                boxShadow: chartView === 'APY'
-                  ? '0 8px 32px rgba(96, 165, 250, 0.2)'
-                  : '0 8px 32px rgba(0, 0, 0, 0.3)',
-                aspectRatio: '1.2 / 1',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: chartView === 'APY'
-                    ? '0 12px 40px rgba(96, 165, 250, 0.3)'
-                    : '0 12px 40px rgba(255, 255, 255, 0.1)',
-                }
-              }}
-              onClick={() => setChartView('APY')}
-              >
-                <Typography variant="h4" fontWeight={700} sx={{ 
-                  mb: 0.5, 
-                  color: chartView === 'APY' ? '#60a5fa' : 'white',
-                  transition: 'color 0.3s ease'
+                {/* Interest Earned Card */}
+                <Card sx={{ 
+                  p: 2.5, 
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                  }
                 }}>
-                  {userVaultPosition.totalAPY > 0 ? (
-                    formatPercentage(userVaultPosition.totalAPY * 100)
-                  ) : (
-                    '-'
-                  )}
-                </Typography>
-                <Typography variant="body2" sx={{ 
-                  color: chartView === 'APY' ? '#60a5fa' : '#94a3b8',
-                  transition: 'color 0.3s ease'
-                }}>
-                  APY
-                </Typography>
-              </Card>
+                  <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1 }}>
+                    Interest Earned
+                  </Typography>
+                  <Typography variant="h4" fontWeight={700} sx={{ color: '#34d399' }}>
+                    {userVaultPosition.interestEarned > 0 ? (
+                      `$${userVaultPosition.interestEarned.toFixed(4)}`
+                    ) : (
+                      '-'
+                    )}
+                  </Typography>
+                </Card>
 
-              {/* Daily Interest Card */}
-              <Card sx={{ 
-                p: 2, 
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                background: 'rgba(96, 165, 250, 0.15)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(96, 165, 250, 0.3)',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(96, 165, 250, 0.2)',
-                aspectRatio: '1.2 / 1',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 12px 40px rgba(96, 165, 250, 0.3)',
-                }
-              }}>
-                <Typography variant="h4" fontWeight={700} sx={{ 
-                  mb: 0.5, 
-                  color: '#60a5fa',
-                  transition: 'color 0.3s ease'
+                {/* APY Card */}
+                <Card sx={{ 
+                  p: 2.5, 
+                  background: chartView === 'APY' 
+                    ? 'rgba(96, 165, 250, 0.1)' 
+                    : 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: chartView === 'APY'
+                    ? '1px solid rgba(96, 165, 250, 0.3)'
+                    : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                  }
+                }}
+                onClick={() => setChartView('APY')}
+                >
+                  <Typography variant="body2" sx={{ 
+                    color: chartView === 'APY' ? '#60a5fa' : '#94a3b8', 
+                    mb: 1 
+                  }}>
+                    APY
+                  </Typography>
+                  <Typography variant="h4" fontWeight={700} sx={{ 
+                    color: chartView === 'APY' ? '#60a5fa' : 'white' 
+                  }}>
+                    {userVaultPosition.totalAPY > 0 ? (
+                      formatPercentage(userVaultPosition.totalAPY * 100)
+                    ) : (
+                      '-'
+                    )}
+                  </Typography>
+                </Card>
+
+                {/* Daily Interest Card */}
+                <Card sx={{ 
+                  p: 2.5, 
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                  }
                 }}>
-                  {userVaultPosition.dailyInterestUSD > 0 ? (
-                    `$${userVaultPosition.dailyInterestUSD.toFixed(4)}`
-                  ) : (
-                    '-'
-                  )}
-                </Typography>
-                <Typography variant="body2" sx={{ 
-                  color: '#60a5fa',
-                  transition: 'color 0.3s ease'
-                }}>
-                  Daily Interest
-                </Typography>
-              </Card>
-            </Box>
+                  <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1 }}>
+                    Daily Interest
+                  </Typography>
+                  <Typography variant="h4" fontWeight={700} sx={{ color: '#60a5fa' }}>
+                    {userVaultPosition.dailyInterestUSD > 0 ? (
+                      `$${userVaultPosition.dailyInterestUSD.toFixed(4)}`
+                    ) : (
+                      '-'
+                    )}
+                  </Typography>
+                </Card>
+              </Box>
+            </Card>
           </Grid>
 
           {/* Right Side - Deposit/Withdraw Card */}
