@@ -240,6 +240,8 @@ const XFundPage = () => {
         const walletPublicKey = new PublicKey(userWalletAddress);
         const helper = new KaminoSDKHelper(rpcUrl, walletPublicKey);
         
+        // Must initialize the helper before using it
+        await helper.initialize();
         console.log('🔧 [Claim Rewards] SDK Helper initialized');
         
         // Get the PYUSD vault address as PublicKey
