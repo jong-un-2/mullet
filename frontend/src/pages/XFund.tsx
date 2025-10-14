@@ -213,56 +213,16 @@ const XFundPage = () => {
   // Get user's vault position (Total Supplied)
   const userVaultPosition = useUserVaultPosition(userWalletAddress || null);
 
-  // Check for pending rewards availability
+  // Simplified: Always show Claim Rewards button if wallet is connected and user has rewards data
+  // We'll check for actual pending rewards when user clicks the button
   useEffect(() => {
-    const checkPendingRewards = async () => {
-      console.log('🔍 [Claim Rewards] Checking pending rewards...', {
-        isWalletConnected,
-        hasUserWalletAddress: !!userWalletAddress,
-        hasSolanaPublicKey: !!solanaPublicKey
-      });
-
-      if (!isWalletConnected || !userWalletAddress) {
-        console.log('⚠️ [Claim Rewards] Wallet not connected or no user wallet address');
-        setHasPendingRewards(false);
-        return;
-      }
-
-      try {
-        // Import required modules dynamically
-        const [{ KaminoSDKHelper }, { PublicKey }] = await Promise.all([
-          import('../services/kaminoSdkHelper'),
-          import('@solana/web3.js')
-        ]);
-        
-        // Initialize helper - use userWalletAddress (works for both Privy and direct Solana wallets)
-        const rpcUrl = import.meta.env.VITE_SOLANA_MAINNET_RPC || 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
-        const walletPublicKey = new PublicKey(userWalletAddress);
-        const helper = new KaminoSDKHelper(rpcUrl, walletPublicKey);
-        
-        // Must initialize the helper before using it
-        await helper.initialize();
-        console.log('🔧 [Claim Rewards] SDK Helper initialized');
-        
-        // Get the PYUSD vault address as PublicKey
-        const PYUSD_VAULT = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK');
-        
-        // Check if there are claimable rewards
-        console.log('📞 [Claim Rewards] Calling getClaimRewardsInstructions...');
-        const instructions = await helper.getClaimRewardsInstructions(PYUSD_VAULT);
-        
-        console.log('📋 [Claim Rewards] Instructions result:', instructions);
-        console.log('🎁 [Claim Rewards] Has pending rewards:', instructions !== null);
-        
-        // If instructions is not null, there are pending rewards
-        setHasPendingRewards(instructions !== null);
-      } catch (error) {
-        console.error('❌ [Claim Rewards] Error checking pending rewards:', error);
-        setHasPendingRewards(false);
-      }
-    };
-
-    checkPendingRewards();
+    // Show button if wallet connected and user has some rewards info (even if 0)
+    const hasRewardsInfo = userVaultPosition.rewards && userVaultPosition.rewards.length > 0;
+    setHasPendingRewards(isWalletConnected && hasRewardsInfo);
+    
+    if (isWalletConnected && hasRewardsInfo) {
+      console.log('🎁 [Claim Rewards] Button enabled - user has rewards info');
+    }
   }, [isWalletConnected, userWalletAddress, userVaultPosition.rewards]);
   
   // Get real wallet balance for selected token
