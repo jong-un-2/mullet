@@ -84,7 +84,6 @@ const XFundPage = () => {
   
   // Claim rewards state
   const [isClaimingRewards, setIsClaimingRewards] = useState(false);
-  const [hasPendingRewards, setHasPendingRewards] = useState(false);
 
   // Calendar helper functions
   const getMonthName = (monthNum: string) => {
@@ -212,18 +211,6 @@ const XFundPage = () => {
   
   // Get user's vault position (Total Supplied)
   const userVaultPosition = useUserVaultPosition(userWalletAddress || null);
-
-  // Simplified: Always show Claim Rewards button if wallet is connected and user has rewards data
-  // We'll check for actual pending rewards when user clicks the button
-  useEffect(() => {
-    // Show button if wallet connected and user has some rewards info (even if 0)
-    const hasRewardsInfo = userVaultPosition.rewards && userVaultPosition.rewards.length > 0;
-    setHasPendingRewards(isWalletConnected && hasRewardsInfo);
-    
-    if (isWalletConnected && hasRewardsInfo) {
-      console.log('🎁 [Claim Rewards] Button enabled - user has rewards info');
-    }
-  }, [isWalletConnected, userWalletAddress, userVaultPosition.rewards]);
   
   // Get real wallet balance for selected token
   const getWalletBalance = (token: string) => {
@@ -1080,44 +1067,9 @@ const XFundPage = () => {
               borderRadius: 3,
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             }}>
-              {/* Claimable Rewards Section with Claim Button */}
-              {isWalletConnected && hasPendingRewards && (
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  mb: 2,
-                  p: 2.5,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: 2,
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1 }}>
-                      Claimable PYUSD
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-                      <Typography variant="h4" fontWeight={700} sx={{ color: 'white' }}>
-                        {userVaultPosition.rewards && userVaultPosition.rewards[0]?.weeklyAmount ? (
-                          <>
-                            <Box component="span" sx={{ fontSize: '0.8em', mr: 0.5 }}>Ⓟ</Box>
-                            {(userVaultPosition.rewards[0].weeklyAmount / 1_000_000).toFixed(4)}
-                          </>
-                        ) : (
-                          <>
-                            <Box component="span" sx={{ fontSize: '0.8em', mr: 0.5 }}>Ⓟ</Box>
-                            0.0000
-                          </>
-                        )}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#64748b' }}>
-                        {userVaultPosition.rewards && userVaultPosition.rewards[0]?.weeklyAmount 
-                          ? `($${(userVaultPosition.rewards[0].weeklyAmount / 1_000_000).toFixed(2)})`
-                          : '(<$0.01)'
-                        }
-                      </Typography>
-                    </Box>
-                  </Box>
+              {/* Claim Rewards Button */}
+              {isWalletConnected && (
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
                     variant="contained"
                     disabled={isClaimingRewards}
@@ -1152,7 +1104,7 @@ const XFundPage = () => {
                 </Box>
               )}
 
-              {/* Stats Cards Grid - Bottom Row */}
+              {/* Stats Cards Grid */}
               <Box sx={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(2, 1fr)',
