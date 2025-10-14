@@ -8,7 +8,7 @@
     "script": "ts-node ./cli/command.ts"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.31.1",
+    "@coral-xyz/anchor": "^0.32.1",
     "@kamino-finance/klend-sdk": "^7.1.6",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.95.5",

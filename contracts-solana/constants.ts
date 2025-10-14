@@ -4,7 +4,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 // Mars Program ID (updated for V12 deployment)
-export const MARS_PROGRAM_ID = new PublicKey("AEK6WoTp7vY6LM1ZDmedxXHoCkpJL1i86KD2qWzsaJx4");
+export const MARS_PROGRAM_ID = new PublicKey("6dZQiWCbkUCPibxjBs8LVLtRBZYfAZEcWDAJLgVNAXTA");
 
 // Kamino 集成
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");

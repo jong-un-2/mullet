@@ -11,7 +11,7 @@ package:
     - Kamino Finance V2 integration
     - Jupiter Aggregator swaps
     
-    Start block: 372,182,088 (Mars V2 deployment - AEK6WoTp7vY6LM1ZDmedxXHoCkpJL1i86KD2qWzsaJx4)
+    Start block: 372,182,088 (Mars V2 deployment - 6dZQiWCbkUCPibxjBs8LVLtRBZYfAZEcWDAJLgVNAXTA)
     Target: Neon PostgreSQL via Cloudflare Hyperdrive
 
 protobuf:

@@ -1,5 +1,5 @@
 [toolchain]
-anchor_version = "0.31.1"
+anchor_version = "0.32.1"
 
 [features]
 resolution = true
@@ -9,7 +9,7 @@ skip-lint = false
 cargo_args = ["--release"]
 
 [programs.localnet]
-mars = "AEK6WoTp7vY6LM1ZDmedxXHoCkpJL1i86KD2qWzsaJx4"
+mars = "6dZQiWCbkUCPibxjBs8LVLtRBZYfAZEcWDAJLgVNAXTA"
 
 [registry]
 url = "https://api.apr.dev"
