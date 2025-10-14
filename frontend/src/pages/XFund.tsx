@@ -218,11 +218,12 @@ const XFundPage = () => {
     const checkPendingRewards = async () => {
       console.log('🔍 [Claim Rewards] Checking pending rewards...', {
         isWalletConnected,
+        hasUserWalletAddress: !!userWalletAddress,
         hasSolanaPublicKey: !!solanaPublicKey
       });
 
-      if (!isWalletConnected || !solanaPublicKey) {
-        console.log('⚠️ [Claim Rewards] Wallet not connected or no Solana public key');
+      if (!isWalletConnected || !userWalletAddress) {
+        console.log('⚠️ [Claim Rewards] Wallet not connected or no user wallet address');
         setHasPendingRewards(false);
         return;
       }
@@ -234,9 +235,10 @@ const XFundPage = () => {
           import('@solana/web3.js')
         ]);
         
-        // Initialize helper
+        // Initialize helper - use userWalletAddress (works for both Privy and direct Solana wallets)
         const rpcUrl = import.meta.env.VITE_HELIUS_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=1c12b4cc-c319-4f4c-b48d-cad3e0bc5cda';
-        const helper = new KaminoSDKHelper(rpcUrl, solanaPublicKey);
+        const walletPublicKey = new PublicKey(userWalletAddress);
+        const helper = new KaminoSDKHelper(rpcUrl, walletPublicKey);
         
         console.log('🔧 [Claim Rewards] SDK Helper initialized');
         
@@ -259,7 +261,7 @@ const XFundPage = () => {
     };
 
     checkPendingRewards();
-  }, [isWalletConnected, solanaPublicKey, userVaultPosition.rewards]);
+  }, [isWalletConnected, userWalletAddress, userVaultPosition.rewards]);
   
   // Get real wallet balance for selected token
   const getWalletBalance = (token: string) => {
