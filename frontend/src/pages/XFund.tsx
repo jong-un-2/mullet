@@ -216,7 +216,13 @@ const XFundPage = () => {
   // Check for pending rewards availability
   useEffect(() => {
     const checkPendingRewards = async () => {
+      console.log('🔍 [Claim Rewards] Checking pending rewards...', {
+        isWalletConnected,
+        hasSolanaPublicKey: !!solanaPublicKey
+      });
+
       if (!isWalletConnected || !solanaPublicKey) {
+        console.log('⚠️ [Claim Rewards] Wallet not connected or no Solana public key');
         setHasPendingRewards(false);
         return;
       }
@@ -232,16 +238,22 @@ const XFundPage = () => {
         const rpcUrl = import.meta.env.VITE_HELIUS_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=1c12b4cc-c319-4f4c-b48d-cad3e0bc5cda';
         const helper = new KaminoSDKHelper(rpcUrl, solanaPublicKey);
         
+        console.log('🔧 [Claim Rewards] SDK Helper initialized');
+        
         // Get the PYUSD vault address as PublicKey
         const PYUSD_VAULT = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK');
         
         // Check if there are claimable rewards
+        console.log('📞 [Claim Rewards] Calling getClaimRewardsInstructions...');
         const instructions = await helper.getClaimRewardsInstructions(PYUSD_VAULT);
+        
+        console.log('📋 [Claim Rewards] Instructions result:', instructions);
+        console.log('🎁 [Claim Rewards] Has pending rewards:', instructions !== null);
         
         // If instructions is not null, there are pending rewards
         setHasPendingRewards(instructions !== null);
       } catch (error) {
-        console.error('Error checking pending rewards:', error);
+        console.error('❌ [Claim Rewards] Error checking pending rewards:', error);
         setHasPendingRewards(false);
       }
     };
