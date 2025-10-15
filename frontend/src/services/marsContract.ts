@@ -8,6 +8,7 @@ import {
   Transaction, 
   TransactionInstruction,
   ComputeBudgetProgram,
+  SystemProgram,
 } from '@solana/web3.js';
 import { 
   TOKEN_2022_PROGRAM_ID,
@@ -264,12 +265,41 @@ async function createClaimRewardsThroughMarsContract(
       KAMINO_FARMS_PROGRAM
     );
     
+    // 🔍 检查 UserState 是否已初始化，如果没有则创建初始化指令
+    const userStateInfo = await connection.getAccountInfo(userState);
+    if (!userStateInfo || userStateInfo.owner.equals(SystemProgram.programId)) {
+      console.log(`⚠️  UserState 未初始化 (${userState.toString()})，添加 initializeUser 指令`);
+      
+      // 创建 Kamino Farms initializeUser 指令
+      // Discriminator: [111, 17, 185, 250, 60, 122, 38, 254]
+      const SYSVAR_RENT = new PublicKey('SysvarRent111111111111111111111111111111111');
+      
+      const initUserIx = new TransactionInstruction({
+        programId: KAMINO_FARMS_PROGRAM,
+        keys: [
+          { pubkey: userPublicKey, isSigner: true, isWritable: false },   // authority
+          { pubkey: userPublicKey, isSigner: true, isWritable: true },    // payer
+          { pubkey: userPublicKey, isSigner: false, isWritable: false },  // owner
+          { pubkey: userPublicKey, isSigner: false, isWritable: false },  // delegatee (= owner)
+          { pubkey: userState, isSigner: false, isWritable: true },       // userState (PDA)
+          { pubkey: farmStateAddress, isSigner: false, isWritable: true }, // farmState
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // systemProgram
+          { pubkey: SYSVAR_RENT, isSigner: false, isWritable: false },    // rent
+        ],
+        data: Buffer.from([111, 17, 185, 250, 60, 122, 38, 254]), // initializeUser discriminator
+      });
+      
+      setupInstructions.push(initUserIx);
+      console.log(`✅ 已添加 initializeUser 指令到 setup`);
+    }
+    
     console.log(`🔍 Reward ${rewardIndex} 关键账户:`, {
       userState: userState.toString(),
       farmState: farmStateAddress.toString(),
       rewardMint: rewardMint.toString(),
       rewardVault: rewardVault.toString(),
-      derivedFrom: 'Kamino SDK: [b"user", farmState, owner] (3 seeds)'
+      derivedFrom: 'Kamino SDK: [b"user", farmState, owner] (3 seeds)',
+      userStateInitialized: userStateInfo ? '✅ 已初始化' : '🆕 将在交易中初始化'
     });
     
     console.log(`💰 处理 Reward ${rewardIndex}:`, rewardMint.toString());
