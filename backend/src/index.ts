@@ -11,6 +11,7 @@ import { runCacheWarming } from './cache/warmer';
 
 import { createIndexerRoutes } from './containers';
 import { createMarsRoutes } from './mars/routes';
+import { runIncrementalSync, getIndexerHealth } from './services/substreamsIndexer';
 
 export interface Env {
 	D1_DATABASE?: D1Database;
@@ -24,6 +25,9 @@ export interface Env {
 	SUBSTREAMS_INDEXER_CONTAINER?: any;
 	SUBSTREAMS_ENDPOINT?: string;
 	SUBSTREAMS_JWT_TOKEN?: string;
+	// Solana RPC
+	SOLANA_RPC_URL?: string;
+	SOLANA_CLUSTER?: string;
 }
 
 // Export Durable Objects for wrangler
@@ -70,61 +74,34 @@ app.get('/health', (c) => {
 	});
 });
 
-// Mount route modules using unified routes
-app.route('/v1/api/dex', createDexRoutes());
-app.route('/v1/api/mars', createMarsRoutes());
+// Mount sub-routes
+app.route('/dex', createDexRoutes());
+app.route('/mcp', createDBRoutes());
+app.route('/cache', createCacheRoutes());
+app.route('/mars', createMarsRoutes());
 
-// MCP Agent routes - handle SSE and MCP requests
-// SSE endpoint - support both GET and POST
-app.get("/sse", async (c) => {
-  try {
-    console.log('SSE GET request received');
-    // Create a new request with the correct path that D1Agent expects
-    const request = new Request(c.req.url.toString(), {
-      method: c.req.method,
-      headers: c.req.header(),
-    });
-    return D1Agent.serveSSE("/sse").fetch(request, c.env, c.executionCtx);
-  } catch (error) {
-    console.error('SSE GET error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ error: 'SSE connection failed', message: errorMessage }, 500);
-  }
+// Mount indexer routes (Durable Object container control)
+app.route('/indexer', createIndexerRoutes());
+
+// Substreams sync API
+app.get('/api/sync/status', async (c) => {
+	const health = await getIndexerHealth(c.env);
+	return c.json(health);
 });
 
-app.post("/sse", async (c) => {
-  try {
-    console.log('SSE POST request received');
-    return D1Agent.serveSSE("/sse").fetch(c.req.raw, c.env, c.executionCtx);
-  } catch (error) {
-    console.error('SSE POST error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ error: 'SSE connection failed', message: errorMessage }, 500);
-  }
-});
-
-// SSE message endpoint
-app.post("/sse/message", async (c) => {
-  try {
-    console.log('SSE message request received');
-    return D1Agent.serveSSE("/sse").fetch(c.req.raw, c.env, c.executionCtx);
-  } catch (error) {
-    console.error('SSE message error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ error: 'SSE message failed', message: errorMessage }, 500);
-  }
-});
-
-// MCP endpoint
-app.post("/mcp", async (c) => {
-  try {
-    console.log('MCP request received');
-    return D1Agent.serve("/mcp").fetch(c.req.raw, c.env, c.executionCtx);
-  } catch (error) {
-    console.error('MCP error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ error: 'MCP request failed', message: errorMessage }, 500);
-  }
+app.post('/api/sync/trigger', async (c) => {
+	try {
+		const stats = await runIncrementalSync(c.env);
+		return c.json({
+			success: true,
+			stats
+		});
+	} catch (error: any) {
+		return c.json({
+			success: false,
+			error: error.message
+		}, 500);
+	}
 });
 
 // Debug endpoint to check if D1Agent is working
@@ -184,26 +161,17 @@ export default {
 		try {
 			// Lightweight tasks for pure GraphQL architecture
 			switch (controller.cron) {
-				case "*/1 * * * *": // Every 1 minute - Cache warming & container heartbeat
-					console.log("🔥 Running cache warming & container heartbeat...");
-					await runCacheWarming(env);
-					
-					// Keep Substreams indexer container alive
-					if (env.SUBSTREAMS_INDEXER_CONTAINER) {
-						try {
-							const id = env.SUBSTREAMS_INDEXER_CONTAINER.idFromName("main-indexer");
-							const stub = env.SUBSTREAMS_INDEXER_CONTAINER.get(id);
-							const response = await stub.fetch("https://container/health");
-							// Don't parse JSON, just check if response is ok
-							if (response.ok) {
-								console.log("✅ Substreams indexer heartbeat successful (status:", response.status, ")");
-							} else {
-								console.warn("⚠️ Substreams indexer response not ok:", response.status);
-							}
-						} catch (error) {
-							console.error("❌ Substreams indexer heartbeat failed:", error);
-						}
+				case "*/1 * * * *": // Every 1 minute - Substreams batch indexing & cache warming
+					console.log("� Running Substreams incremental sync...");
+					try {
+						const stats = await runIncrementalSync(env);
+						console.log(`✅ Synced ${stats.blocksProcessed} blocks, ${stats.eventsIndexed} events in ${stats.duration}ms`);
+					} catch (error) {
+						console.error("❌ Incremental sync failed:", error);
 					}
+					
+					console.log("🔥 Running cache warming...");
+					await runCacheWarming(env);
 					break;
 
 				case "0 * * * *": // metrics-collection - Collect metrics hourly
