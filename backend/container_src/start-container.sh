@@ -107,6 +107,8 @@ stdbuf -oL -eL substreams-sink-sql from-proto \
     "$OUTPUT_MODULE" \
     --start-block "$START_BLOCK" \
     --final-blocks-only \
+    -e "$SUBSTREAMS_ENDPOINT" \
+    -H "authorization: Bearer ${SUBSTREAMS_API_TOKEN}" \
     2>&1 | stdbuf -oL -eL tee /app/logs/substreams-sink.log &
 
 SINK_PID=$!
