@@ -79,6 +79,7 @@ app.route('/dex', createDexRoutes());
 app.route('/mcp', createDBRoutes());
 app.route('/cache', createCacheRoutes());
 app.route('/mars', createMarsRoutes());
+app.route('/v1/api/mars', createMarsRoutes()); // V1 API compatibility
 
 // Mount indexer routes (Durable Object container control)
 app.route('/indexer', createIndexerRoutes());
