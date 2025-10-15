@@ -38,26 +38,6 @@ const DISCRIMINATOR_CLAIM_FARM_REWARDS = Buffer.from([102, 40, 223, 149, 90, 81,
 export const KAMINO_FARMS_PROGRAM = new PublicKey("FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr");
 
 /**
- * 解析 Farm State 数据获取 Global Config
- * Farm State 结构：Global Config 在偏移量 8 处（8 bytes discriminator 之后）
- */
-function parseFarmStateGlobalConfig(data: Buffer): PublicKey {
-  try {
-    // Farm State 布局：
-    // 0-8: discriminator
-    // 8-40: global_config (Pubkey, 32 bytes)
-    const GLOBAL_CONFIG_OFFSET = 8;
-    const globalConfigBytes = data.slice(GLOBAL_CONFIG_OFFSET, GLOBAL_CONFIG_OFFSET + 32);
-    const globalConfig = new PublicKey(globalConfigBytes);
-    console.log('🔍 解析到 Global Config:', globalConfig.toString());
-    return globalConfig;
-  } catch (error) {
-    console.warn('⚠️  解析 Global Config 失败，使用默认值', error);
-    return KAMINO_FARMS_PROGRAM;
-  }
-}
-
-/**
  * 创建 Mars claim_farm_rewards 指令（单个奖励）
  * 新版本每次只领取一个奖励，需要指定 reward_index
  */
@@ -170,18 +150,7 @@ async function createClaimRewardsThroughMarsContract(
     KAMINO_FARMS_PROGRAM
   );
   
-  // 4. 获取 Farm State 数据以提取 Global Config
-  const farmStateInfo = await connection.getAccountInfo(farmStateAddress);
-  if (!farmStateInfo) {
-    console.log('❌ 无法获取 Farm State 数据');
-    return null;
-  }
-  
-  // 5. 解析 Global Config
-  const globalConfig = parseFarmStateGlobalConfig(farmStateInfo.data);
-  console.log('✅ Global Config:', globalConfig.toString());
-  
-  // 6. 获取 Mars PDAs
+  // 4. 获取 Mars PDAs
   const [globalStatePda] = PublicKey.findProgramAddressSync(
     [Buffer.from('global-state')],
     MARS_PROGRAM_ID
@@ -250,8 +219,14 @@ async function createClaimRewardsThroughMarsContract(
     // 0: user, 1: farmState, 2: userFarm, 3: globalConfig(?), 4: rewardMint, 
     // 5: userRewardAta, 6: rewardsVault, 7: treasuryVault, 8: farmAuthority, 9: farmsProgram, 10: tokenProgram
     
+    // 从 Kamino harvestReward 指令中提取账户：
+    // 0: owner, 1: userState, 2: farmState, 3: globalConfig, 4: rewardMint, 
+    // 5: userRewardAta, 6: rewardsVault, 7: treasuryVault, 8: farmAuthority, 9: scopePrices, 10: tokenProgram
+    const globalConfigFromIx = new PublicKey(accounts[3].pubkey || accounts[3].address);
     const rewardMint = new PublicKey(accounts[4].pubkey || accounts[4].address);
     const rewardVault = new PublicKey(accounts[6].pubkey || accounts[6].address);
+    
+    console.log(`🔍 从 Kamino 指令提取 Global Config: ${globalConfigFromIx.toString()}`);
     
     // 推导正确的 UserState PDA
     // ⚠️ 重要：Kamino Farms SDK 只使用 3 个 seeds（参考 @kamino-finance/farms-sdk/src/utils/utils.ts）
@@ -334,21 +309,21 @@ async function createClaimRewardsThroughMarsContract(
       setupInstructions.push(createAtaIx);
     }
     
-    // 获取 Treasury Vault
+    // 获取 Treasury Vault（使用从 Kamino 指令提取的 globalConfig）
     const [treasuryVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from('treasury'), globalConfig.toBuffer(), rewardMint.toBuffer()],
+      [Buffer.from('treasury'), globalConfigFromIx.toBuffer(), rewardMint.toBuffer()],
       KAMINO_FARMS_PROGRAM
     );
     
-    // 创建 claim_farm_rewards 指令（使用从 Kamino 指令提取的 userState）
+    // 创建 claim_farm_rewards 指令（使用从 Kamino 指令提取的账户）
     const claimIx = createMarsClaimFarmRewardsInstruction({
       user: userPublicKey,
       globalState: globalStatePda,
       vaultState: vaultStatePda,
       vaultMint: PYUSD_MINT,
       farmState: farmStateAddress,
-      userFarm: userState, // ✅ 使用从 Kamino 指令提取的 userState，而不是 farmAccounts.userFarm
-      globalConfig: globalConfig,
+      userFarm: userState, // ✅ 使用正确推导的 UserState PDA
+      globalConfig: globalConfigFromIx, // ✅ 使用从 Kamino 指令提取的 globalConfig
       rewardMint: rewardMint,
       rewardVault: rewardVault,
       treasuryVault: treasuryVault,
