@@ -198,3 +198,8 @@ docker-compose.override.yml
 *.swp
 *.swo
 *~
+
+# ==================== 
+# Submodules (not tracked)
+# ====================
+klend-sdk/
