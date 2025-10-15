@@ -34,6 +34,7 @@ const KAMINO_STAKE_IN_FARM_DISCRIMINATOR: [u8; 8] = [24, 191, 24, 158, 110, 190,
 const KAMINO_START_UNSTAKE_DISCRIMINATOR: [u8; 8] = [69, 169, 100, 27, 224, 93, 160, 125];
 const KAMINO_UNSTAKE_FROM_FARM_DISCRIMINATOR: [u8; 8] = [147, 182, 155, 59, 74, 113, 23, 203];
 const KAMINO_DEPOSIT_AND_STAKE_DISCRIMINATOR: [u8; 8] = [42, 143, 36, 40, 74, 180, 200, 42];
+const CLAIM_FARM_REWARDS_DISCRIMINATOR: [u8; 8] = [102, 40, 223, 149, 90, 81, 228, 23];
 
 // Admin Operations (optional, for comprehensive tracking)
 const INITIALIZE_DISCRIMINATOR: [u8; 8] = [175, 175, 109, 31, 13, 152, 155, 237];
@@ -85,6 +86,20 @@ fn map_blocks(block: Block) -> Result<Events, substreams::errors::Error> {
                             ) {
                                 events.push(event);
                             }
+                        }
+                    }
+                }
+                
+                // Parse Anchor event logs (for events emitted by emit! macro)
+                for log in &meta.log_messages {
+                    if log.starts_with("Program data: ") {
+                        if let Some(event) = parse_anchor_event_log(
+                            log,
+                            &signature,
+                            slot,
+                            block_timestamp,
+                        ) {
+                            events.push(event);
                         }
                     }
                 }
@@ -991,7 +1006,28 @@ pub fn graph_out(
                 .change("kaminoVault", &kamino.kamino_vault);
             }
 
-            // 8. Vault State Updated Event
+            // 8. Farm Rewards Claimed Event (V18 - Token-2022 support)
+            Some(pb::mars::vaults::v1::vault_event::Event::FarmRewardsClaimed(rewards)) => {
+                let rewards_id = format!("{}:{}:{}", event.signature, &rewards.user, &rewards.reward_mint);
+                entity_changes.push_change(
+                    "FarmRewardsClaimed",
+                    &rewards_id,
+                    0,
+                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
+                )
+                .change("id", &rewards_id)
+                .change("signature", &event.signature)
+                .change("slot", event.slot.to_string())
+                .change("timestamp", event.timestamp.to_string())
+                .change("user", &rewards.user)
+                .change("vaultMint", &rewards.vault_mint)
+                .change("farmState", &rewards.farm_state)
+                .change("rewardMint", &rewards.reward_mint)
+                .change("rewardAmount", rewards.reward_amount.to_string())
+                .change("totalRewardsClaimed", rewards.total_rewards_claimed.to_string());
+            }
+
+            // 9. Vault State Updated Event
             Some(pb::mars::vaults::v1::vault_event::Event::VaultStateUpdated(state)) => {
                 let state_id = format!("{}:{}", event.signature, bs58::encode(&state.vault_id).into_string());
                 entity_changes.push_change(
@@ -1038,4 +1074,108 @@ pub fn graph_out(
     }
 
     Ok(entity_changes)
+}
+
+/// Parse Anchor event logs (emitted by `emit!` macro)
+/// 
+/// Anchor events are logged as "Program data: <base64_encoded_data>"
+/// Format: [8-byte event discriminator] + [Borsh-serialized event data]
+fn parse_anchor_event_log(
+    log: &str,
+    signature: &str,
+    slot: u64,
+    timestamp: i64,
+) -> Option<VaultEvent> {
+    use base64::Engine;
+    
+    // Extract base64 data after "Program data: "
+    let data_str = log.strip_prefix("Program data: ")?;
+    let data = base64::engine::general_purpose::STANDARD.decode(data_str).ok()?;
+    
+    if data.len() < 8 {
+        return None;
+    }
+    
+    // Extract event discriminator (first 8 bytes)
+    let discriminator: [u8; 8] = data[0..8].try_into().ok()?;
+    
+    // FarmRewardsClaimedEvent discriminator (from IDL)
+    const FARM_REWARDS_CLAIMED_EVENT_DISC: [u8; 8] = [
+        200, 44, 160, 155, 129, 16, 21, 151
+    ];
+    
+    match discriminator {
+        FARM_REWARDS_CLAIMED_EVENT_DISC => {
+            parse_farm_rewards_claimed_event(&data[8..], signature, slot, timestamp)
+        }
+        _ => None,
+    }
+}
+
+/// Parse FarmRewardsClaimedEvent from Borsh-serialized data
+/// 
+/// Event structure:
+/// - user: Pubkey (32 bytes)
+/// - vault_mint: Pubkey (32 bytes)  
+/// - farm_state: Pubkey (32 bytes)
+/// - reward_mint: Pubkey (32 bytes)
+/// - reward_amount: u64 (8 bytes)
+/// - total_rewards_claimed: u64 (8 bytes)
+/// - timestamp: i64 (8 bytes)
+fn parse_farm_rewards_claimed_event(
+    data: &[u8],
+    signature: &str,
+    slot: u64,
+    timestamp: i64,
+) -> Option<VaultEvent> {
+    if data.len() < 32 + 32 + 32 + 32 + 8 + 8 + 8 {
+        return None;
+    }
+    
+    let mut offset = 0;
+    
+    // Parse user (32 bytes)
+    let user = bs58::encode(&data[offset..offset+32]).into_string();
+    offset += 32;
+    
+    // Parse vault_mint (32 bytes)
+    let vault_mint = bs58::encode(&data[offset..offset+32]).into_string();
+    offset += 32;
+    
+    // Parse farm_state (32 bytes)
+    let farm_state = bs58::encode(&data[offset..offset+32]).into_string();
+    offset += 32;
+    
+    // Parse reward_mint (32 bytes)
+    let reward_mint = bs58::encode(&data[offset..offset+32]).into_string();
+    offset += 32;
+    
+    // Parse reward_amount (8 bytes)
+    let reward_amount = u64::from_le_bytes(data[offset..offset+8].try_into().ok()?);
+    offset += 8;
+    
+    // Parse total_rewards_claimed (8 bytes)
+    let total_rewards_claimed = u64::from_le_bytes(data[offset..offset+8].try_into().ok()?);
+    offset += 8;
+    
+    // Parse timestamp (8 bytes) - use block timestamp
+    let _event_timestamp = i64::from_le_bytes(data[offset..offset+8].try_into().ok()?);
+    
+    Some(VaultEvent {
+        signature: signature.to_string(),
+        slot,
+        timestamp,
+        program_id: MARS_PROGRAM_ID.to_string(),
+        event: Some(pb::mars::vaults::v1::vault_event::Event::FarmRewardsClaimed(
+            pb::mars::vaults::v1::FarmRewardsClaimedEvent {
+                user,
+                vault_mint,
+                farm_state,
+                reward_mint,
+                reward_amount,
+                total_rewards_claimed,
+                timestamp,
+            },
+        )),
+    })
 }

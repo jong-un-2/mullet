@@ -28,6 +28,7 @@ message VaultEvent {
     KaminoWithdrawEvent kamino_withdraw = 16;
     KaminoStakeEvent kamino_stake = 17;
     KaminoUnstakeEvent kamino_unstake = 18;
+    FarmRewardsClaimedEvent farm_rewards_claimed = 19;
   }
 }
 
@@ -241,6 +242,17 @@ message KaminoUnstakeEvent {
   string farm_address = 4;
   bool is_start = 5;                // true=start_unstake, false=complete_unstake
   uint64 slot = 6;                  // Slot when unstake started
+  int64 timestamp = 7;
+}
+
+// Kamino farm rewards claim event (V18 with Token-2022 support)
+message FarmRewardsClaimedEvent {
+  string user = 1;
+  string vault_mint = 2;            // Vault base token mint (e.g., PYUSD)
+  string farm_state = 3;            // Kamino farm state address
+  string reward_mint = 4;           // Reward token mint (can be Token-2022)
+  uint64 reward_amount = 5;         // Amount of rewards claimed
+  uint64 total_rewards_claimed = 6; // Lifetime total rewards claimed by vault
   int64 timestamp = 7;
 }
 

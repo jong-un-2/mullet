@@ -221,6 +221,17 @@ impl<'info> ClaimFarmRewards<'info> {
         msg!("🎉 Claim farm rewards completed!");
         msg!("  Total rewards claimed (lifetime): {}", ctx.accounts.vault_state.total_rewards_claimed);
 
+        // 发出事件
+        emit!(crate::events::FarmRewardsClaimedEvent {
+            user: ctx.accounts.user.key(),
+            vault_mint: ctx.accounts.vault_mint.key(),
+            farm_state: ctx.accounts.farm_state.key(),
+            reward_mint: ctx.accounts.reward_mint.key(),
+            reward_amount: reward_claimed,
+            total_rewards_claimed: ctx.accounts.vault_state.total_rewards_claimed,
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+
         Ok(())
     }
 }

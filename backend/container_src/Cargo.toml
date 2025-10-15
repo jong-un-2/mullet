@@ -16,6 +16,7 @@ prost = "0.13"
 prost-types = "0.13"
 bs58 = "0.5"
 hex = "0.4"
+base64 = "0.21"
 
 [build-dependencies]
 prost-build = "0.13"

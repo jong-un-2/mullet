@@ -106,3 +106,15 @@ pub enum EmergencyEventType {
     EmergencyWithdraw,
     ForceRebalance,
 }
+
+/// Farm 奖励领取事件
+#[event]
+pub struct FarmRewardsClaimedEvent {
+    pub user: Pubkey,
+    pub vault_mint: Pubkey,
+    pub farm_state: Pubkey,
+    pub reward_mint: Pubkey,
+    pub reward_amount: u64,
+    pub total_rewards_claimed: u64, // vault lifetime total
+    pub timestamp: i64,
+}
