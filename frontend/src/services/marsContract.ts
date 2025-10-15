@@ -1,5 +1,10 @@
 /**
  * Mars 合约直接集成 - PYUSD 存款和取款
+ * 
+ * ⚠️ 重要修复（2025-10-15）：
+ * - Claim Rewards 时从 Kamino harvestReward 指令的 accounts[2] 提取真正的 FarmState
+ * - 不再使用 SDK 的 farmAccounts.farmState（那个是 token vault，不是 FarmState）
+ * - 使用正确的 FarmState 推导 UserState PDA 和创建 initializeUser 指令
  */
 
 import { 
@@ -135,14 +140,29 @@ async function createClaimRewardsThroughMarsContract(
   
   console.log(`✅ Kamino SDK 返回了 ${kaminoClaimIxs.length} 个奖励指令`);
   
-  // 2. 从 SDK Helper 获取 Farm 账户信息
-  const depositInfo = await sdkHelper.getDepositAndStakeInfo(PYUSD_VAULT, 0.01);
-  const { farmAccounts } = depositInfo.stake;
+  // 2. 从 Kamino harvestReward 指令中提取真正的 farmState 地址
+  // ⚠️ 重要：不要使用 getDepositAndStakeInfo 的 farmAccounts.farmState，那个是 token vault！
+  // 从 harvestReward 指令的 accounts[2] 提取真正的 FarmState
+  const firstKaminoIx = kaminoClaimIxs[0];
+  const kaminoAccounts = firstKaminoIx.accounts || firstKaminoIx.keys;
   
-  const farmStateAddress = farmAccounts.farmState;
+  if (!kaminoAccounts || kaminoAccounts.length < 3) {
+    console.error('❌ Kamino 指令账户不足，无法提取 farmState');
+    return null;
+  }
   
-  console.log('✅ Farm State:', farmStateAddress.toString());
-  console.log('✅ User Farm PDA:', farmAccounts.userFarm.toString());
+  // Kamino harvestReward 指令账户顺序：
+  // 0: owner, 1: userState, 2: farmState ✅, 3: globalConfig, 4: rewardMint...
+  const farmStateAddress = new PublicKey(kaminoAccounts[2].pubkey || kaminoAccounts[2].address);
+  
+  console.log('✅ Farm State (从 Kamino 指令提取):', farmStateAddress.toString());
+  
+  // 推导 userFarm PDA 用于日志
+  const [userFarmPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from('user'), farmStateAddress.toBuffer(), userPublicKey.toBuffer()],
+    KAMINO_FARMS_PROGRAM
+  );
+  console.log('✅ User Farm PDA (推导):', userFarmPda.toString());
   
   // 3. 推导 Farm Authority PDA
   const [farmAuthorityPda] = PublicKey.findProgramAddressSync(
@@ -193,24 +213,40 @@ async function createClaimRewardsThroughMarsContract(
     }
     
     // 🔍 打印所有账户地址以确定正确的顺序
-    console.log(`🔍 Kamino 指令 ${rewardIndex} 所有账户:`, accounts.map((acc: any, idx: number) => ({
-      index: idx,
-      address: (acc.pubkey || acc.address).toString(),
-      writable: acc.isWritable || acc.role === 1 || acc.role === 3,
-      signer: acc.isSigner || acc.role === 2 || acc.role === 3,
-    })));
+    console.log(`🔍 Kamino 指令 ${rewardIndex} 所有账户:`, accounts.map((acc: any, idx: number) => {
+      const addr = (acc.pubkey || acc.address).toString();
+      let name = `account_${idx}`;
+      // 标注关键账户
+      if (idx === 0) name = 'owner';
+      else if (idx === 1) name = 'userState';
+      else if (idx === 2) name = 'farmState ✅';
+      else if (idx === 3) name = 'globalConfig';
+      else if (idx === 4) name = 'rewardMint';
+      else if (idx === 5) name = 'userRewardAta';
+      else if (idx === 6) name = 'rewardsVault';
+      else if (idx === 7) name = 'treasuryVault';
+      else if (idx === 8) name = 'farmAuthority';
+      
+      return {
+        index: idx,
+        name,
+        address: addr,
+        writable: acc.isWritable || acc.role === 1 || acc.role === 3,
+        signer: acc.isSigner || acc.role === 2 || acc.role === 3,
+      };
+    }));
     
-    // Kamino harvestReward 指令的账户顺序：
+    // Kamino harvestReward 指令的账户顺序（标准）：
     // 0: owner (user)
-    // 1: userState (NOT userFarm! UserState tracks rewards per user per reward mint)
-    // 2: farmState
-    // 3: globalConfig
-    // 4: rewardMint
-    // 5: userRewardAta
-    // 6: rewardsVault
-    // 7: rewardsTreasuryVault
-    // 8: farmVaultsAuthority
-    // 9: scopePrices
+    // 1: userState (UserState PDA: [b"user", farmState, owner])
+    // 2: farmState ✅ (真正的 FarmState 账户)
+    // 3: globalConfig (Kamino Farms Global Config)
+    // 4: rewardMint (奖励代币 mint)
+    // 5: userRewardAta (用户的奖励代币账户)
+    // 6: rewardsVault (Farm 的奖励代币池)
+    // 7: rewardsTreasuryVault (国库奖励账户)
+    // 8: farmVaultsAuthority (Farm 权限 PDA)
+    // 9: scopePrices (价格预言机)
     // 10: tokenProgram
     
     // 从 Kamino 指令中提取账户
@@ -220,22 +256,32 @@ async function createClaimRewardsThroughMarsContract(
     // 5: userRewardAta, 6: rewardsVault, 7: treasuryVault, 8: farmAuthority, 9: farmsProgram, 10: tokenProgram
     
     // 从 Kamino harvestReward 指令中提取账户：
-    // 0: owner, 1: userState, 2: farmState, 3: globalConfig, 4: rewardMint, 
+    // 0: owner, 1: userState, 2: farmState ✅, 3: globalConfig, 4: rewardMint, 
     // 5: userRewardAta, 6: rewardsVault, 7: treasuryVault, 8: farmAuthority, 9: scopePrices, 10: tokenProgram
+    const farmStateFromIx = new PublicKey(accounts[2].pubkey || accounts[2].address);
     const globalConfigFromIx = new PublicKey(accounts[3].pubkey || accounts[3].address);
     const rewardMint = new PublicKey(accounts[4].pubkey || accounts[4].address);
     const rewardVault = new PublicKey(accounts[6].pubkey || accounts[6].address);
     
-    console.log(`🔍 从 Kamino 指令提取 Global Config: ${globalConfigFromIx.toString()}`);
+    // 验证 farmState 一致性
+    if (!farmStateFromIx.equals(farmStateAddress)) {
+      console.warn(`⚠️  FarmState 不一致！外层: ${farmStateAddress.toString()}, 指令内: ${farmStateFromIx.toString()}`);
+      console.warn(`⚠️  使用指令内的 farmState: ${farmStateFromIx.toString()}`);
+    }
+    
+    console.log(`🔍 从 Kamino 指令提取账户:`);
+    console.log(`   - FarmState: ${farmStateFromIx.toString()}`);
+    console.log(`   - Global Config: ${globalConfigFromIx.toString()}`);
+    console.log(`   - Reward Mint: ${rewardMint.toString()}`);
     
     // 推导正确的 UserState PDA
-    // ⚠️ 重要：Kamino Farms SDK 只使用 3 个 seeds（参考 @kamino-finance/farms-sdk/src/utils/utils.ts）
+    // ⚠️ 重要：使用从指令中提取的真实 farmState，不是 SDK 返回的 token vault！
     // seeds: [b"user", farmState, owner]
     const [userState] = PublicKey.findProgramAddressSync(
       [
         Buffer.from('user'),
-        farmStateAddress.toBuffer(),
-        userPublicKey.toBuffer(),  // ✅ 只用 3 个 seeds
+        farmStateFromIx.toBuffer(),  // ✅ 使用指令中的真实 farmState
+        userPublicKey.toBuffer(),
       ],
       KAMINO_FARMS_PROGRAM
     );
@@ -257,7 +303,7 @@ async function createClaimRewardsThroughMarsContract(
           { pubkey: userPublicKey, isSigner: false, isWritable: false },  // owner
           { pubkey: userPublicKey, isSigner: false, isWritable: false },  // delegatee (= owner)
           { pubkey: userState, isSigner: false, isWritable: true },       // userState (PDA)
-          { pubkey: farmStateAddress, isSigner: false, isWritable: true }, // farmState
+          { pubkey: farmStateFromIx, isSigner: false, isWritable: true }, // farmState ✅ 真实的 FarmState
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // systemProgram
           { pubkey: SYSVAR_RENT, isSigner: false, isWritable: false },    // rent
         ],
@@ -265,15 +311,15 @@ async function createClaimRewardsThroughMarsContract(
       });
       
       setupInstructions.push(initUserIx);
-      console.log(`✅ 已添加 initializeUser 指令到 setup`);
+      console.log(`✅ 已添加 initializeUser 指令 (farmState: ${farmStateFromIx.toString().slice(0, 8)}...)`);
     }
     
     console.log(`🔍 Reward ${rewardIndex} 关键账户:`, {
       userState: userState.toString(),
-      farmState: farmStateAddress.toString(),
+      farmState: farmStateFromIx.toString(),
       rewardMint: rewardMint.toString(),
       rewardVault: rewardVault.toString(),
-      derivedFrom: 'Kamino SDK: [b"user", farmState, owner] (3 seeds)',
+      derivedFrom: `[b"user", ${farmStateFromIx.toString().slice(0, 8)}..., ${userPublicKey.toString().slice(0, 8)}...]`,
       userStateInitialized: userStateInfo ? '✅ 已初始化' : '🆕 将在交易中初始化'
     });
     
@@ -315,26 +361,29 @@ async function createClaimRewardsThroughMarsContract(
       KAMINO_FARMS_PROGRAM
     );
     
-    // 创建 claim_farm_rewards 指令（使用从 Kamino 指令提取的账户）
+    // 从 Kamino 指令提取 scopePrices (index 9)
+    const scopePrices = accounts.length > 9 
+      ? new PublicKey(accounts[9].pubkey || accounts[9].address)
+      : new PublicKey('HFn8GnPADiny6XqUoWE8uRPPxb29ikn4yTuPa9MF2fWJ'); // Scope Prices Mainnet
+    
+    // 创建 claim_farm_rewards 指令（使用从 Kamino 指令提取的真实 farmState）
     const claimIx = createMarsClaimFarmRewardsInstruction({
       user: userPublicKey,
       globalState: globalStatePda,
       vaultState: vaultStatePda,
-      vaultMint: PYUSD_MINT,
-      farmState: farmStateAddress,
-      userFarm: userState, // ✅ 使用正确推导的 UserState PDA
-      globalConfig: globalConfigFromIx, // ✅ 使用从 Kamino 指令提取的 globalConfig
+      vaultMint: PYUSD_MINT,  // ✅ 添加 vaultMint
+      userFarm: userState,  // ✅ 使用推导的 userState
+      farmState: farmStateFromIx,  // ✅ 使用指令中的真实 farmState
       rewardMint: rewardMint,
       rewardVault: rewardVault,
-      treasuryVault: treasuryVault,
+      treasuryVault: treasuryVault,  // ✅ 正确的参数名
       userRewardAta: userRewardAta,
       farmAuthority: farmAuthorityPda,
-      scopePrices: KAMINO_FARMS_PROGRAM, // 使用 Program ID 作为占位符
+      globalConfig: globalConfigFromIx,
+      scopePrices: scopePrices,  // ✅ 添加 scopePrices
       farmsProgram: KAMINO_FARMS_PROGRAM,
       rewardTokenProgram: rewardTokenProgram,
-    }, rewardIndex);
-    
-    claimTx.add(claimIx);
+    }, rewardIndex);    claimTx.add(claimIx);
   }
   
   // 添加 setup 指令（创建 ATA）
