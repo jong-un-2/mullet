@@ -12,6 +12,7 @@ import { runCacheWarming } from './cache/warmer';
 import { createIndexerRoutes } from './containers';
 import { createMarsRoutes } from './mars/routes';
 import { runIncrementalSync, getIndexerHealth } from './services/substreamsIndexer';
+import { collectVaultHistoricalData } from './services/vaultHistoricalCollector';
 
 export interface Env {
 	D1_DATABASE?: D1Database;
@@ -175,8 +176,25 @@ export default {
 					await runCacheWarming(env);
 					break;
 
-				case "0 * * * *": // metrics-collection - Collect metrics hourly
-					console.log("📊 Collecting GraphQL metrics...");
+				case "0 * * * *": // Hourly - Collect vault historical data & metrics
+					console.log("📊 Collecting vault historical data...");
+					try {
+						// 使用环境变量中的 Solana RPC URL
+						const rpcUrl = env.SOLANA_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+						
+						// 使用 Hyperdrive 连接 Neon PostgreSQL
+						const dbConnectionString = env.HYPERDRIVE?.connectionString;
+						
+						const result = await collectVaultHistoricalData(rpcUrl, dbConnectionString);
+						
+						if (result.success && result.snapshot) {
+							console.log(`✅ Vault data collected: Total APY ${(result.snapshot.totalApy * 100).toFixed(2)}% (Lending: ${(result.snapshot.lendingApy * 100).toFixed(2)}%, Incentives: ${(result.snapshot.incentivesApy * 100).toFixed(2)}%), TVL $${(result.snapshot.totalSuppliedUsd / 1_000_000).toFixed(2)}M in ${result.duration}ms`);
+						} else {
+							console.error(`❌ Vault data collection failed: ${result.error}`);
+						}
+					} catch (error) {
+						console.error("❌ Vault historical collection failed:", error);
+					}
 					break;
 
 				case "0 2 * * 0": // log-cleanup - Clean logs every Sunday at 2am

@@ -504,4 +504,77 @@ marsVaultRoutes.post('/earning-details',
   }
 );
 
+/**
+ * POST /historical - 获取 Vault 的历史 APY 和 TVL 数据
+ * 用于显示图表趋势
+ */
+marsVaultRoutes.post('/historical',
+  zValidator('json', z.object({
+    vaultAddress: z.string().optional(),
+    days: z.number().int().min(1).max(365).optional().default(30),
+  })),
+  async (c) => {
+    const { vaultAddress, days } = c.req.valid('json');
+    const vault = vaultAddress || 'A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK';
+
+    try {
+      const result = await withDrizzle(c.env as HyperdriveEnv, async (db) => {
+        const histResult = await db.execute(sql`
+          SELECT 
+            id,
+            vault_address,
+            recorded_at,
+            lending_apy,
+            incentives_apy,
+            total_apy,
+            total_supplied,
+            total_supplied_usd,
+            token_symbol,
+            slot_number,
+            metadata
+          FROM vault_historical_data
+          WHERE vault_address = ${vault}
+            AND recorded_at >= NOW() - INTERVAL '${sql.raw(days.toString())} days'
+          ORDER BY recorded_at ASC
+          LIMIT 1000
+        `);
+
+        const historicalData = Array.from(histResult).map((row: any) => ({
+          date: new Date(row.recorded_at).toISOString().split('T')[0],
+          recordedAt: row.recorded_at,
+          lendingApy: parseFloat(row.lending_apy),
+          incentivesApy: parseFloat(row.incentives_apy),
+          totalApy: parseFloat(row.total_apy),
+          totalSupplied: parseFloat(row.total_supplied),
+          totalSuppliedUsd: parseFloat(row.total_supplied_usd),
+          tokenSymbol: row.token_symbol,
+        }));
+
+        return {
+          vaultAddress: vault,
+          days,
+          dataPoints: historicalData.length,
+          historical: historicalData,
+        };
+      });
+
+      return c.json({
+        success: true,
+        data: result,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Historical data API error:', error);
+      return c.json(
+        {
+          success: false,
+          error: 'Failed to fetch historical data',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+        500
+      );
+    }
+  }
+);
+
 export { marsVaultRoutes };

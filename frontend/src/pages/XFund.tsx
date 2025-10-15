@@ -30,10 +30,10 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
 import { useWallets } from '@privy-io/react-auth/solana';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useMarsOpportunities, getUserWalletAddress, formatCurrency, formatPercentage } from '../hooks/useMarsApi';
+import { useMarsOpportunities, getUserWalletAddress, formatPercentage } from '../hooks/useMarsApi';
 import { useSolanaBalance } from '../hooks/useSolanaBalance';
-import { useMarsProtocolData } from '../hooks/useMarsData';
 import { useVaultTransactions, useVaultEarningDetails } from '../hooks/useVaultData';
+import { useVaultHistoricalData } from '../hooks/useVaultHistoricalData';
 import { useMarsContract } from '../hooks/useMarsContract';
 import { useUserVaultPosition } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
@@ -139,13 +139,12 @@ const XFundPage = () => {
   
   // Mars Contract Hook - 直接与 Mars 合约交互
   const marsContract = useMarsContract();
-  
-  // Mars Data hooks - 新的数据API集成
+
+  // Vault historical data for charts (APY and TVL trends)
   const {
-    performance: marsPerformanceData,
-    transactions: marsTransactionsData,
-  } = useMarsProtocolData(userWalletAddress, selectedToken);
-  
+    data: vaultHistoricalData,
+  } = useVaultHistoricalData(undefined, 30); // Get 30 days of data
+
   // Calendar data for earnings - using real Neon database
   // Don't specify vault address to get all user transactions across all vaults
   // Calendar data is now computed from earning details
@@ -215,6 +214,44 @@ const XFundPage = () => {
   
   // Get user's vault position (Total Supplied)
   const userVaultPosition = useUserVaultPosition(userWalletAddress || null);
+  
+  // Calculate current vault stats from historical data
+  const getCurrentVaultStats = () => {
+    if (!vaultHistoricalData?.historical || vaultHistoricalData.historical.length === 0) {
+      return {
+        currentApy: 0,
+        currentTvl: 0,
+        apyChange: 0,
+        tvlChange: 0,
+        apyChangePercent: 0,
+      };
+    }
+
+    const data = vaultHistoricalData.historical;
+    const latest = data[data.length - 1];
+    
+    // Find data from 30 days ago for comparison
+    const thirtyDaysAgo = data.length > 1 ? data[0] : latest;
+    
+    const currentApy = latest.totalApy * 100; // Convert to percentage
+    const currentTvl = latest.totalSuppliedUsd;
+    const previousApy = thirtyDaysAgo.totalApy * 100;
+    const previousTvl = thirtyDaysAgo.totalSuppliedUsd;
+    
+    const apyChange = currentApy - previousApy;
+    const tvlChange = currentTvl - previousTvl;
+    const apyChangePercent = previousApy > 0 ? (apyChange / previousApy) * 100 : 0;
+    
+    return {
+      currentApy,
+      currentTvl,
+      apyChange,
+      tvlChange,
+      apyChangePercent,
+    };
+  };
+
+  const vaultStats = getCurrentVaultStats();
   
   // Get real wallet balance for selected token
   const getWalletBalance = (token: string) => {
@@ -728,20 +765,22 @@ const XFundPage = () => {
 
   const getCurrentToken = () => tokenConfigs[selectedToken as keyof typeof tokenConfigs];
 
-  // Chart data from Mars API or fallback to mock data
+  // Chart data - using real historical data from Neon PostgreSQL
   const getChartData = () => {
-    if (marsPerformanceData && marsPerformanceData.length > 0) {
-      const labels = marsPerformanceData.map(item => {
-        const date = new Date(item.date);
+    // Use real historical data if available
+    if (vaultHistoricalData && vaultHistoricalData.historical.length > 0) {
+      const historical = vaultHistoricalData.historical;
+      const labels = historical.map(item => {
+        const date = new Date(item.recordedAt);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       });
-      
+
       return {
         apy: {
           labels,
           datasets: [{
             label: 'APY (%)',
-            data: marsPerformanceData.map(item => item.apy),
+            data: historical.map(item => item.totalApy * 100), // Convert to percentage
             borderColor: '#60a5fa',
             backgroundColor: 'rgba(96, 165, 250, 0.1)',
             borderWidth: 3,
@@ -758,7 +797,7 @@ const XFundPage = () => {
           labels,
           datasets: [{
             label: 'TVL (M)',
-            data: marsPerformanceData.map(item => item.tvl / 1_000_000),
+            data: historical.map(item => item.totalSuppliedUsd / 1_000_000), // Convert to millions
             borderColor: '#34d399',
             backgroundColor: 'rgba(52, 211, 153, 0.1)',
             borderWidth: 3,
@@ -774,13 +813,13 @@ const XFundPage = () => {
       };
     }
     
-    // Fallback mock data
+    // Fallback data while loading or on error
     return {
       apy: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        labels: ['Loading...'],
         datasets: [{
           label: 'APY (%)',
-          data: [7.5, 8.2, 7.8, 8.5, 8.8, 8.6],
+          data: [0],
           borderColor: '#60a5fa',
           backgroundColor: 'rgba(96, 165, 250, 0.1)',
           borderWidth: 3,
@@ -794,10 +833,10 @@ const XFundPage = () => {
         }],
       },
       tvl: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        labels: ['Loading...'],
         datasets: [{
           label: 'TVL (M)',
-          data: [120, 125, 128, 130, 125, 125],
+          data: [0],
           borderColor: '#34d399',
           backgroundColor: 'rgba(52, 211, 153, 0.1)',
           borderWidth: 3,
@@ -817,9 +856,9 @@ const XFundPage = () => {
 
   const currentChartData = chartView === 'APY' ? chartDataSets.apy : chartDataSets.tvl;
 
-  // Transaction history from Neon database or fallback to mock data
+  // Transaction history from Neon database only (no mock data)
   const getTransactionHistory = () => {
-    // Use real Neon data if available
+    // Use real Neon data only
     if (vaultTransactionsData?.transactions && vaultTransactionsData.transactions.length > 0) {
       return vaultTransactionsData.transactions.map(tx => ({
         date: tx.date,
@@ -829,17 +868,7 @@ const XFundPage = () => {
       }));
     }
     
-    // Fallback to mock data if no real data
-    if (marsTransactionsData?.transactions && marsTransactionsData.transactions.length > 0) {
-      return marsTransactionsData.transactions.map(tx => ({
-        date: tx.date,
-        type: tx.type,
-        tokens: `${tx.asset} ${tx.amount}`,
-        value: formatCurrency(tx.amountUsd, 'USD').replace('$', '') + 'K'
-      }));
-    }
-    
-    // Empty state
+    // Empty state - no fallback to mock data
     return [];
   };
 
@@ -1970,15 +1999,18 @@ const XFundPage = () => {
                   color: chartView === 'APY' ? '#60a5fa' : '#34d399',
                   mb: 0.5
                 }}>
-                  {chartView === 'APY' ? '48%' : '$200.45M'}
+                  {chartView === 'APY' 
+                    ? `${vaultStats.currentApy.toFixed(2)}%`
+                    : `$${(vaultStats.currentTvl / 1_000_000).toFixed(2)}M`
+                  }
                 </Typography>
                 <Typography variant="body2" sx={{ 
                   color: '#94a3b8',
                   fontSize: '0.875rem'
                 }}>
                   {chartView === 'APY' 
-                    ? '↑ +2.3% from last month' 
-                    : '↑ +$8.2M from last month'
+                    ? `${vaultStats.apyChange >= 0 ? '↑' : '↓'} ${Math.abs(vaultStats.apyChange).toFixed(2)}% from last month`
+                    : `${vaultStats.tvlChange >= 0 ? '↑' : '↓'} $${(Math.abs(vaultStats.tvlChange) / 1_000_000).toFixed(2)}M from last month`
                   }
                 </Typography>
               </Box>

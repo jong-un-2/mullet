@@ -62,6 +62,17 @@ export interface MarsPerformanceData {
   tvl: number;
 }
 
+export interface VaultHistoricalData {
+  date: string;
+  recordedAt: string;
+  lendingApy: number;
+  incentivesApy: number;
+  totalApy: number;
+  totalSupplied: number;
+  totalSuppliedUsd: number;
+  tokenSymbol: string;
+}
+
 export interface MarsTransactionHistory {
   id: string;
   date: string;
@@ -527,6 +538,47 @@ class MarsApiService {
       return result.data;
     } catch (error) {
       console.error('Vault earning details API Error:', error);
+      throw error;
+    }
+  }
+
+  // 获取 Vault 历史数据（APY 和 TVL 趋势图）
+  async getVaultHistoricalData(
+    vaultAddress?: string,
+    days: number = 30
+  ): Promise<{
+    vaultAddress: string;
+    days: number;
+    dataPoints: number;
+    historical: VaultHistoricalData[];
+  }> {
+    try {
+      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/historical`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ vaultAddress, days }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result: ApiResponse<{
+        vaultAddress: string;
+        days: number;
+        dataPoints: number;
+        historical: VaultHistoricalData[];
+      }> = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error?.message || 'API request failed');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Vault historical data API Error:', error);
       throw error;
     }
   }
