@@ -128,8 +128,8 @@ name = "mars-substreams-indexer"
 [containers.image_vars]
 RUST_LOG = "debug"
 SUBSTREAMS_ENDPOINT = "mainnet.sol.streamingfast.io:443"
-START_BLOCK = "372182088"
-OUTPUT_MODULE = "map_vault_events"
+START_BLOCK = "373471279"
+OUTPUT_MODULE = "db_out"
 
 # Note: Sensitive data (DATABASE_URL, SUBSTREAMS_API_TOKEN) should be:
 # 1. Stored in .env.substreams file in container_src/ (copied during build)
