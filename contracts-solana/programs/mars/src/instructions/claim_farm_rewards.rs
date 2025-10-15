@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
-use anchor_spl::token::{Token, TokenAccount};
+use anchor_spl::token::TokenAccount;
 use crate::state::*;
 use crate::error::MarsError;
 
@@ -13,7 +13,9 @@ pub struct ClaimFarmRewards<'info> {
 
     /// Global state - 用于记录和收取手续费
     #[account(
-        mut,
+        init_if_needed,
+        payer = user,
+        space = 8 + std::mem::size_of::<GlobalState>(),
         seeds = [b"global-state"],
         bump,
     )]
@@ -21,7 +23,9 @@ pub struct ClaimFarmRewards<'info> {
 
     /// Vault state - PYUSD vault
     #[account(
-        mut,
+        init_if_needed,
+        payer = user,
+        space = 8 + std::mem::size_of::<VaultState>(),
         seeds = [b"vault-state", vault_mint.key().as_ref()],
         bump,
     )]
@@ -75,8 +79,9 @@ pub struct ClaimFarmRewards<'info> {
     /// CHECK: Kamino Farms program
     pub farms_program: UncheckedAccount<'info>,
 
-    /// Token program
-    pub token_program: Program<'info, Token>,
+    /// Token program (支持 SPL Token 和 Token-2022)
+    /// CHECK: Can be either SPL Token or Token-2022
+    pub token_program: AccountInfo<'info>,
 
     /// System program
     pub system_program: Program<'info, System>,
@@ -85,6 +90,28 @@ pub struct ClaimFarmRewards<'info> {
 impl<'info> ClaimFarmRewards<'info> {
     pub fn process_instruction(ctx: Context<ClaimFarmRewards>) -> Result<()> {
         msg!("🎁 Starting claim farm rewards");
+
+        // 如果 global_state 是新创建的，初始化默认值
+        if ctx.accounts.global_state.admin == Pubkey::default() {
+            msg!("🆕 Initializing global_state for the first time");
+            ctx.accounts.global_state.admin = ctx.accounts.user.key();
+            ctx.accounts.global_state.frozen = false;
+            ctx.accounts.global_state.base_mint = ctx.accounts.vault_mint.key();
+            ctx.accounts.global_state.cross_chain_fee_bps = 30; // 0.3%
+            ctx.accounts.global_state.rebalance_threshold = 0;
+            ctx.accounts.global_state.max_order_amount = 100_000_000_000; // 100k
+        }
+
+        // 如果 vault_state 是新创建的，初始化默认值
+        if ctx.accounts.vault_state.base_token_mint == Pubkey::default() {
+            msg!("🆕 Initializing vault_state for the first time");
+            ctx.accounts.vault_state.admin = ctx.accounts.user.key();
+            ctx.accounts.vault_state.base_token_mint = ctx.accounts.vault_mint.key();
+            ctx.accounts.vault_state.status = VaultStatus::Active;
+            ctx.accounts.vault_state.total_rewards_claimed = 0;
+            ctx.accounts.vault_state.created_at = Clock::get()?.unix_timestamp;
+            ctx.accounts.vault_state.last_updated = Clock::get()?.unix_timestamp;
+        }
 
         // 检查 vault 是否冻结
         require!(

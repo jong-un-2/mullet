@@ -19,7 +19,10 @@ use instructions::*;
 use state::*;
 use util::*;
 
-declare_id!("DojYM71BG5FoCEMgd1sHtodAjQQtGX271swjaDrtHaY4");
+use anchor_lang::prelude::*;
+
+// V15 deployment with Token-2022 support in claim_farm_rewards
+declare_id!("AWspW4jJ1vYzfBpnChSromWnxNDv6pcmgKAtY4uizV6q");
 
 #[program]
 pub mod mars {

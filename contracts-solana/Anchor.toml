@@ -8,8 +8,8 @@ skip-lint = false
 [build]
 cargo_args = ["--release"]
 
-[programs.localnet]
-mars = "DojYM71BG5FoCEMgd1sHtodAjQQtGX271swjaDrtHaY4"
+[programs.mainnet]
+mars = "AWspW4jJ1vYzfBpnChSromWnxNDv6pcmgKAtY4uizV6q"
 
 [registry]
 url = "https://api.apr.dev"

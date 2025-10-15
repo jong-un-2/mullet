@@ -18,7 +18,8 @@ import {
 import { KaminoSDKHelper } from './kaminoSdkHelper';
 
 // Mars 合约常量
-export const MARS_PROGRAM_ID = new PublicKey("DojYM71BG5FoCEMgd1sHtodAjQQtGX271swjaDrtHaY4");
+// Mars Program ID (deployed to Solana mainnet - V15 with Token-2022 support)
+const MARS_PROGRAM_ID = new PublicKey("AWspW4jJ1vYzfBpnChSromWnxNDv6pcmgKAtY4uizV6q");
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");
 export const KLEND_PROGRAM = new PublicKey("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD");
 export const PYUSD_MINT = new PublicKey("2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo");
@@ -223,17 +224,34 @@ async function createClaimRewardsThroughMarsContract(
   
   // 6. 准备奖励 token 账户（最多 2 个，如果没有就使用 PYUSD 作为占位符）
   const reward0Mint = rewardInfos[0]?.mint || PYUSD_MINT;
-  const reward0Vault = rewardInfos[0]?.vault || getAssociatedTokenAddressSync(reward0Mint, farmAuthorityPda, true);
-  const userReward0Ata = getAssociatedTokenAddressSync(reward0Mint, userPublicKey, false, TOKEN_PROGRAM_ID);
-  
   const reward1Mint = rewardInfos[1]?.mint || PYUSD_MINT;
-  const reward1Vault = rewardInfos[1]?.vault || getAssociatedTokenAddressSync(reward1Mint, farmAuthorityPda, true);
-  const userReward1Ata = getAssociatedTokenAddressSync(reward1Mint, userPublicKey, false, TOKEN_PROGRAM_ID);
   
   console.log('💰 Reward 0 Mint:', reward0Mint.toString());
   console.log('💰 Reward 1 Mint:', reward1Mint.toString());
   
-  // 7. 检查并准备创建 Reward Token ATA（如果不存在）
+  // 7. 检测 reward token 使用的 Token Program（SPL Token 还是 Token-2022）
+  const reward0MintInfo = await connection.getAccountInfo(reward0Mint);
+  const reward1MintInfo = await connection.getAccountInfo(reward1Mint);
+  
+  // 根据 mint account 的 owner 判断使用哪个 token program
+  const reward0TokenProgram = reward0MintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID) 
+    ? TOKEN_2022_PROGRAM_ID 
+    : TOKEN_PROGRAM_ID;
+  const reward1TokenProgram = reward1MintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID) 
+    ? TOKEN_2022_PROGRAM_ID 
+    : TOKEN_PROGRAM_ID;
+  
+  console.log('🔍 Reward 0 Token Program:', reward0TokenProgram.toString());
+  console.log('🔍 Reward 1 Token Program:', reward1TokenProgram.toString());
+  
+  // 使用正确的 Token Program 获取 ATA 地址
+  const reward0Vault = rewardInfos[0]?.vault || getAssociatedTokenAddressSync(reward0Mint, farmAuthorityPda, true, reward0TokenProgram);
+  const userReward0Ata = getAssociatedTokenAddressSync(reward0Mint, userPublicKey, false, reward0TokenProgram);
+  
+  const reward1Vault = rewardInfos[1]?.vault || getAssociatedTokenAddressSync(reward1Mint, farmAuthorityPda, true, reward1TokenProgram);
+  const userReward1Ata = getAssociatedTokenAddressSync(reward1Mint, userPublicKey, false, reward1TokenProgram);
+  
+  // 8. 检查并准备创建 Reward Token ATA（如果不存在）
   const setupInstructions: TransactionInstruction[] = [];
   
   // 检查 Reward 0 ATA
@@ -245,7 +263,7 @@ async function createClaimRewardsThroughMarsContract(
       userReward0Ata,
       userPublicKey,
       reward0Mint,
-      TOKEN_PROGRAM_ID
+      reward0TokenProgram  // 使用正确的 Token Program
     );
     setupInstructions.push(createReward0AtaIx);
   }
@@ -259,7 +277,7 @@ async function createClaimRewardsThroughMarsContract(
       userReward1Ata,
       userPublicKey,
       reward1Mint,
-      TOKEN_PROGRAM_ID
+      reward1TokenProgram  // 使用正确的 Token Program
     );
     setupInstructions.push(createReward1AtaIx);
   }
