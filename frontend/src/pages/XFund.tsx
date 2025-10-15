@@ -33,7 +33,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useMarsOpportunities, getUserWalletAddress, formatCurrency, formatPercentage } from '../hooks/useMarsApi';
 import { useSolanaBalance } from '../hooks/useSolanaBalance';
 import { useMarsProtocolData } from '../hooks/useMarsData';
-import { useVaultCalendar, useVaultTransactions } from '../hooks/useVaultData';
+import { useVaultCalendar, useVaultTransactions, useVaultEarningDetails } from '../hooks/useVaultData';
 import { useMarsContract } from '../hooks/useMarsContract';
 import { useUserVaultPosition } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
@@ -162,6 +162,11 @@ const XFundPage = () => {
   const {
     data: vaultTransactionsData
   } = useVaultTransactions(userWalletAddress);
+
+  // Earning details - using real Neon database
+  const {
+    data: vaultEarningDetailsData
+  } = useVaultEarningDetails(userWalletAddress);
 
 
 
@@ -837,7 +842,71 @@ const XFundPage = () => {
     return [];
   };
 
+  // Earning details from Neon database
+  const getEarningDetails = () => {
+    // Use real Neon data if available
+    if (vaultEarningDetailsData?.earningDetails && vaultEarningDetailsData.earningDetails.length > 0) {
+      return vaultEarningDetailsData.earningDetails.map(detail => ({
+        date: detail.date,
+        type: detail.type,
+        tokens: `${detail.rewardAmount} Rewards`,
+        value: `$${(parseFloat(detail.rewardAmount) * 1).toFixed(2)}`, // Assuming $1 per token
+        rewardMint: detail.rewardMint,
+        totalClaimed: detail.totalRewardsClaimed,
+        timestamp: detail.timestamp,
+        rewardAmount: parseFloat(detail.rewardAmount)
+      }));
+    }
+    
+    // Empty state
+    return [];
+  };
+
+  // Convert earning details to calendar data format
+  const getCalendarDataFromEarnings = () => {
+    const earningDetails = getEarningDetails();
+    if (earningDetails.length === 0) {
+      return null;
+    }
+
+    // Group earnings by date
+    const dailyEarnings: Record<string, number> = {};
+    let totalEarnings = 0;
+    const activeDaysSet = new Set<string>();
+
+    earningDetails.forEach(detail => {
+      const timestamp = new Date(detail.timestamp);
+      const dateStr = timestamp.toISOString().split('T')[0];
+      
+      if (!dailyEarnings[dateStr]) {
+        dailyEarnings[dateStr] = 0;
+      }
+      
+      dailyEarnings[dateStr] += detail.rewardAmount;
+      totalEarnings += detail.rewardAmount;
+      activeDaysSet.add(dateStr);
+    });
+
+    // Convert to dailyBreakdown format
+    const dailyBreakdown = Object.entries(dailyEarnings).map(([date, earnings]) => ({
+      date,
+      earnings,
+      apy: 10.41 // Fixed APY for now
+    }));
+
+    return {
+      year: parseInt(selectedYear),
+      month: parseInt(selectedMonth),
+      monthKey: `${selectedYear}-${selectedMonth}`,
+      totalEarnings,
+      activeDays: activeDaysSet.size,
+      dailyBreakdown
+    };
+  };
+
   const transactionHistory = getTransactionHistory();
+  const earningDetails = getEarningDetails();
+  const calendarDataFromEarnings = getCalendarDataFromEarnings();
 
   const chartOptions = {
     responsive: true,
@@ -2117,10 +2186,8 @@ const XFundPage = () => {
                         {getMonthName(selectedMonth)} {selectedYear} Total Earnings
                       </Typography>
                       <Typography variant="h4" fontWeight={700} sx={{ color: '#34d399' }}>
-                        {calendarLoading ? (
-                          <CircularProgress size={24} sx={{ color: '#34d399' }} />
-                        ) : calendarData?.totalEarnings ? (
-                          `+$${calendarData.totalEarnings.toFixed(2)}`
+                        {calendarDataFromEarnings?.totalEarnings ? (
+                          `+$${calendarDataFromEarnings.totalEarnings.toFixed(2)}`
                         ) : (
                           '+$0.00'
                         )}
@@ -2131,10 +2198,8 @@ const XFundPage = () => {
                         Active Days
                       </Typography>
                       <Typography variant="h5" fontWeight={600} sx={{ color: '#60a5fa' }}>
-                        {calendarLoading ? (
-                          <CircularProgress size={20} sx={{ color: '#60a5fa' }} />
-                        ) : calendarData?.activeDays ? (
-                          `${calendarData.activeDays} days`
+                        {calendarDataFromEarnings?.activeDays ? (
+                          `${calendarDataFromEarnings.activeDays} days`
                         ) : (
                           '0 days'
                         )}
@@ -2194,9 +2259,9 @@ const XFundPage = () => {
                                          today.getMonth() + 1 === parseInt(selectedMonth) && 
                                          today.getFullYear() === parseInt(selectedYear);
                           
-                          // Get earning data from backend
+                          // Get earning data from earning details
                           const dateStr = `${selectedYear}-${selectedMonth}-${day.toString().padStart(2, '0')}`;
-                          const dayEarning = calendarData?.dailyBreakdown?.find(d => d.date === dateStr);
+                          const dayEarning = calendarDataFromEarnings?.dailyBreakdown?.find(d => d.date === dateStr);
                           const hasEarning = !!dayEarning && dayEarning.earnings > 0;
                           const earnings = hasEarning ? `+$${dayEarning.earnings.toFixed(2)}` : null;
                           const isSelected = selectedDay === day;
@@ -2350,36 +2415,36 @@ const XFundPage = () => {
 
                   {/* Transaction Rows */}
                   {transactionHistory.map((transaction, index) => (
-                    <Box key={index} sx={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr 1fr 1fr',
-                      gap: 2,
-                      p: 2,
-                      borderBottom: index < transactionHistory.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-                      '&:hover': {
-                        background: 'rgba(255, 255, 255, 0.05)'
-                      }
-                    }}>
-                      <Typography variant="body2" sx={{ color: '#f1f5f9', fontSize: '0.875rem' }}>
-                        {transaction.date}
-                      </Typography>
-                      <Typography variant="body2" sx={{ 
-                        color: transaction.type === 'deposit' ? '#34d399' : '#ef4444', 
-                        fontSize: '0.875rem', 
-                        fontWeight: 600,
-                        textTransform: 'capitalize'
-                      }}>
-                        {transaction.type}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#f1f5f9', fontSize: '0.875rem' }}>
-                        {transaction.tokens}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#f1f5f9', fontSize: '0.875rem' }}>
-                        {transaction.value}
-                      </Typography>
-                    </Box>
-                  ))}
-                  
+                        <Box key={index} sx={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr 1fr 1fr',
+                          gap: 2,
+                          p: 2,
+                          borderBottom: index < transactionHistory.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                          '&:hover': {
+                            background: 'rgba(255, 255, 255, 0.05)'
+                          }
+                        }}>
+                          <Typography variant="body2" sx={{ color: '#f1f5f9', fontSize: '0.875rem' }}>
+                            {transaction.date}
+                          </Typography>
+                          <Typography variant="body2" sx={{ 
+                            color: transaction.type === 'deposit' ? '#34d399' : '#ef4444', 
+                            fontSize: '0.875rem', 
+                            fontWeight: 600,
+                            textTransform: 'capitalize'
+                          }}>
+                            {transaction.type}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#f1f5f9', fontSize: '0.875rem' }}>
+                            {transaction.tokens}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#f1f5f9', fontSize: '0.875rem' }}>
+                            {transaction.value}
+                          </Typography>
+                        </Box>
+                      ))}
+                      
                   {/* Empty state if no transactions */}
                   {transactionHistory.length === 0 && (
                     <Box sx={{

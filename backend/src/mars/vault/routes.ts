@@ -422,4 +422,86 @@ marsVaultRoutes.post('/position',
   }
 );
 
+/**
+ * POST /vault/earning-details - 获取用户的收益明细历史
+ * 从 farmrewardsclaimedevent 表读取真实的claim记录
+ */
+marsVaultRoutes.post('/earning-details',
+  zValidator('json', userAddressSchema),
+  async (c) => {
+    const { userAddress, vaultAddress } = c.req.valid('json');
+
+    try {
+      const result = await withDrizzle(c.env as HyperdriveEnv, async (db) => {
+        // Query farmrewardsclaimedevent table
+        const earningDetailsResult = await db.execute(sql`
+          SELECT 
+            CONCAT('reward-', _block_number_::text, '-', "user") as id,
+            "user" as user_address,
+            vault_mint,
+            farm_state,
+            reward_mint,
+            reward_amount,
+            total_rewards_claimed,
+            timestamp as claimed_at,
+            _block_timestamp_ as block_timestamp,
+            _block_number_ as block_number
+          FROM farmrewardsclaimedevent
+          WHERE ${vaultAddress 
+            ? sql`"user" = ${userAddress} AND vault_mint = ${vaultAddress}`
+            : sql`"user" = ${userAddress}`}
+          ORDER BY _block_timestamp_ DESC
+          LIMIT 100
+        `);
+
+        const earningDetails = Array.from(earningDetailsResult) as any[];
+
+        // Format earning details for frontend
+        const formattedDetails = earningDetails.map((detail) => ({
+          id: detail.id,
+          date: new Date(detail.block_timestamp).toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          type: 'claim' as const,
+          rewardMint: detail.reward_mint,
+          rewardAmount: (Number(detail.reward_amount) / 1e6).toFixed(6), // Assuming 6 decimals
+          rewardAmountRaw: detail.reward_amount,
+          totalRewardsClaimed: (Number(detail.total_rewards_claimed) / 1e6).toFixed(6),
+          vaultMint: detail.vault_mint,
+          farmState: detail.farm_state,
+          claimedAt: detail.claimed_at,
+          blockNumber: detail.block_number,
+          timestamp: detail.block_timestamp,
+        }));
+
+        return {
+          earningDetails: formattedDetails,
+          total: formattedDetails.length,
+          page: 1,
+          limit: 100,
+        };
+      });
+
+      return c.json({
+        success: true,
+        data: result,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Earning details API error:', error);
+      return c.json(
+        {
+          success: false,
+          error: 'Failed to fetch earning details',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+        500
+      );
+    }
+  }
+);
+
 export { marsVaultRoutes };

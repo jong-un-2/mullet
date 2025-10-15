@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { marsApiService, type MarsTransactionHistory, type MarsCalendarData, type MarsUserEarnings } from '../services/marsApiService';
+import { marsApiService, type MarsTransactionHistory, type MarsCalendarData, type MarsUserEarnings, type MarsEarningDetail } from '../services/marsApiService';
 
 // 通用状态管理接口
 interface ApiState<T> {
@@ -143,5 +143,51 @@ export const useVaultEarnings = (userAddress?: string, vaultAddress?: string) =>
   return {
     ...state,
     refetch: fetchEarnings,
+  };
+};
+
+/**
+ * 从 Neon 数据库获取用户的收益明细历史
+ */
+export const useVaultEarningDetails = (userAddress?: string, vaultAddress?: string) => {
+  const [state, setState] = useState<ApiState<{
+    earningDetails: MarsEarningDetail[];
+    total: number;
+    page: number;
+    limit: number;
+  }>>({
+    data: null,
+    loading: false,
+    error: null,
+  });
+
+  const fetchEarningDetails = useCallback(async () => {
+    if (!userAddress) {
+      setState({ data: null, loading: false, error: null });
+      return;
+    }
+
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      const data = await marsApiService.getVaultEarningDetails(userAddress, vaultAddress);
+      setState({ data, loading: false, error: null });
+    } catch (error) {
+      setState({ 
+        data: null, 
+        loading: false, 
+        error: error instanceof Error ? error.message : 'Failed to fetch earning details' 
+      });
+    }
+  }, [userAddress, vaultAddress]);
+
+  useEffect(() => {
+    if (userAddress) {
+      fetchEarningDetails();
+    }
+  }, [fetchEarningDetails, userAddress]);
+
+  return {
+    ...state,
+    refetch: fetchEarningDetails,
   };
 };

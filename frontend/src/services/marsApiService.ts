@@ -75,6 +75,21 @@ export interface MarsTransactionHistory {
   apy: number;
 }
 
+export interface MarsEarningDetail {
+  id: string;
+  date: string;
+  type: 'claim';
+  rewardMint: string;
+  rewardAmount: string;
+  rewardAmountRaw: string;
+  totalRewardsClaimed: string;
+  vaultMint: string;
+  farmState: string;
+  claimedAt: number;
+  blockNumber: number;
+  timestamp: string;
+}
+
 // ==================== 交易API接口定义 ====================
 export interface MarsOpportunity {
   id: string;
@@ -474,6 +489,44 @@ class MarsApiService {
       return result.data;
     } catch (error) {
       console.error('Vault earnings API Error:', error);
+      throw error;
+    }
+  }
+
+  // 从 Neon 数据库获取真实的收益明细历史
+  async getVaultEarningDetails(userAddress: string, vaultAddress?: string): Promise<{
+    earningDetails: MarsEarningDetail[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    try {
+      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/earning-details`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userAddress, vaultAddress }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result: ApiResponse<{
+        earningDetails: MarsEarningDetail[];
+        total: number;
+        page: number;
+        limit: number;
+      }> = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error?.message || 'API request failed');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Vault earning details API Error:', error);
       throw error;
     }
   }
