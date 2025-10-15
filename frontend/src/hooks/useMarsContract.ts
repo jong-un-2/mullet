@@ -255,11 +255,60 @@ export const useMarsContract = () => {
       // 等待确认
       console.log('⏳ 等待交易确认...');
       setStatus('confirming');
-      await connection.confirmTransaction(signature, 'confirmed');
+      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+
+      console.log('📋 交易确认结果:', confirmation);
+      
+      if (confirmation.value.err) {
+        throw new Error(`交易失败: ${JSON.stringify(confirmation.value.err)}`);
+      }
+
+      // 获取交易详情以验证
+      try {
+        const txDetails = await connection.getTransaction(signature, {
+          maxSupportedTransactionVersion: 0,
+          commitment: 'confirmed'
+        });
+        console.log('📄 交易详情:', txDetails);
+        
+        if (txDetails?.meta?.err) {
+          throw new Error(`交易执行失败: ${JSON.stringify(txDetails.meta.err)}`);
+        }
+        
+        console.log('✅ 交易成功执行');
+        console.log('💰 Post Token Balances:', txDetails?.meta?.postTokenBalances);
+        
+        // 打印详细的余额变化
+        if (txDetails?.meta?.postTokenBalances) {
+          console.log('\n📊 Token 余额详情:');
+          txDetails.meta.postTokenBalances.forEach((balance, index) => {
+            console.log(`  账户 ${index + 1}:`, {
+              accountIndex: balance.accountIndex,
+              owner: balance.owner,
+              mint: balance.mint,
+              amount: balance.uiTokenAmount?.uiAmountString || balance.uiTokenAmount?.uiAmount || '未知',
+              decimals: balance.uiTokenAmount?.decimals
+            });
+          });
+        }
+        
+        // 检查你的钱包地址是否收到了奖励
+        const yourAddress = publicKey?.toBase58();
+        if (yourAddress && txDetails?.meta?.postTokenBalances) {
+          const yourBalance = txDetails.meta.postTokenBalances.find(
+            (b: any) => b.owner === yourAddress
+          );
+          if (yourBalance) {
+            console.log(`\n💎 你的钱包余额: ${yourBalance.uiTokenAmount?.uiAmountString || yourBalance.uiTokenAmount?.uiAmount}`);
+          }
+        }
+      } catch (detailErr) {
+        console.warn('⚠️ 无法获取交易详情:', detailErr);
+      }
 
       setStatus('success');
       console.log('✅ 奖励领取完成!');
-      console.log('交易签名:', signature);
+      console.log('🔗 查看交易: https://solscan.io/tx/' + signature);
 
       return signature;
     } catch (err: any) {
