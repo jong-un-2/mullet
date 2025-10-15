@@ -355,11 +355,11 @@ async function createClaimRewardsThroughMarsContract(
       setupInstructions.push(createAtaIx);
     }
     
-    // 获取 Treasury Vault（使用从 Kamino 指令提取的 globalConfig）
-    const [treasuryVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from('treasury'), globalConfigFromIx.toBuffer(), rewardMint.toBuffer()],
-      KAMINO_FARMS_PROGRAM
-    );
+    // ✅ 从 Kamino 指令提取 Treasury Vault (index 7)
+    // 不要自己推导！Kamino Farms 使用特定的 treasury vault
+    const treasuryVault = new PublicKey(accounts[7].pubkey || accounts[7].address);
+    
+    console.log(`🔍 Reward ${rewardIndex} Treasury Vault (从指令):`, treasuryVault.toString());
     
     // 从 Kamino 指令提取 scopePrices (index 9)
     const scopePrices = accounts.length > 9 
