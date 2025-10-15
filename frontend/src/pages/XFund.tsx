@@ -471,12 +471,28 @@ const XFundPage = () => {
 
       console.log('✅ Swap completed:', result);
       
-      // Now deposit the swapped PYUSD
+      // 🔥 从 swap 结果中提取实际收到的 PYUSD 数量
+      let actualPyusdAmount = amount; // fallback to original amount
+      
+      try {
+        // LiFi executeRoute 返回 RouteExtended，它包含 toAmount（实际收到的金额，以最小单位为单位）
+        // route 参数本身就包含 toAmount
+        if (route && route.toAmount) {
+          const toAmountLamports = parseFloat(route.toAmount);
+          actualPyusdAmount = toAmountLamports / Math.pow(10, TOKEN_ADDRESSES.PYUSD.decimals);
+          console.log(`💰 预计 Swap 收到: ${actualPyusdAmount} PYUSD (原始输入: ${amount} ${selectedToken})`);
+          console.log(`📊 预计滑点损失: ${((amount - actualPyusdAmount) / amount * 100).toFixed(2)}%`);
+        }
+      } catch (parseError) {
+        console.warn('⚠️ 无法解析 route 中的 toAmount，使用原始金额:', parseError);
+      }
+      
+      // Now deposit the actual swapped PYUSD amount
       setProgressTitle('Depositing PYUSD');
-      setProgressMessage('Processing deposit to vault...');
+      setProgressMessage(`Processing deposit of ${actualPyusdAmount.toFixed(4)} PYUSD to vault...`);
       
       const DEPOSIT_TIMEOUT = 60000;
-      const depositPromise = marsContract.deposit(amount);
+      const depositPromise = marsContract.deposit(actualPyusdAmount);
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Deposit timeout after 60 seconds')), DEPOSIT_TIMEOUT)
       );
