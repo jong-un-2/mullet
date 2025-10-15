@@ -33,7 +33,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useMarsOpportunities, getUserWalletAddress, formatCurrency, formatPercentage } from '../hooks/useMarsApi';
 import { useSolanaBalance } from '../hooks/useSolanaBalance';
 import { useMarsProtocolData } from '../hooks/useMarsData';
-import { useVaultCalendar, useVaultTransactions, useVaultEarningDetails } from '../hooks/useVaultData';
+import { useVaultTransactions, useVaultEarningDetails } from '../hooks/useVaultData';
 import { useMarsContract } from '../hooks/useMarsContract';
 import { useUserVaultPosition } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
@@ -148,14 +148,15 @@ const XFundPage = () => {
   
   // Calendar data for earnings - using real Neon database
   // Don't specify vault address to get all user transactions across all vaults
-  const { 
-    data: calendarData,
-    loading: calendarLoading 
-  } = useVaultCalendar(
-    userWalletAddress,
-    parseInt(selectedYear),
-    parseInt(selectedMonth)
-  );
+  // Calendar data is now computed from earning details
+  // const { 
+  //   data: calendarData,
+  //   loading: calendarLoading 
+  // } = useVaultCalendar(
+  //   userWalletAddress,
+  //   parseInt(selectedYear),
+  //   parseInt(selectedMonth)
+  // );
 
   // Transaction history - using real Neon database
   // Don't specify vault address to get all user transactions
@@ -905,7 +906,8 @@ const XFundPage = () => {
   };
 
   const transactionHistory = getTransactionHistory();
-  const earningDetails = getEarningDetails();
+  // earningDetails is used internally by getCalendarDataFromEarnings
+  // const earningDetails = getEarningDetails();
   const calendarDataFromEarnings = getCalendarDataFromEarnings();
 
   const chartOptions = {
