@@ -9,7 +9,7 @@ skip-lint = false
 cargo_args = ["--release"]
 
 [programs.localnet]
-mars = "AsL42FUJVwPuJy9Noe4ATnHNQhS47ExB7qo4dnK42VQx"
+mars = "83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N"
 
 [registry]
 url = "https://api.apr.dev"
@@ -22,7 +22,7 @@ wallet = "~/.config/solana/id.json"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [programs.mainnet]
-mars = "AsL42FUJVwPuJy9Noe4ATnHNQhS47ExB7qo4dnK42VQx"
+mars = "83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N"
 
 [[test.genesis]]
 address = "4sN8PnN2ki2W4TFXAfzR645FWs8nimmsYeNtxM8RBK6A"

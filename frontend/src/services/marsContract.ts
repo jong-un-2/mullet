@@ -24,8 +24,8 @@ import {
 import { KaminoSDKHelper } from './kaminoSdkHelper';
 
 // Mars 合约常量
-// Mars Program ID (V18 - Fixed Token-2022 support in claim_farm_rewards)
-const MARS_PROGRAM_ID = new PublicKey("AsL42FUJVwPuJy9Noe4ATnHNQhS47ExB7qo4dnK42VQx");
+// Mars Program ID (V19 - Added FarmRewardsClaimedEvent for indexing)
+const MARS_PROGRAM_ID = new PublicKey("83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N");
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");
 export const KLEND_PROGRAM = new PublicKey("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD");
 export const PYUSD_MINT = new PublicKey("2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo");

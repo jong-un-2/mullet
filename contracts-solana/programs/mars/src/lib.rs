@@ -21,10 +21,10 @@ use util::*;
 
 use anchor_lang::prelude::*;
 
-// V18 deployment - Fixed Token-2022 support in claim_farm_rewards
-// Changed user_reward_ata from Account<TokenAccount> to UncheckedAccount
-// This allows PYUSD (Token-2022) rewards without owner program mismatch errors
-declare_id!("AsL42FUJVwPuJy9Noe4ATnHNQhS47ExB7qo4dnK42VQx");
+// V19 deployment - Added FarmRewardsClaimedEvent for Substreams indexing
+// Emits event when users claim farming rewards
+// Enables tracking of all reward claims in PostgreSQL via Neon
+declare_id!("83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N");
 
 #[program]
 pub mod mars {
