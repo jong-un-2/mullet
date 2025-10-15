@@ -222,6 +222,14 @@ async function createClaimRewardsThroughMarsContract(
       continue;
     }
     
+    // 🔍 打印所有账户地址以确定正确的顺序
+    console.log(`🔍 Kamino 指令 ${rewardIndex} 所有账户:`, accounts.map((acc: any, idx: number) => ({
+      index: idx,
+      address: (acc.pubkey || acc.address).toString(),
+      writable: acc.isWritable || acc.role === 1 || acc.role === 3,
+      signer: acc.isSigner || acc.role === 2 || acc.role === 3,
+    })));
+    
     // Kamino harvestReward 指令的账户顺序：
     // 0: owner (user)
     // 1: userState (NOT userFarm! UserState tracks rewards per user per reward mint)
@@ -236,14 +244,32 @@ async function createClaimRewardsThroughMarsContract(
     // 10: tokenProgram
     
     // 从 Kamino 指令中提取账户
-    const userState = new PublicKey(accounts[1].pubkey || accounts[1].address);
+    // 注意：Kamino SDK 返回的顺序可能不同于 harvestReward 指令
+    // 实际账户顺序（从日志）：
+    // 0: user, 1: farmState, 2: userFarm, 3: globalConfig(?), 4: rewardMint, 
+    // 5: userRewardAta, 6: rewardsVault, 7: treasuryVault, 8: farmAuthority, 9: farmsProgram, 10: tokenProgram
+    
     const rewardMint = new PublicKey(accounts[4].pubkey || accounts[4].address);
     const rewardVault = new PublicKey(accounts[6].pubkey || accounts[6].address);
     
+    // 推导正确的 UserState PDA
+    // ⚠️ 重要：Kamino Farms SDK 只使用 3 个 seeds（参考 @kamino-finance/farms-sdk/src/utils/utils.ts）
+    // seeds: [b"user", farmState, owner]
+    const [userState] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from('user'),
+        farmStateAddress.toBuffer(),
+        userPublicKey.toBuffer(),  // ✅ 只用 3 个 seeds
+      ],
+      KAMINO_FARMS_PROGRAM
+    );
+    
     console.log(`🔍 Reward ${rewardIndex} 关键账户:`, {
       userState: userState.toString(),
+      farmState: farmStateAddress.toString(),
       rewardMint: rewardMint.toString(),
       rewardVault: rewardVault.toString(),
+      derivedFrom: 'Kamino SDK: [b"user", farmState, owner] (3 seeds)'
     });
     
     console.log(`💰 处理 Reward ${rewardIndex}:`, rewardMint.toString());
