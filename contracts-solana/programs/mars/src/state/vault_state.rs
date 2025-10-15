@@ -74,8 +74,11 @@ pub struct VaultState {
     pub total_management_fee_collected: u64,
     pub total_performance_fee_collected: u64,
     
+    /// 总共领取的奖励数量（用于统计）
+    pub total_rewards_claimed: u64,
+    
     /// 保留字段用于未来扩展
-    pub reserved: [u8; 64],
+    pub reserved: [u8; 56],
 }
 
 impl VaultState {
@@ -110,7 +113,8 @@ impl VaultState {
         8 + // total_withdraw_fee_collected
         8 + // total_management_fee_collected
         8 + // total_performance_fee_collected
-        64 // reserved
+        8 + // total_rewards_claimed
+        56 // reserved
     }
     
     /// 更新再平衡记录

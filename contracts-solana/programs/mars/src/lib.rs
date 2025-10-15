@@ -19,7 +19,7 @@ use instructions::*;
 use state::*;
 use util::*;
 
-declare_id!("6dZQiWCbkUCPibxjBs8LVLtRBZYfAZEcWDAJLgVNAXTA");
+declare_id!("DojYM71BG5FoCEMgd1sHtodAjQQtGX271swjaDrtHaY4");
 
 #[program]
 pub mod mars {
@@ -212,6 +212,11 @@ pub mod mars {
     /// 管理员提取 Vault 所有累积的费用
     pub fn claim_all_fees(ctx: Context<ClaimFees>) -> Result<()> {
         ClaimFees::claim_all_fees(ctx)
+    }
+
+    /// 用户领取 Farm 奖励
+    pub fn claim_farm_rewards(ctx: Context<ClaimFarmRewards>) -> Result<()> {
+        ClaimFarmRewards::process_instruction(ctx)
     }
 
     // 已移除 create_order 指令以优化合约大小

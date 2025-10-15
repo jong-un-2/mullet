@@ -667,16 +667,6 @@ const XFundPage = () => {
       return;
     }
 
-    if (!solanaPublicKey || !directSolanaConnected) {
-      console.error('❌ Solana wallet not connected');
-      setShowProgress(true);
-      setProgressTitle('Validation Error');
-      setProgressMessage('Please connect Solana wallet');
-      setTotalTxSteps(0);
-      setTimeout(() => setShowProgress(false), 6000);
-      return;
-    }
-
     try {
       setIsClaimingRewards(true);
       setShowProgress(true);
@@ -687,96 +677,35 @@ const XFundPage = () => {
 
       console.log('🎁 Starting claim rewards process...');
 
-      // 动态导入需要的模块
-      const { Connection, PublicKey, Transaction, ComputeBudgetProgram } = await import('@solana/web3.js');
-      const { useWallet } = await import('@solana/wallet-adapter-react');
-      const { KaminoSDKHelper } = await import('../services/kaminoSdkHelper');
-
-      // 获取钱包上下文
-      const { sendTransaction } = useWallet();
+      // 使用 marsContract 的 claimRewards 方法（类似于 deposit/withdraw）
+      setProgressMessage('Processing claim rewards...');
       
-      if (!sendTransaction) {
-        throw new Error('Wallet does not support sendTransaction');
-      }
-
-      // 创建连接
-      const RPC_URL = import.meta.env.VITE_SOLANA_MAINNET_RPC || 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
-      const connection = new Connection(RPC_URL, 'confirmed');
-
-      // 初始化 Kamino SDK Helper
-      const sdkHelper = new KaminoSDKHelper(RPC_URL, solanaPublicKey);
-      await sdkHelper.initialize();
-
-      // 获取 claim rewards 指令
-      const PYUSD_VAULT = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK');
-      const claimInstructions = await sdkHelper.getClaimRewardsInstructions(PYUSD_VAULT);
-
-      if (!claimInstructions || claimInstructions.length === 0) {
-        console.log('ℹ️  No rewards to claim');
-        setProgressMessage('No rewards available to claim');
+      const CLAIM_TIMEOUT = 60000;
+      const claimPromise = marsContract.claimRewards();
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Transaction timeout after 60 seconds')), CLAIM_TIMEOUT)
+      );
+      
+      const signature = await Promise.race([claimPromise, timeoutPromise]);
+      
+      if (signature) {
+        console.log('✅ Rewards claimed successfully!');
+        setTxSignature(signature);
+        setProgressMessage('Rewards claimed successfully!');
+        
         setTimeout(() => {
           setShowProgress(false);
+          setTxSignature(undefined);
           setIsClaimingRewards(false);
-        }, 3000);
-        return;
+        }, 6000);
+      } else {
+        throw new Error('No transaction signature received');
       }
-
-      setProgressMessage(`Building claim transaction (${claimInstructions.length} rewards)...`);
-
-      // 构建交易
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      const claimTx = new Transaction();
-      
-      // 添加 compute budget
-      claimTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
-      
-      // 添加所有 claim 指令
-      for (const ix of claimInstructions) {
-        if (ix.programId && ix.keys && ix.data) {
-          claimTx.add(ix);
-        } else if (ix.programAddress && ix.accounts && ix.data) {
-          const { TransactionInstruction } = await import('@solana/web3.js');
-          const standardIx = new TransactionInstruction({
-            programId: new PublicKey(ix.programAddress),
-            keys: ix.accounts.map((acc: any) => ({
-              pubkey: new PublicKey(acc.address),
-              isSigner: acc.role === 2 || acc.role === 3,
-              isWritable: acc.role === 1 || acc.role === 3,
-            })),
-            data: Buffer.from(ix.data),
-          });
-          claimTx.add(standardIx);
-        }
-      }
-      
-      claimTx.recentBlockhash = blockhash;
-      claimTx.lastValidBlockHeight = lastValidBlockHeight;
-      claimTx.feePayer = solanaPublicKey;
-
-      setProgressMessage('Sending transaction...');
-
-      // 发送交易
-      const signature = await sendTransaction(claimTx, connection);
-      setTxSignature(signature);
-      
-      setProgressMessage('Confirming transaction...');
-      console.log('⏳ Waiting for confirmation...', signature);
-
-      // 等待确认
-      await connection.confirmTransaction(signature, 'confirmed');
-      
-      console.log('✅ Rewards claimed successfully!');
-      setProgressMessage('Rewards claimed successfully!');
-
-      setTimeout(() => {
-        setShowProgress(false);
-        setTxSignature(undefined);
-        setIsClaimingRewards(false);
-      }, 6000);
 
     } catch (error) {
       console.error('❌ Claim rewards failed:', error);
-      setProgressMessage(error instanceof Error ? error.message : 'Claim failed');
+      const errorMessage = error instanceof Error ? error.message : 'Claim failed';
+      setProgressMessage(errorMessage);
       
       setTimeout(() => {
         setShowProgress(false);

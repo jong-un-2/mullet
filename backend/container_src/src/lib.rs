@@ -5,8 +5,8 @@ use substreams::prelude::*;
 use substreams::Hex;
 use substreams_solana::pb::sf::solana::r#type::v1::{Block, ConfirmedTransaction};
 
-// Mars V2 Program ID (from deployment: 6dZQiWCbkUCPibxjBs8LVLtRBZYfAZEcWDAJLgVNAXTA)
-const MARS_PROGRAM_ID: &str = "6dZQiWCbkUCPibxjBs8LVLtRBZYfAZEcWDAJLgVNAXTA";
+// Mars Program ID (V13 deployment with claim_farm_rewards: DojYM71BG5FoCEMgd1sHtodAjQQtGX271swjaDrtHaY4)
+const MARS_PROGRAM_ID: &str = "DojYM71BG5FoCEMgd1sHtodAjQQtGX271swjaDrtHaY4";
 
 // Kamino Vaults Program ID (V2 - Current Mainnet Version)
 // V1 (Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE) is deprecated

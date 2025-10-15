@@ -10,8 +10,10 @@ import { PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web
 import {
   createDepositAndStakeTransaction,
   createUnstakeAndWithdrawTransactions,
+  createClaimRewardsTransaction,
   checkPyusdBalance,
 } from '../services/marsContract';
+import { KaminoSDKHelper } from '../services/kaminoSdkHelper';
 
 export interface TransactionStatus {
   status: 'idle' | 'building' | 'signing' | 'sending' | 'confirming' | 'success' | 'error';
@@ -213,9 +215,68 @@ export const useMarsContract = () => {
     }
   }, [publicKey, sendTransaction, connection]);
 
+  /**
+   * 领取奖励
+   */
+  const claimRewards = useCallback(async (): Promise<string | undefined> => {
+    if (!publicKey || !sendTransaction) {
+      throw new Error('钱包未连接');
+    }
+
+    setIsProcessing(true);
+    setStatus('building');
+    setError(undefined);
+
+    try {
+      console.log('🎁 开始领取奖励...');
+
+      // 初始化 Kamino SDK Helper
+      const RPC_URL = import.meta.env.VITE_SOLANA_MAINNET_RPC || 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+      const sdkHelper = new KaminoSDKHelper(RPC_URL, publicKey);
+      await sdkHelper.initialize();
+
+      // 创建 claim rewards 交易
+      const claimTx = await createClaimRewardsTransaction(publicKey, connection, sdkHelper);
+      
+      if (!claimTx) {
+        throw new Error('没有可领取的奖励');
+      }
+
+      console.log('📝 交易构建完成，准备签名并发送...');
+      setStatus('signing');
+
+      // 发送交易
+      console.log('📤 发送交易...');
+      setStatus('sending');
+      const signature = await sendTransaction(claimTx, connection);
+      setCurrentSignature(signature);
+      console.log(`✅ 交易已发送: ${signature}`);
+
+      // 等待确认
+      console.log('⏳ 等待交易确认...');
+      setStatus('confirming');
+      await connection.confirmTransaction(signature, 'confirmed');
+
+      setStatus('success');
+      console.log('✅ 奖励领取完成!');
+      console.log('交易签名:', signature);
+
+      return signature;
+    } catch (err: any) {
+      const errorMessage = err.message || '领取奖励失败';
+      console.error('❌ 领取奖励失败:', err);
+      setError(errorMessage);
+      setStatus('error');
+      throw err;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [publicKey, sendTransaction, connection]);
+
   return {
     deposit,
     withdraw,
+    claimRewards,
     status,
     currentSignature,
     error,

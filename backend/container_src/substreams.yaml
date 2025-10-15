@@ -10,8 +10,9 @@ package:
     - Swap and rebalance events
     - Kamino Finance V2 integration
     - Jupiter Aggregator swaps
+    - Claim farm rewards (V13)
     
-    Start block: 372,182,088 (Mars V2 deployment - 6dZQiWCbkUCPibxjBs8LVLtRBZYfAZEcWDAJLgVNAXTA)
+    Program ID: DojYM71BG5FoCEMgd1sHtodAjQQtGX271swjaDrtHaY4 (V13 with claim_farm_rewards)
     Target: Neon PostgreSQL via Cloudflare Hyperdrive
 
 protobuf:
