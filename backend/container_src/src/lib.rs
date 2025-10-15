@@ -5,8 +5,8 @@ use substreams::prelude::*;
 use substreams::Hex;
 use substreams_solana::pb::sf::solana::r#type::v1::{Block, ConfirmedTransaction};
 
-// V15 deployment with Token-2022 support in claim_farm_rewards
-const MARS_PROGRAM_ID: &str = "AWspW4jJ1vYzfBpnChSromWnxNDv6pcmgKAtY4uizV6q";
+// V17 deployment - Per-reward claiming with reward_index parameter
+const MARS_PROGRAM_ID: &str = "7r284naAG8i2Mc7fuQuvRA1EbtpeNh419F1HpkPkGX4";
 
 // Kamino Vaults Program ID (V2 - Current Mainnet Version)
 // V1 (Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE) is deprecated

@@ -21,8 +21,9 @@ use util::*;
 
 use anchor_lang::prelude::*;
 
-// V15 deployment with Token-2022 support in claim_farm_rewards
-declare_id!("AWspW4jJ1vYzfBpnChSromWnxNDv6pcmgKAtY4uizV6q");
+// V17 deployment - Changed claim_farm_rewards to per-reward claiming (reward_index parameter)
+// Now matches Kamino's harvestReward design: one claim per reward, not batch claiming
+declare_id!("7r284naAG8i2Mc7fuQuvRA1EbtpeNh419F1HpkPkGX4");
 
 #[program]
 pub mod mars {
@@ -218,17 +219,10 @@ pub mod mars {
     }
 
     /// 用户领取 Farm 奖励
-    pub fn claim_farm_rewards(ctx: Context<ClaimFarmRewards>) -> Result<()> {
-        ClaimFarmRewards::process_instruction(ctx)
+    /// reward_index: 0 或 1，表示要领取第几个奖励
+    pub fn claim_farm_rewards(ctx: Context<ClaimFarmRewards>, reward_index: u64) -> Result<()> {
+        ClaimFarmRewards::process_instruction(ctx, reward_index)
     }
-
-    // 已移除 create_order 指令以优化合约大小
-
-    // 已移除 fill_order 指令以优化合约大小
-
-    // 已移除 fill_order_token_transfer 指令以优化合约大小
-
-    // 已移除 revert_order 指令以优化合约大小
 
     // set protocol fee fraction
     pub fn set_protocol_fee_fraction(

@@ -10,9 +10,9 @@ package:
     - Swap and rebalance events
     - Kamino Finance V2 integration
     - Jupiter Aggregator swaps
-    - Claim farm rewards
+    - Claim farm rewards (V17 - per-reward claiming)
     
-    Program ID: AWspW4jJ1vYzfBpnChSromWnxNDv6pcmgKAtY4uizV6q
+    Program ID: 7r284naAG8i2Mc7fuQuvRA1EbtpeNh419F1HpkPkGX4
     Target: Neon PostgreSQL via Cloudflare Hyperdrive
 
 protobuf:

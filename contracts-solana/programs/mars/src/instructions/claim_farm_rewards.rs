@@ -5,6 +5,7 @@ use crate::state::*;
 use crate::error::MarsError;
 
 /// 从 Kamino Farm 领取奖励
+/// 注意：Kamino harvest 指令每次只能领取一个奖励，所以需要传入 reward_index
 #[derive(Accounts)]
 pub struct ClaimFarmRewards<'info> {
     /// 用户账户
@@ -45,51 +46,51 @@ pub struct ClaimFarmRewards<'info> {
     #[account(mut)]
     pub user_farm: UncheckedAccount<'info>,
 
-    /// Reward Token 0 Mint
-    /// CHECK: Reward token mint
-    pub reward_token_0_mint: UncheckedAccount<'info>,
+    /// Global Config (Kamino)
+    /// CHECK: Kamino global config
+    pub global_config: UncheckedAccount<'info>,
 
-    /// Reward Token 0 Vault (farm 的奖励池)
+    /// Reward Token Mint
+    /// CHECK: Reward token mint
+    pub reward_mint: UncheckedAccount<'info>,
+
+    /// Reward Vault (farm 的奖励池)
     /// CHECK: Farm's reward vault
     #[account(mut)]
-    pub reward_token_0_vault: UncheckedAccount<'info>,
+    pub reward_vault: UncheckedAccount<'info>,
 
-    /// User Reward Token 0 ATA (用户接收奖励的账户)
+    /// Treasury Vault (Kamino treasury)
+    /// CHECK: Kamino treasury vault
     #[account(mut)]
-    pub user_reward_token_0_ata: Account<'info, TokenAccount>,
+    pub treasury_vault: UncheckedAccount<'info>,
 
-    /// Reward Token 1 Mint (可选)
-    /// CHECK: Reward token mint
-    pub reward_token_1_mint: UncheckedAccount<'info>,
-
-    /// Reward Token 1 Vault (可选)
-    /// CHECK: Farm's reward vault
+    /// User Reward Token ATA (用户接收奖励的账户)
     #[account(mut)]
-    pub reward_token_1_vault: UncheckedAccount<'info>,
-
-    /// User Reward Token 1 ATA (可选)
-    #[account(mut)]
-    pub user_reward_token_1_ata: Account<'info, TokenAccount>,
+    pub user_reward_ata: Account<'info, TokenAccount>,
 
     /// Farm Authority PDA (用于签名)
     /// CHECK: Farm authority
     pub farm_authority: UncheckedAccount<'info>,
 
+    /// Scope Prices (optional, can be Program ID if not used)
+    /// CHECK: Scope prices oracle
+    pub scope_prices: UncheckedAccount<'info>,
+
     /// Kamino Farms 程序
     /// CHECK: Kamino Farms program
     pub farms_program: UncheckedAccount<'info>,
 
-    /// Token program (支持 SPL Token 和 Token-2022)
+    /// Reward Token program (支持 SPL Token 和 Token-2022)
     /// CHECK: Can be either SPL Token or Token-2022
-    pub token_program: AccountInfo<'info>,
+    pub reward_token_program: AccountInfo<'info>,
 
     /// System program
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> ClaimFarmRewards<'info> {
-    pub fn process_instruction(ctx: Context<ClaimFarmRewards>) -> Result<()> {
-        msg!("🎁 Starting claim farm rewards");
+    pub fn process_instruction(ctx: Context<ClaimFarmRewards>, reward_index: u64) -> Result<()> {
+        msg!("🎁 Starting claim farm rewards (reward index: {})", reward_index);
 
         // 如果 global_state 是新创建的，初始化默认值
         if ctx.accounts.global_state.admin == Pubkey::default() {
@@ -120,36 +121,45 @@ impl<'info> ClaimFarmRewards<'info> {
         );
 
         // 记录领取前的奖励余额
-        let reward_0_before = ctx.accounts.user_reward_token_0_ata.amount;
-        let reward_1_before = ctx.accounts.user_reward_token_1_ata.amount;
+        let reward_before = ctx.accounts.user_reward_ata.amount;
+        msg!("📊 Reward balance before claim: {}", reward_before);
 
-        msg!("📊 Reward balances before claim:");
-        msg!("  Reward 0: {}", reward_0_before);
-        msg!("  Reward 1: {}", reward_1_before);
-
-        // 构造 Kamino Farms harvest (claim) CPI 账户
+        // 构造 Kamino Farms harvestReward CPI 账户
+        // harvestReward 账户结构 (参考 Kamino SDK):
+        // 0: owner (signer+writable)
+        // 1: userState (writable)
+        // 2: farmState (writable)
+        // 3: globalConfig (readonly)
+        // 4: rewardMint (readonly)
+        // 5: userRewardAta (writable)
+        // 6: rewardsVault (writable)
+        // 7: rewardsTreasuryVault (writable)
+        // 8: farmVaultsAuthority (readonly)
+        // 9: scopePrices (readonly, optional)
+        // 10: tokenProgram (readonly)
         let cpi_accounts = vec![
-            AccountMeta::new(ctx.accounts.user.key(), true),                    // 0: user (signer+writable)
-            AccountMeta::new(ctx.accounts.farm_state.key(), false),             // 1: farm_state (writable)
-            AccountMeta::new(ctx.accounts.user_farm.key(), false),              // 2: user_farm (writable)
-            AccountMeta::new_readonly(ctx.accounts.reward_token_0_mint.key(), false), // 3: reward_token_0_mint
-            AccountMeta::new(ctx.accounts.reward_token_0_vault.key(), false),   // 4: reward_token_0_vault (writable)
-            AccountMeta::new(ctx.accounts.user_reward_token_0_ata.key(), false), // 5: user_reward_token_0_ata (writable)
-            AccountMeta::new_readonly(ctx.accounts.reward_token_1_mint.key(), false), // 6: reward_token_1_mint
-            AccountMeta::new(ctx.accounts.reward_token_1_vault.key(), false),   // 7: reward_token_1_vault (writable)
-            AccountMeta::new(ctx.accounts.user_reward_token_1_ata.key(), false), // 8: user_reward_token_1_ata (writable)
-            AccountMeta::new_readonly(ctx.accounts.farm_authority.key(), false), // 9: farm_authority
-            AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),  // 10: token_program
+            AccountMeta::new(ctx.accounts.user.key(), true),                          // 0: owner
+            AccountMeta::new(ctx.accounts.user_farm.key(), false),                    // 1: userState
+            AccountMeta::new(ctx.accounts.farm_state.key(), false),                   // 2: farmState
+            AccountMeta::new_readonly(ctx.accounts.global_config.key(), false),       // 3: globalConfig
+            AccountMeta::new_readonly(ctx.accounts.reward_mint.key(), false),         // 4: rewardMint
+            AccountMeta::new(ctx.accounts.user_reward_ata.key(), false),              // 5: userRewardAta
+            AccountMeta::new(ctx.accounts.reward_vault.key(), false),                 // 6: rewardsVault
+            AccountMeta::new(ctx.accounts.treasury_vault.key(), false),               // 7: rewardsTreasuryVault
+            AccountMeta::new_readonly(ctx.accounts.farm_authority.key(), false),      // 8: farmVaultsAuthority
+            AccountMeta::new_readonly(ctx.accounts.scope_prices.key(), false),        // 9: scopePrices
+            AccountMeta::new_readonly(ctx.accounts.reward_token_program.key(), false), // 10: tokenProgram
         ];
 
-        msg!("📋 Prepared {} accounts for harvest CPI", cpi_accounts.len());
+        msg!("📋 Prepared {} accounts for harvestReward CPI", cpi_accounts.len());
 
-        // Kamino Farms harvest discriminator
-        // harvest([u8; 8]) - 从 Kamino SDK 获取
-        let mut instruction_data = vec![0u8; 8];
-        instruction_data[0..8].copy_from_slice(&[0x25, 0x90, 0x4e, 0x7b, 0x2d, 0x4e, 0x5a, 0x0c]);
+        // Kamino Farms harvestReward discriminator + rewardIndex (u64)
+        // discriminator: [68, 200, 228, 233, 184, 32, 226, 188]
+        let mut instruction_data = vec![0u8; 16]; // 8 bytes discriminator + 8 bytes u64
+        instruction_data[0..8].copy_from_slice(&[68, 200, 228, 233, 184, 32, 226, 188]);
+        instruction_data[8..16].copy_from_slice(&reward_index.to_le_bytes());
 
-        msg!("🚀 Executing CPI call to Kamino Farms harvest");
+        msg!("🚀 Executing CPI call to Kamino Farms harvestReward");
 
         // 创建 CPI 指令
         let harvest_ix = solana_program::instruction::Instruction {
@@ -163,34 +173,29 @@ impl<'info> ClaimFarmRewards<'info> {
             &harvest_ix,
             &[
                 ctx.accounts.user.to_account_info(),
-                ctx.accounts.farm_state.to_account_info(),
                 ctx.accounts.user_farm.to_account_info(),
-                ctx.accounts.reward_token_0_mint.to_account_info(),
-                ctx.accounts.reward_token_0_vault.to_account_info(),
-                ctx.accounts.user_reward_token_0_ata.to_account_info(),
-                ctx.accounts.reward_token_1_mint.to_account_info(),
-                ctx.accounts.reward_token_1_vault.to_account_info(),
-                ctx.accounts.user_reward_token_1_ata.to_account_info(),
+                ctx.accounts.farm_state.to_account_info(),
+                ctx.accounts.global_config.to_account_info(),
+                ctx.accounts.reward_mint.to_account_info(),
+                ctx.accounts.user_reward_ata.to_account_info(),
+                ctx.accounts.reward_vault.to_account_info(),
+                ctx.accounts.treasury_vault.to_account_info(),
                 ctx.accounts.farm_authority.to_account_info(),
-                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.scope_prices.to_account_info(),
+                ctx.accounts.reward_token_program.to_account_info(),
             ],
         )?;
 
-        msg!("✅ Harvest CPI successful!");
+        msg!("✅ HarvestReward CPI successful!");
 
         // 重新加载账户以获取最新余额
-        ctx.accounts.user_reward_token_0_ata.reload()?;
-        ctx.accounts.user_reward_token_1_ata.reload()?;
+        ctx.accounts.user_reward_ata.reload()?;
 
-        let reward_0_after = ctx.accounts.user_reward_token_0_ata.amount;
-        let reward_1_after = ctx.accounts.user_reward_token_1_ata.amount;
-
-        let reward_0_claimed = reward_0_after.saturating_sub(reward_0_before);
-        let reward_1_claimed = reward_1_after.saturating_sub(reward_1_before);
+        let reward_after = ctx.accounts.user_reward_ata.amount;
+        let reward_claimed = reward_after.saturating_sub(reward_before);
 
         msg!("📊 Rewards claimed:");
-        msg!("  Reward 0: {} (+{})", reward_0_after, reward_0_claimed);
-        msg!("  Reward 1: {} (+{})", reward_1_after, reward_1_claimed);
+        msg!("  Reward: {} (+{})", reward_after, reward_claimed);
 
         // 可选：收取一定比例的奖励作为协议费用
         // 暂时不收费，只记录
@@ -198,8 +203,7 @@ impl<'info> ClaimFarmRewards<'info> {
             .accounts
             .vault_state
             .total_rewards_claimed
-            .saturating_add(reward_0_claimed)
-            .saturating_add(reward_1_claimed);
+            .saturating_add(reward_claimed);
 
         msg!("🎉 Claim farm rewards completed!");
         msg!("  Total rewards claimed (lifetime): {}", ctx.accounts.vault_state.total_rewards_claimed);
