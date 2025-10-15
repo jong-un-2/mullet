@@ -223,20 +223,28 @@ async function createClaimRewardsThroughMarsContract(
     }
     
     // Kamino harvestReward 指令的账户顺序：
-    // 0: user
-    // 1: globalConfig
-    // 2: farm
-    // 3: userFarm
+    // 0: owner (user)
+    // 1: userState (NOT userFarm! UserState tracks rewards per user per reward mint)
+    // 2: farmState
+    // 3: globalConfig
     // 4: rewardMint
-    // 5: rewardVault
-    // 6: userRewardAta
-    // 7: treasuryVault
-    // 8: farmAuthority
+    // 5: userRewardAta
+    // 6: rewardsVault
+    // 7: rewardsTreasuryVault
+    // 8: farmVaultsAuthority
     // 9: scopePrices
     // 10: tokenProgram
     
+    // 从 Kamino 指令中提取账户
+    const userState = new PublicKey(accounts[1].pubkey || accounts[1].address);
     const rewardMint = new PublicKey(accounts[4].pubkey || accounts[4].address);
-    const rewardVault = new PublicKey(accounts[5].pubkey || accounts[5].address);
+    const rewardVault = new PublicKey(accounts[6].pubkey || accounts[6].address);
+    
+    console.log(`🔍 Reward ${rewardIndex} 关键账户:`, {
+      userState: userState.toString(),
+      rewardMint: rewardMint.toString(),
+      rewardVault: rewardVault.toString(),
+    });
     
     console.log(`💰 处理 Reward ${rewardIndex}:`, rewardMint.toString());
     
@@ -276,14 +284,14 @@ async function createClaimRewardsThroughMarsContract(
       KAMINO_FARMS_PROGRAM
     );
     
-    // 创建 claim_farm_rewards 指令（注意：rewardIndex 是第二个参数）
+    // 创建 claim_farm_rewards 指令（使用从 Kamino 指令提取的 userState）
     const claimIx = createMarsClaimFarmRewardsInstruction({
       user: userPublicKey,
       globalState: globalStatePda,
       vaultState: vaultStatePda,
       vaultMint: PYUSD_MINT,
       farmState: farmStateAddress,
-      userFarm: farmAccounts.userFarm,
+      userFarm: userState, // ✅ 使用从 Kamino 指令提取的 userState，而不是 farmAccounts.userFarm
       globalConfig: globalConfig,
       rewardMint: rewardMint,
       rewardVault: rewardVault,
