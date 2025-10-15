@@ -299,6 +299,15 @@ const XStockPage = () => {
     }
   }, [authenticated, wallets, solanaWallets]);
 
+  // Auto-fetch quote when stock changes (if amount is already entered)
+  useEffect(() => {
+    // Only auto-fetch if user has already entered an amount and gotten a quote before
+    if (amount && parseFloat(amount) > 0 && quote) {
+      console.log('🔄 Stock changed to', selectedStock.symbol, '- auto-fetching new quote');
+      fetchQuote();
+    }
+  }, [selectedStock]);
+
   // 获取报价
   const fetchQuote = async () => {
     if (!amount || parseFloat(amount) <= 0) {
