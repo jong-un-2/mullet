@@ -106,13 +106,17 @@ bindings = [
 ]
 
 # Note: Migrations removed - Durable Objects already exist in production
-# [[migrations]]
-# tag = "v1"
-# new_sqlite_classes = ["D1Agent"]
+[[migrations]]
+ tag = "v1"
+ new_sqlite_classes = ["D1Agent"]
 
-# [[migrations]]
-# tag = "v2"
-# new_sqlite_classes = ["SubstreamsIndexerContainer"]
+[[migrations]]
+ tag = "v2"
+ new_classes = ["SubstreamsIndexerContainer"]
+
+[[migrations]]
+ tag = "v3"
+ new_sqlite_classes = ["SubstreamsIndexerContainer"]
 
 # ✅ Cloudflare Containers Configuration
 # Substreams Indexer runs as a containerized Durable Object
