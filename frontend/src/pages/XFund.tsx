@@ -1167,8 +1167,8 @@ const XFundPage = () => {
                   <Typography variant="h4" fontWeight={700} sx={{ 
                     color: chartView === 'TVL' ? '#34d399' : 'white' 
                   }}>
-                    {userVaultPosition.totalSuppliedUSD > 0 ? (
-                      `$${userVaultPosition.totalSuppliedUSD.toFixed(2)}`
+                    {vaultStats.currentTvl > 0 ? (
+                      `$${(vaultStats.currentTvl / 1_000_000).toFixed(2)}M`
                     ) : (
                       '-'
                     )}
