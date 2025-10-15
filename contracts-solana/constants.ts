@@ -4,8 +4,8 @@
 import { PublicKey } from "@solana/web3.js";
 
 // Mars Program ID
-// Mars Program ID (V17 - Per-reward claiming with reward_index)
-export const MARS_PROGRAM_ID = "7r284naAG8i2Mc7fuQuvRA1EbtpeNh419F1HpkPkGX4";
+// Mars Program ID (V18 - Fixed Token-2022 support in claim_farm_rewards)
+export const MARS_PROGRAM_ID = "AsL42FUJVwPuJy9Noe4ATnHNQhS47ExB7qo4dnK42VQx";
 
 // Kamino 集成
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");

@@ -18,8 +18,8 @@ import {
 import { KaminoSDKHelper } from './kaminoSdkHelper';
 
 // Mars 合约常量
-// Mars Program ID (V17 - Per-reward claiming with reward_index)
-const MARS_PROGRAM_ID = new PublicKey("7r284naAG8i2Mc7fuQuvRA1EbtpeNh419F1HpkPkGX4");
+// Mars Program ID (V18 - Fixed Token-2022 support in claim_farm_rewards)
+const MARS_PROGRAM_ID = new PublicKey("AsL42FUJVwPuJy9Noe4ATnHNQhS47ExB7qo4dnK42VQx");
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");
 export const KLEND_PROGRAM = new PublicKey("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD");
 export const PYUSD_MINT = new PublicKey("2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo");

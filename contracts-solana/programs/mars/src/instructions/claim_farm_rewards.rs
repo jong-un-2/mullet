@@ -1,8 +1,21 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
-use anchor_spl::token::TokenAccount;
 use crate::state::*;
 use crate::error::MarsError;
+
+/// 读取 Token Account 的 amount 字段（支持 SPL Token 和 Token-2022）
+/// Token Account 布局：mint(32) + owner(32) + amount(8) + ...
+fn get_token_account_amount(account: &UncheckedAccount) -> Result<u64> {
+    let data = account.try_borrow_data()?;
+    require!(data.len() >= 72, MarsError::InvalidTokenAccount);
+    
+    // amount 字段在偏移量 64 处（32 bytes mint + 32 bytes owner）
+    let amount_bytes: [u8; 8] = data[64..72]
+        .try_into()
+        .map_err(|_| MarsError::InvalidTokenAccount)?;
+    
+    Ok(u64::from_le_bytes(amount_bytes))
+}
 
 /// 从 Kamino Farm 领取奖励
 /// 注意：Kamino harvest 指令每次只能领取一个奖励，所以需要传入 reward_index
@@ -65,8 +78,10 @@ pub struct ClaimFarmRewards<'info> {
     pub treasury_vault: UncheckedAccount<'info>,
 
     /// User Reward Token ATA (用户接收奖励的账户)
+    /// 使用 UncheckedAccount 以支持 Token-2022 (不再硬编码 SPL Token owner check)
+    /// CHECK: Token account manually validated in instruction
     #[account(mut)]
-    pub user_reward_ata: Account<'info, TokenAccount>,
+    pub user_reward_ata: UncheckedAccount<'info>,
 
     /// Farm Authority PDA (用于签名)
     /// CHECK: Farm authority
@@ -120,8 +135,8 @@ impl<'info> ClaimFarmRewards<'info> {
             MarsError::GlobalStateFrozen
         );
 
-        // 记录领取前的奖励余额
-        let reward_before = ctx.accounts.user_reward_ata.amount;
+        // 记录领取前的奖励余额（手动读取 Token Account）
+        let reward_before = get_token_account_amount(&ctx.accounts.user_reward_ata)?;
         msg!("📊 Reward balance before claim: {}", reward_before);
 
         // 构造 Kamino Farms harvestReward CPI 账户
@@ -188,10 +203,8 @@ impl<'info> ClaimFarmRewards<'info> {
 
         msg!("✅ HarvestReward CPI successful!");
 
-        // 重新加载账户以获取最新余额
-        ctx.accounts.user_reward_ata.reload()?;
-
-        let reward_after = ctx.accounts.user_reward_ata.amount;
+        // 读取 CPI 后的最新余额（手动读取 Token Account）
+        let reward_after = get_token_account_amount(&ctx.accounts.user_reward_ata)?;
         let reward_claimed = reward_after.saturating_sub(reward_before);
 
         msg!("📊 Rewards claimed:");

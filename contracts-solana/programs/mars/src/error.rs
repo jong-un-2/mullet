@@ -197,6 +197,9 @@ pub enum CustomError {
 
     #[msg("Only admin can perform this action")]
     OnlyAdmin,
+
+    #[msg("Invalid token account data")]
+    InvalidTokenAccount,
 }
 
 pub type MarsError = CustomError;

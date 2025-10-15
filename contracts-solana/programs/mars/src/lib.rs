@@ -21,9 +21,10 @@ use util::*;
 
 use anchor_lang::prelude::*;
 
-// V17 deployment - Changed claim_farm_rewards to per-reward claiming (reward_index parameter)
-// Now matches Kamino's harvestReward design: one claim per reward, not batch claiming
-declare_id!("7r284naAG8i2Mc7fuQuvRA1EbtpeNh419F1HpkPkGX4");
+// V18 deployment - Fixed Token-2022 support in claim_farm_rewards
+// Changed user_reward_ata from Account<TokenAccount> to UncheckedAccount
+// This allows PYUSD (Token-2022) rewards without owner program mismatch errors
+declare_id!("AsL42FUJVwPuJy9Noe4ATnHNQhS47ExB7qo4dnK42VQx");
 
 #[program]
 pub mod mars {
