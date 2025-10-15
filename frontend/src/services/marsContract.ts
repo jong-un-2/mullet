@@ -38,89 +38,24 @@ export const KAMINO_FARMS_PROGRAM = new PublicKey("FarmsPZpWu9i7Kky8tPN37rs2TpmM
 
 /**
  * 解析 Farm State 数据获取 Global Config
- * Farm State 结构：Global Config 在偏移量 40 处（8 bytes discriminator + 32 bytes globalConfig）
+ * Farm State 结构：Global Config 在偏移量 8 处（8 bytes discriminator 之后）
  */
 function parseFarmStateGlobalConfig(data: Buffer): PublicKey {
   try {
-    const GLOBAL_CONFIG_OFFSET = 40; // 8 (discriminator) + 32 (padding/other fields)
+    // Farm State 布局：
+    // 0-8: discriminator
+    // 8-40: global_config (Pubkey, 32 bytes)
+    const GLOBAL_CONFIG_OFFSET = 8;
     const globalConfigBytes = data.slice(GLOBAL_CONFIG_OFFSET, GLOBAL_CONFIG_OFFSET + 32);
-    return new PublicKey(globalConfigBytes);
+    const globalConfig = new PublicKey(globalConfigBytes);
+    console.log('🔍 解析到 Global Config:', globalConfig.toString());
+    return globalConfig;
   } catch (error) {
     console.warn('⚠️  解析 Global Config 失败，使用默认值', error);
     return KAMINO_FARMS_PROGRAM;
   }
 }
 
-/**
- * 解析 Farm State 数据获取奖励信息
- * Farm State 结构（简化版）：
- * - 前 8 bytes: discriminator
- * - ... 其他字段 ...
- * - RewardInfo 数组（2 个元素，每个 96 bytes）
- */
-function parseFarmStateRewardInfos(data: Buffer): Array<{ mint: PublicKey; vault: PublicKey } | null> {
-  const rewardInfos: Array<{ mint: PublicKey; vault: PublicKey } | null> = [];
-  
-  // Farm State 中 RewardInfo 的偏移量（根据 Kamino Farms 程序结构）
-  // 这是一个简化的解析，实际结构可能需要调整
-  const REWARD_INFO_OFFSET = 808; // 大概位置
-  const REWARD_INFO_SIZE = 168;   // 每个 RewardInfo 的大小
-  
-  try {
-    for (let i = 0; i < 2; i++) {
-      const offset = REWARD_INFO_OFFSET + (i * REWARD_INFO_SIZE);
-      
-      if (offset + 64 > data.length) {
-        rewardInfos.push(null);
-        continue;
-      }
-      
-      // 读取 reward mint (32 bytes)
-      const mintBytes = data.slice(offset, offset + 32);
-      const mint = new PublicKey(mintBytes);
-      
-      // 读取 rewards vault (32 bytes, 偏移 +32)
-      const vaultBytes = data.slice(offset + 32, offset + 64);
-      const vault = new PublicKey(vaultBytes);
-      
-      // 检查是否是有效的奖励（非零地址）
-      if (mint.toString() !== PublicKey.default.toString()) {
-        rewardInfos.push({ mint, vault });
-      } else {
-        rewardInfos.push(null);
-      }
-    }
-  } catch (error) {
-    console.warn('⚠️  解析 Farm State 奖励信息失败，使用默认值', error);
-    return [null, null];
-  }
-  
-  return rewardInfos;
-}
-
-/**
- * 创建 Mars 合约的 claim_farm_rewards 指令
- * 参考 deposit_and_stake 的实现方式，直接构建指令
- * 
- * 账户顺序（从 IDL）:
- * 0: user (mut, signer)
- * 1: global_state (mut)
- * 2: vault_state (mut)
- * 3: vault_mint
- * 4: farm_state (mut)
- * 5: user_farm (mut)
- * 6: reward_token_0_mint
- * 7: reward_token_0_vault (mut)
- * 8: user_reward_token_0_ata (mut)
- * 9: reward_token_1_mint
- * 10: reward_token_1_vault (mut)
- * 11: user_reward_token_1_ata (mut)
- * 12: farm_authority
- * 13: farms_program
- * 14: reward_token_0_program (Token-2022 or SPL Token)
- * 15: reward_token_1_program (Token-2022 or SPL Token)
- * 16: system_program
- */
 /**
  * 创建 Mars claim_farm_rewards 指令（单个奖励）
  * 新版本每次只领取一个奖励，需要指定 reward_index
@@ -200,7 +135,7 @@ export async function createClaimRewardsTransaction(
 
 /**
  * 通过 Mars 合约 claim rewards
- * 新版本：每次只领取一个奖励，需要调用两次（reward index 0 和 1）
+ * 新版本：每次只领取一个奖励，使用 Kamino SDK 获取奖励信息
  */
 async function createClaimRewardsThroughMarsContract(
   userPublicKey: PublicKey,
@@ -209,45 +144,40 @@ async function createClaimRewardsThroughMarsContract(
 ): Promise<Transaction | null> {
   console.log('📋 使用 Mars 合约方式 claim rewards');
   
-  // 1. 从 SDK Helper 获取 Farm 账户信息
+  // 1. 使用 Kamino SDK 获取 claim 指令（这会告诉我们有哪些奖励）
+  const kaminoClaimIxs = await sdkHelper.getClaimRewardsInstructions(PYUSD_VAULT);
+  
+  if (!kaminoClaimIxs || kaminoClaimIxs.length === 0) {
+    console.log('ℹ️  没有可领取的奖励');
+    return null;
+  }
+  
+  console.log(`✅ Kamino SDK 返回了 ${kaminoClaimIxs.length} 个奖励指令`);
+  
+  // 2. 从 SDK Helper 获取 Farm 账户信息
   const depositInfo = await sdkHelper.getDepositAndStakeInfo(PYUSD_VAULT, 0.01);
   const { farmAccounts } = depositInfo.stake;
   
   const farmStateAddress = farmAccounts.farmState;
   
-  if (!farmStateAddress || farmStateAddress.toString() === PublicKey.default.toString()) {
-    console.log('ℹ️  此 Vault 没有关联的 Farm');
-    return null;
-  }
-  
   console.log('✅ Farm State:', farmStateAddress.toString());
   console.log('✅ User Farm PDA:', farmAccounts.userFarm.toString());
   
-  // 2. 推导 Farm Authority PDA
+  // 3. 推导 Farm Authority PDA
   const [farmAuthorityPda] = PublicKey.findProgramAddressSync(
     [Buffer.from('authority'), farmStateAddress.toBuffer()],
     KAMINO_FARMS_PROGRAM
   );
   
-  // 3. 检查 User Farm 是否存在
-  const userFarmInfo = await connection.getAccountInfo(farmAccounts.userFarm);
-  if (!userFarmInfo) {
-    console.log('ℹ️  用户还没有在此 Farm 中质押，无法 claim rewards');
-    return null;
-  }
-  
-  // 4. 获取 Farm State 数据以获取奖励信息
+  // 4. 获取 Farm State 数据以提取 Global Config
   const farmStateInfo = await connection.getAccountInfo(farmStateAddress);
   if (!farmStateInfo) {
     console.log('❌ 无法获取 Farm State 数据');
     return null;
   }
   
-  // 5. 解析 Farm State 获取奖励信息和 Global Config
-  const rewardInfos = parseFarmStateRewardInfos(farmStateInfo.data);
+  // 5. 解析 Global Config
   const globalConfig = parseFarmStateGlobalConfig(farmStateInfo.data);
-  
-  console.log('✅ 奖励信息已解析:', rewardInfos.filter(r => r !== null).length, '个有效奖励 token');
   console.log('✅ Global Config:', globalConfig.toString());
   
   // 6. 获取 Mars PDAs
@@ -261,26 +191,52 @@ async function createClaimRewardsThroughMarsContract(
     MARS_PROGRAM_ID
   );
   
-  // 8. 构建交易：为每个有效的奖励创建一个 claim 指令
+  // 7. 构建交易：为每个 Kamino 指令创建对应的 Mars 合约指令
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
   const claimTx = new Transaction();
   
   claimTx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
   
   const setupInstructions: TransactionInstruction[] = [];
-  let claimInstructionsCount = 0;
   
-  // 为每个奖励创建 claim 指令
-  for (let rewardIndex = 0; rewardIndex < rewardInfos.length; rewardIndex++) {
-    const rewardInfo = rewardInfos[rewardIndex];
+  // 从 Kamino 指令中提取奖励信息
+  console.log(`📝 从 ${kaminoClaimIxs.length} 个 Kamino 指令中提取奖励信息`);
+  
+  for (let rewardIndex = 0; rewardIndex < kaminoClaimIxs.length; rewardIndex++) {
+    const kaminoIx = kaminoClaimIxs[rewardIndex];
     
-    if (!rewardInfo || rewardInfo.mint.toString() === PublicKey.default.toString()) {
-      console.log(`ℹ️  跳过 reward ${rewardIndex}（无效或默认地址）`);
+    // 🔍 调试：检查 Kamino SDK 返回的指令结构
+    console.log(`🔍 Kamino 指令 ${rewardIndex} 结构:`, {
+      hasKeys: !!kaminoIx.keys,
+      hasAccounts: !!kaminoIx.accounts,
+      keysLength: kaminoIx.keys?.length,
+      accountsLength: kaminoIx.accounts?.length,
+    });
+    
+    // Kamino SDK 可能返回的是它们自己的格式，而不是标准的 TransactionInstruction
+    // 尝试访问 accounts 字段（Kamino 格式）或 keys 字段（标准格式）
+    const accounts = kaminoIx.accounts || kaminoIx.keys;
+    
+    if (!accounts || accounts.length < 6) {
+      console.warn(`⚠️  Reward ${rewardIndex} 指令账户不足，跳过`);
       continue;
     }
     
-    const rewardMint = rewardInfo.mint;
-    const rewardVault = rewardInfo.vault;
+    // Kamino harvestReward 指令的账户顺序：
+    // 0: user
+    // 1: globalConfig
+    // 2: farm
+    // 3: userFarm
+    // 4: rewardMint
+    // 5: rewardVault
+    // 6: userRewardAta
+    // 7: treasuryVault
+    // 8: farmAuthority
+    // 9: scopePrices
+    // 10: tokenProgram
+    
+    const rewardMint = new PublicKey(accounts[4].pubkey || accounts[4].address);
+    const rewardVault = new PublicKey(accounts[5].pubkey || accounts[5].address);
     
     console.log(`💰 处理 Reward ${rewardIndex}:`, rewardMint.toString());
     
@@ -340,12 +296,6 @@ async function createClaimRewardsThroughMarsContract(
     }, rewardIndex);
     
     claimTx.add(claimIx);
-    claimInstructionsCount++;
-  }
-  
-  if (claimInstructionsCount === 0) {
-    console.log('ℹ️  没有有效的奖励可以领取');
-    return null;
   }
   
   // 添加 setup 指令（创建 ATA）
@@ -360,7 +310,7 @@ async function createClaimRewardsThroughMarsContract(
   claimTx.lastValidBlockHeight = lastValidBlockHeight;
   claimTx.feePayer = userPublicKey;
   
-  console.log(`✅ Mars 合约 Claim Rewards 交易构建完成（${claimInstructionsCount} 个奖励）`);
+  console.log(`✅ Mars 合约 Claim Rewards 交易构建完成（${kaminoClaimIxs.length} 个奖励）`);
   return claimTx;
 }
 
@@ -576,20 +526,6 @@ export async function createUnstakeAndWithdrawTransactions(
 
   const transactions: Transaction[] = [];
   
-  // === 步骤 1: 尝试领取 Farm Rewards（如果有） ===
-  // try {
-  //   console.log('💰 检查是否有 pending rewards...');
-  //   const claimTx = await createClaimRewardsTransaction(userPublicKey, connection, sdkHelper);
-  //   if (claimTx) {
-  //     console.log('✅ 添加 Claim Rewards 交易');
-  //     transactions.push(claimTx);
-  //   } else {
-  //     console.log('ℹ️  没有 pending rewards 可领取');
-  //   }
-  // } catch (error: any) {
-  //   console.warn('⚠️  无法创建 claim rewards 交易，继续 withdraw 流程:', error.message);
-  // }
-
   // 转换金额为 lamports (6 decimals for shares)
   const amountLamports = Math.floor(sharesAmount * 1_000_000);
 
@@ -689,16 +625,10 @@ export async function createUnstakeAndWithdrawTransactions(
   const instructionCount = needUnstake ? 3 : 1;
   console.log(`✅ 批量取款交易构建完成（${instructionCount} 个指令）`);
   
-  // === 步骤 2: 添加 Withdraw 交易 ===
   transactions.push(batchTx);
   
   console.log(`✅ 总共 ${transactions.length} 个交易需要签名`);
-  if (transactions.length > 1) {
-    console.log('  1️⃣ Claim Rewards (领取奖励)');
-    console.log('  2️⃣ Unstake & Withdraw (取消质押并提款)');
-  } else {
-    console.log('  1️⃣ Unstake & Withdraw (取消质押并提款)');
-  }
+  console.log('  1️⃣ Unstake & Withdraw (取消质押并提款)');
   
   return transactions;
 }
