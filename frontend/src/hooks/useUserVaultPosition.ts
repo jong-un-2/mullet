@@ -18,6 +18,7 @@ import {
   createRpc,
   createSolanaRpcApi,
 } from "@solana/kit";
+import { PublicKey } from '@solana/web3.js';
 import {
   getMedianSlotDurationInMsFromLastEpochs,
   KaminoManager,
@@ -49,6 +50,7 @@ export interface RewardInfo {
   weeklyAmount: number;
   apy: number;
   rewardMint: string;
+  pendingBalance: number; // 当前待领取的奖励余额
 }
 
 const EMPTY_POSITION: UserVaultPosition = {
@@ -214,7 +216,97 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
         
         console.log('📈 [useUserVaultPosition] User position - Total Supplied USD:', totalSuppliedUSD, 'Interest Earned:', safeInterestEarned, 'Daily Interest:', dailyInterestUSD);
 
-        // 10. 解析 rewards 信息
+        // 10. 获取 Pending Rewards 余额（如果有用户地址）
+        let pendingRewardsMap = new Map<string, number>();
+        if (userAddress) {
+          try {
+            console.log('💰 [useUserVaultPosition] Fetching pending rewards...');
+            const { Farms, FarmState, calculatePendingRewards, getUserStatePDA } = 
+              await import('@kamino-finance/farms-sdk');
+            const { UserState, Reserve, DEFAULT_PUBLIC_KEY, lamportsToDecimal } = 
+              await import('@kamino-finance/klend-sdk');
+            
+            const farmsClient = new Farms(rpc);
+            const currentTimestamp = new Decimal(Date.now() / 1000);
+            const userPubkey = new PublicKey(userAddress);
+            
+            // 检查 Vault Farm
+            if (vaultState.vaultFarm && vaultState.vaultFarm.toString() !== '11111111111111111111111111111111') {
+              try {
+                const userFarmStateAddress = await getUserStatePDA(
+                  farmsClient.getProgramID(),
+                  vaultState.vaultFarm,
+                  userPubkey.toBase58() as any
+                );
+                const farmUserState = await UserState.fetch(rpc, userFarmStateAddress, farmsClient.getProgramID());
+                if (farmUserState) {
+                  const farmState = await FarmState.fetch(rpc, farmUserState.farmState);
+                  if (farmState) {
+                    for (let i = 0; i < farmState.rewardInfos.length; i++) {
+                      const pendingReward = calculatePendingRewards(farmState, farmUserState, i, currentTimestamp, null);
+                      if (pendingReward && pendingReward.gt(0)) {
+                        const decimals = farmState.rewardInfos[i].token.decimals.toString();
+                        const amount = lamportsToDecimal(pendingReward, new Decimal(decimals));
+                        const mint = farmState.rewardInfos[i].token.mint.toString();
+                        const existing = pendingRewardsMap.get(mint) || 0;
+                        pendingRewardsMap.set(mint, existing + amount.toNumber());
+                      }
+                    }
+                  }
+                }
+              } catch (err: any) {
+                console.warn('⚠️  获取 Vault Farm pending rewards 失败:', err.message);
+              }
+            }
+            
+            // 检查 Reserve Farms
+            const reserves = kaminoManager.getVaultAllocations(vaultState);
+            for (const [reserveAddress] of reserves) {
+              try {
+                const reserveState = await Reserve.fetch(rpc, reserveAddress);
+                if (!reserveState || reserveState.farmCollateral === DEFAULT_PUBLIC_KEY) continue;
+                
+                const delegateePDA = await kaminoManager.computeUserFarmStateForUserInVault(
+                  farmsClient.getProgramID(),
+                  vault.address,
+                  reserveAddress,
+                  userPubkey.toBase58() as any
+                );
+                
+                const userFarmStateAddress = await getUserStatePDA(
+                  farmsClient.getProgramID(),
+                  reserveState.farmCollateral,
+                  delegateePDA[0]
+                );
+                
+                const farmUserState = await UserState.fetch(rpc, userFarmStateAddress, farmsClient.getProgramID());
+                if (farmUserState) {
+                  const farmState = await FarmState.fetch(rpc, farmUserState.farmState);
+                  if (farmState) {
+                    for (let i = 0; i < farmState.rewardInfos.length; i++) {
+                      const pendingReward = calculatePendingRewards(farmState, farmUserState, i, currentTimestamp, null);
+                      if (pendingReward && pendingReward.gt(0)) {
+                        const decimals = farmState.rewardInfos[i].token.decimals.toString();
+                        const amount = lamportsToDecimal(pendingReward, new Decimal(decimals));
+                        const mint = farmState.rewardInfos[i].token.mint.toString();
+                        const existing = pendingRewardsMap.get(mint) || 0;
+                        pendingRewardsMap.set(mint, existing + amount.toNumber());
+                      }
+                    }
+                  }
+                }
+              } catch (err: any) {
+                console.warn(`⚠️  获取 Reserve pending rewards 失败:`, err.message);
+              }
+            }
+            
+            console.log('✅ [useUserVaultPosition] Pending rewards:', Object.fromEntries(pendingRewardsMap));
+          } catch (err: any) {
+            console.error('❌ [useUserVaultPosition] Failed to fetch pending rewards:', err);
+          }
+        }
+
+        // 11. 解析 rewards 信息（添加 pendingBalance）
         const rewards: RewardInfo[] = allRewardsStats
           .filter(r => r.incentivesApy > 0)
           .map(incentive => {
@@ -234,6 +326,7 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
               weeklyAmount: incentive.weeklyRewards.toNumber(),
               apy: incentive.incentivesApy,
               rewardMint,
+              pendingBalance: pendingRewardsMap.get(rewardMint) || 0, // 添加 pending balance
             };
           });
 

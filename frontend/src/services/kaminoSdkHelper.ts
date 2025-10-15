@@ -453,4 +453,146 @@ export class KaminoSDKHelper {
       return null;
     }
   }
+
+  /**
+   * 获取用户的 Pending Rewards 余额
+   * 从 Vault Farm 和 Reserve Farms 计算所有待领取的奖励
+   */
+  async getUserPendingRewards(vaultAddress: PublicKey): Promise<Map<string, number>> {
+    this.ensureInitialized();
+
+    const pendingRewards = new Map<string, number>();
+
+    try {
+      // 动态导入所需模块
+      const [{ Farms, FarmState, calculatePendingRewards, getUserStatePDA }, { UserState, Reserve, DEFAULT_PUBLIC_KEY, lamportsToDecimal }] = await Promise.all([
+        import('@kamino-finance/farms-sdk'),
+        import('@kamino-finance/klend-sdk'),
+      ]);
+
+      const farmsClient = new Farms(this.rpc);
+
+      // 1. 获取 vault 状态
+      const vault = new KaminoVault(vaultAddress.toBase58() as any);
+      const vaultState = await vault.getState(this.rpc);
+
+      const currentTimestamp = new Decimal(Date.now() / 1000);
+
+      // 2. 检查 Vault Farm 的 pending rewards
+      if (vaultState.vaultFarm && vaultState.vaultFarm.toString() !== '11111111111111111111111111111111') {
+        try {
+          // 获取 user farm state
+          const userFarmStateAddress = await getUserStatePDA(
+            farmsClient.getProgramID(),
+            vaultState.vaultFarm,
+            this.userPublicKey.toBase58() as any
+          );
+
+          const farmUserState = await UserState.fetch(this.rpc, userFarmStateAddress, farmsClient.getProgramID());
+          
+          if (farmUserState) {
+            const farmState = await FarmState.fetch(this.rpc, farmUserState.farmState);
+            
+            if (farmState) {
+              const rewardInfos = farmState.rewardInfos;
+              
+              for (let i = 0; i < rewardInfos.length; i++) {
+                const pendingReward = calculatePendingRewards(
+                  farmState,
+                  farmUserState,
+                  i,
+                  currentTimestamp,
+                  null
+                );
+
+                if (pendingReward && pendingReward.gt(0)) {
+                  const decimals = rewardInfos[i].token.decimals.toString();
+                  const amount = lamportsToDecimal(pendingReward, new Decimal(decimals));
+                  const mint = rewardInfos[i].token.mint.toString();
+                  
+                  const existing = pendingRewards.get(mint) || 0;
+                  pendingRewards.set(mint, existing + amount.toNumber());
+                  
+                  console.log(`💰 Vault Farm Pending Reward: ${amount.toString()} ${mint.slice(0, 8)}...`);
+                }
+              }
+            }
+          }
+        } catch (error: any) {
+          console.warn('⚠️  无法获取 Vault Farm pending rewards:', error.message);
+        }
+      }
+
+      // 3. 检查每个 Reserve Farm 的 pending rewards
+      const reserves = this.manager!.getVaultAllocations(vaultState);
+
+      for (const [reserveAddress] of reserves) {
+        try {
+          const reserveState = await Reserve.fetch(this.rpc, reserveAddress);
+          
+          if (!reserveState || reserveState.farmCollateral === DEFAULT_PUBLIC_KEY) {
+            continue;
+          }
+
+          // 计算 delegatee PDA (vault 的 farm user state)
+          const delegateePDA = await this.manager!.computeUserFarmStateForUserInVault(
+            farmsClient.getProgramID(),
+            vault.address,
+            reserveAddress,
+            this.userPublicKey.toBase58() as any
+          );
+
+          const userFarmStateAddress = await getUserStatePDA(
+            farmsClient.getProgramID(),
+            reserveState.farmCollateral,
+            delegateePDA[0]
+          );
+
+          const farmUserState = await UserState.fetch(this.rpc, userFarmStateAddress, farmsClient.getProgramID());
+
+          if (farmUserState) {
+            const farmState = await FarmState.fetch(this.rpc, farmUserState.farmState);
+            
+            if (farmState) {
+              const rewardInfos = farmState.rewardInfos;
+              
+              for (let i = 0; i < rewardInfos.length; i++) {
+                const pendingReward = calculatePendingRewards(
+                  farmState,
+                  farmUserState,
+                  i,
+                  currentTimestamp,
+                  null
+                );
+
+                if (pendingReward && pendingReward.gt(0)) {
+                  const decimals = rewardInfos[i].token.decimals.toString();
+                  const amount = lamportsToDecimal(pendingReward, new Decimal(decimals));
+                  const mint = rewardInfos[i].token.mint.toString();
+                  
+                  const existing = pendingRewards.get(mint) || 0;
+                  pendingRewards.set(mint, existing + amount.toNumber());
+                  
+                  console.log(`💰 Reserve Farm Pending Reward: ${amount.toString()} ${mint.slice(0, 8)}...`);
+                }
+              }
+            }
+          }
+        } catch (error: any) {
+          console.warn(`⚠️  无法获取 Reserve ${reserveAddress.toString().slice(0, 8)}... pending rewards:`, error.message);
+        }
+      }
+
+      if (pendingRewards.size > 0) {
+        console.log('✅ 总 Pending Rewards:', Object.fromEntries(pendingRewards));
+      } else {
+        console.log('ℹ️  当前没有 pending rewards');
+      }
+
+    } catch (error: any) {
+      console.error('❌ 获取 pending rewards 失败:', error);
+    }
+
+    return pendingRewards;
+  }
 }
