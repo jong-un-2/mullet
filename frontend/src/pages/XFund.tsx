@@ -1094,12 +1094,59 @@ const XFundPage = () => {
               borderRadius: 3,
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             }}>
-              {/* Claim Rewards Button */}
+              {/* Pending Rewards and Claim Rewards Button */}
               {isWalletConnected && (
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {/* Pending Rewards Display */}
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#94a3b8', mb: 0.5 }}>
+                      Pending Rewards
+                    </Typography>
+                    {(() => {
+                      // 使用 Map 去重，按 rewardMint 分组
+                      const uniqueRewards = new Map<string, typeof userVaultPosition.rewards[0]>();
+                      userVaultPosition.rewards.forEach(reward => {
+                        if (reward.pendingBalance > 0) {
+                          const existing = uniqueRewards.get(reward.rewardMint);
+                          if (!existing || existing.pendingBalance < reward.pendingBalance) {
+                            uniqueRewards.set(reward.rewardMint, reward);
+                          }
+                        }
+                      });
+                      
+                      return uniqueRewards.size > 0 ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          {Array.from(uniqueRewards.values()).map((reward) => (
+                            <Box key={reward.rewardMint} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box
+                                component="img"
+                                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2360a5fa'%3E%3Cpath d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/%3E%3C/svg%3E"
+                                sx={{ width: 20, height: 20 }}
+                              />
+                              <Typography variant="h6" fontWeight={600} sx={{ color: 'white' }}>
+                                {reward.pendingBalance.toFixed(4)}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                ({reward.tokenName})
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Box>
+                      ) : (
+                        <Typography variant="h6" fontWeight={600} sx={{ color: '#94a3b8' }}>
+                          -
+                        </Typography>
+                      );
+                    })()}
+                  </Box>
+
+                  {/* Claim Rewards Button */}
                   <Button
                     variant="contained"
-                    disabled={isClaimingRewards}
+                    disabled={
+                      isClaimingRewards || 
+                      !userVaultPosition.rewards.some(reward => reward.pendingBalance > 0)
+                    }
                     onClick={handleClaimRewards}
                     sx={{
                       backgroundColor: '#60a5fa',
