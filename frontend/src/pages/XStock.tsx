@@ -21,6 +21,7 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import Navigation from '../components/Navigation';
 import { TransactionProgress } from '../components/TransactionProgress';
+import { TokenIcon, ChainIcon } from '../components/ChainIcons';
 import { marsLiFiService, SUPPORTED_CHAINS, SOLANA_CHAIN_ID } from '../services/marsLiFiService';
 import { checkBalance } from '../services/balanceService';
 import { usePrivy } from '@privy-io/react-auth';
@@ -247,30 +248,56 @@ const TOKENIZED_STOCKS = [
 const PAYMENT_TOKENS = [
   // Solana 链代币（优先）
   { 
-    symbol: 'USDC (Solana)', 
-    name: 'USD Coin on Solana', 
+    symbol: 'USDC', 
+    name: 'USD Coin', 
+    chainName: 'Solana',
+    chain: 'solana' as const,
     chainId: SOLANA_CHAIN_ID,
     address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Solana USDC
     decimals: 6
   },
   { 
+    symbol: 'PYUSD', 
+    name: 'PayPal USD', 
+    chainName: 'Solana',
+    chain: 'solana' as const,
+    chainId: SOLANA_CHAIN_ID,
+    address: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', // Solana PYUSD
+    decimals: 6
+  },
+  { 
     symbol: 'SOL', 
     name: 'Solana', 
+    chainName: 'Solana',
+    chain: 'solana' as const,
     chainId: SOLANA_CHAIN_ID,
     address: '0x0000000000000000000000000000000000000000', // Native SOL (LI.FI 会识别)
     decimals: 9
   },
   // Ethereum 链代币
   { 
-    symbol: 'USDC (Ethereum)', 
-    name: 'USD Coin on Ethereum', 
+    symbol: 'USDC', 
+    name: 'USD Coin', 
+    chainName: 'Ethereum',
+    chain: 'ethereum' as const,
     chainId: SUPPORTED_CHAINS.ETHEREUM,
     address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Ethereum USDC
     decimals: 6
   },
   { 
-    symbol: 'USDT (Ethereum)', 
-    name: 'Tether on Ethereum', 
+    symbol: 'PYUSD', 
+    name: 'PayPal USD', 
+    chainName: 'Ethereum',
+    chain: 'ethereum' as const,
+    chainId: SUPPORTED_CHAINS.ETHEREUM,
+    address: '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8', // Ethereum PYUSD
+    decimals: 6
+  },
+  { 
+    symbol: 'USDT', 
+    name: 'Tether', 
+    chainName: 'Ethereum',
+    chain: 'ethereum' as const,
     chainId: SUPPORTED_CHAINS.ETHEREUM,
     address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     decimals: 6
@@ -278,6 +305,8 @@ const PAYMENT_TOKENS = [
   { 
     symbol: 'ETH', 
     name: 'Ethereum', 
+    chainName: 'Ethereum',
+    chain: 'ethereum' as const,
     chainId: SUPPORTED_CHAINS.ETHEREUM,
     address: '0x0000000000000000000000000000000000000000',
     decimals: 18
@@ -459,6 +488,17 @@ const XStockPage = () => {
   };
 
   // 执行购买 - 使用 LiFi SDK 执行跨链交易
+  // 
+  // 错误修复说明:
+  // "Cannot read properties of undefined (reading 'toString')" 错误是因为 LiFi SDK
+  // 在执行 Solana 交易时需要一个标准的 wallet adapter，它期望有一个 publicKey 对象
+  // 该对象必须有 toString() 方法。Privy 的 Solana wallet 直接提供 address 字符串，
+  // 但没有提供标准的 PublicKey 对象。
+  // 
+  // 解决方案：
+  // 1. 从 Privy wallet 的 address 创建一个标准的 @solana/web3.js PublicKey 对象
+  // 2. 创建一个符合 LiFi SDK 期望的 wallet adapter 接口
+  // 3. 添加详细的日志记录来调试任何后续问题
   const handleBuy = async () => {
     if (!quote || !quote.route) {
       setError('Please get a quote first');
@@ -508,11 +548,67 @@ const XStockPage = () => {
         throw new Error('Solana wallet not found');
       }
       
-      // 配置 Solana provider
+      // 验证 Solana wallet 有必要的方法
+      if (!solanaWallet.signTransaction) {
+        throw new Error('Solana wallet does not support signTransaction');
+      }
+      
+      console.log('🔌 Solana wallet info:', {
+        address: solanaWallet.address,
+        hasSignTransaction: !!solanaWallet.signTransaction,
+        walletType: typeof solanaWallet,
+      });
+      
+      // 配置 Solana provider with proper wallet adapter
       const solanaProvider = Solana({
         getWalletAdapter: async () => {
-          // Privy Solana wallet 已经实现了 SignerWalletAdapter 接口
-          return solanaWallet as any;
+          // Create a PublicKey object from the address
+          const { PublicKey } = await import('@solana/web3.js');
+          
+          let publicKey;
+          try {
+            publicKey = new PublicKey(solanaWallet.address);
+            console.log('✅ Created PublicKey:', publicKey.toBase58());
+          } catch (error) {
+            console.error('❌ Failed to create PublicKey:', error);
+            throw new Error(`Invalid Solana address: ${solanaWallet.address}`);
+          }
+          
+          // Create a proper wallet adapter for LiFi SDK
+          const adapter = {
+            publicKey,
+            signTransaction: async (transaction: any) => {
+              console.log('🔵 Signing Solana transaction with Privy wallet...');
+              console.log('🔵 Transaction type:', transaction.constructor.name);
+              
+              try {
+                const serialized = transaction.serialize({ requireAllSignatures: false });
+                console.log('🔵 Serialized transaction length:', serialized.length);
+                
+                const result = await solanaWallet.signTransaction({ transaction: serialized });
+                console.log('✅ Transaction signed successfully');
+                
+                // Deserialize the signed transaction
+                const { VersionedTransaction } = await import('@solana/web3.js');
+                return VersionedTransaction.deserialize(result.signedTransaction);
+              } catch (error) {
+                console.error('❌ Failed to sign transaction:', error);
+                throw error;
+              }
+            },
+            signAllTransactions: async (transactions: any[]) => {
+              console.log('🔵 Signing multiple Solana transactions with Privy wallet...');
+              const results = [];
+              for (const tx of transactions) {
+                const signed = await adapter.signTransaction(tx);
+                results.push(signed);
+              }
+              return results;
+            },
+          };
+          
+          console.log('✅ Solana wallet adapter created');
+          return adapter as any;
         }
       });
       
@@ -536,6 +632,7 @@ const XStockPage = () => {
       setCurrentTxStep(1);
       
       console.log('📝 Executing route with LiFi SDK...');
+      console.log('📝 Route details:', JSON.stringify(quote.route, null, 2));
       setProgressMessage('Please sign the transaction in your wallet...');
       setCurrentTxStep(2);
       
@@ -546,6 +643,19 @@ const XStockPage = () => {
         },
         executeInBackground: false,
       };
+      
+      // 验证 route 对象的完整性
+      if (!quote.route) {
+        throw new Error('Route is undefined');
+      }
+      if (!quote.route.fromChainId) {
+        throw new Error('Route fromChainId is undefined');
+      }
+      if (!quote.route.toChainId) {
+        throw new Error('Route toChainId is undefined');
+      }
+      
+      console.log('✅ Route validation passed');
       
       // 使用 LiFi SDK 执行跨链交易
       const result = await executeRoute(quote.route, {
@@ -588,6 +698,8 @@ const XStockPage = () => {
       
     } catch (err: any) {
       console.error('❌ Purchase failed:', err);
+      console.error('❌ Error stack:', err.stack);
+      console.error('❌ Error cause:', err.cause);
       console.log('📋 Quote details for execution:', quote);
       
       // 提取更有用的错误信息
@@ -600,6 +712,10 @@ const XStockPage = () => {
           errorMessage = 'Insufficient funds for transaction';
         } else if (err.message.includes('internal error')) {
           errorMessage = 'Transaction failed. Please check your USDC balance and approval.';
+        } else if (err.message.includes('Cannot read properties of undefined')) {
+          errorMessage = 'Wallet configuration error. Please reconnect your wallet and try again.';
+          console.error('❌ Detailed error: This is likely due to missing wallet adapter properties.');
+          console.error('❌ Solana wallet object:', solanaWallets[0]);
         } else {
           errorMessage = err.message.substring(0, 100);
         }
@@ -884,11 +1000,31 @@ const XStockPage = () => {
                     Pay With
                   </InputLabel>
                   <Select
-                    value={paymentToken.symbol}
+                    value={`${paymentToken.symbol}-${paymentToken.chainName}`}
                     label="Pay With"
                     onChange={(e) => {
-                      const token = PAYMENT_TOKENS.find(t => t.symbol === e.target.value);
+                      const [symbol, chainName] = e.target.value.split('-');
+                      const token = PAYMENT_TOKENS.find(t => t.symbol === symbol && t.chainName === chainName);
                       if (token) setPaymentToken(token);
+                    }}
+                    renderValue={(value) => {
+                      const [symbol, chainName] = value.split('-');
+                      const token = PAYMENT_TOKENS.find(t => t.symbol === symbol && t.chainName === chainName);
+                      if (!token) return value;
+                      
+                      return (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <TokenIcon symbol={token.symbol} chain={token.chain} size={28} showChainBadge={true} />
+                          <Box>
+                            <Typography sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                              {token.symbol}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                              {token.chainName}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      );
                     }}
                     sx={{
                       color: 'white',
@@ -905,8 +1041,33 @@ const XStockPage = () => {
                     }}
                   >
                     {PAYMENT_TOKENS.map((token) => (
-                      <MenuItem key={token.symbol} value={token.symbol}>
-                        {token.symbol} - {token.name}
+                      <MenuItem 
+                        key={`${token.symbol}-${token.chainName}`} 
+                        value={`${token.symbol}-${token.chainName}`}
+                        sx={{
+                          py: 1.5,
+                          '&:hover': {
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          },
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                          <TokenIcon symbol={token.symbol} chain={token.chain} size={32} showChainBadge={true} />
+                          <Box sx={{ flex: 1 }}>
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                              {token.symbol}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                              {token.name}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            <ChainIcon chain={token.chain} size={20} />
+                            <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8', mt: 0.5 }}>
+                              {token.chainName}
+                            </Typography>
+                          </Box>
+                        </Box>
                       </MenuItem>
                     ))}
                   </Select>

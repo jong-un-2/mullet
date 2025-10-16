@@ -32,6 +32,7 @@ import { useWallets } from '@privy-io/react-auth/solana';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useMarsOpportunities, getUserWalletAddress, formatPercentage } from '../hooks/useMarsApi';
 import { useSolanaBalance } from '../hooks/useSolanaBalance';
+import { checkBalance } from '../services/balanceService';
 import { useVaultTransactions, useVaultEarningDetails } from '../hooks/useVaultData';
 import { useVaultHistoricalData } from '../hooks/useVaultHistoricalData';
 import { useMarsContract } from '../hooks/useMarsContract';
@@ -82,6 +83,9 @@ const XFundPage = () => {
   
   // Claim rewards state
   const [isClaimingRewards, setIsClaimingRewards] = useState(false);
+  
+  // Multi-chain balance state
+  const [tokenBalances, setTokenBalances] = useState<{[key: string]: {solana: string, evm: string, total: string}}>({});
 
   // Calendar helper functions
   const getMonthName = (monthNum: string) => {
@@ -253,11 +257,110 @@ const XFundPage = () => {
 
   const vaultStats = getCurrentVaultStats();
   
-  // Get real wallet balance for selected token
+  // Token addresses mapping
+  const TOKEN_ADDRESSES: {[key: string]: {solana: string, ethereum: string, decimals: number}} = {
+    'USDC': {
+      solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC on Solana
+      ethereum: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC on Ethereum
+      decimals: 6
+    },
+    'USDT': {
+      solana: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT on Solana
+      ethereum: '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT on Ethereum
+      decimals: 6
+    },
+    'PYUSD': {
+      solana: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', // PYUSD on Solana
+      ethereum: '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8', // PYUSD on Ethereum
+      decimals: 6
+    },
+    'SOL': {
+      solana: '0x0000000000000000000000000000000000000000', // Native SOL
+      ethereum: '', // SOL 不在 Ethereum 上
+      decimals: 9
+    }
+  };
+  
+  // Get unified wallet balance for selected token (checks both Solana and EVM)
   const getWalletBalance = (token: string) => {
     if (!isWalletConnected) return '0';
-    return getSolanaBalance(token) || '0';
+    
+    // 优先返回 Solana 余额
+    const solanaBalance = getSolanaBalance(token) || '0';
+    
+    // 如果有缓存的余额数据，返回总余额
+    if (tokenBalances[token]) {
+      return tokenBalances[token].total;
+    }
+    
+    // Fallback to Solana balance
+    return solanaBalance;
   };
+  
+  // Fetch multi-chain balances for selected token
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (!isWalletConnected || !selectedToken) return;
+      
+      const tokenConfig = TOKEN_ADDRESSES[selectedToken];
+      if (!tokenConfig) return;
+      
+      let solanaBalance = '0';
+      let evmBalance = '0';
+      
+      try {
+        // 获取 Solana 余额
+        if (userWalletAddress && tokenConfig.solana) {
+          console.log(`🔍 Checking Solana balance for ${selectedToken}...`);
+          const solResult = await checkBalance(
+            tokenConfig.solana,
+            1151111081099710, // Solana Chain ID for LiFi
+            userWalletAddress,
+            tokenConfig.decimals
+          );
+          solanaBalance = solResult.formatted;
+          console.log(`✅ Solana ${selectedToken}: ${solanaBalance}`);
+        }
+      } catch (err) {
+        console.warn(`⚠️ Failed to check Solana balance for ${selectedToken}:`, err);
+      }
+      
+      try {
+        // 获取 EVM 余额 (如果有 EVM 钱包地址)
+        if (ethAddress && tokenConfig.ethereum) {
+          console.log(`🔍 Checking Ethereum balance for ${selectedToken}...`);
+          const ethResult = await checkBalance(
+            tokenConfig.ethereum,
+            1, // Ethereum Mainnet
+            ethAddress,
+            tokenConfig.decimals
+          );
+          evmBalance = ethResult.formatted;
+          console.log(`✅ Ethereum ${selectedToken}: ${evmBalance}`);
+        }
+      } catch (err) {
+        console.warn(`⚠️ Failed to check Ethereum balance for ${selectedToken}:`, err);
+      }
+      
+      // 计算总余额
+      const solNum = parseFloat(solanaBalance) || 0;
+      const evmNum = parseFloat(evmBalance) || 0;
+      const total = (solNum + evmNum).toFixed(4);
+      
+      console.log(`💰 Total ${selectedToken} balance: ${total} (Solana: ${solanaBalance}, EVM: ${evmBalance})`);
+      
+      setTokenBalances(prev => ({
+        ...prev,
+        [selectedToken]: {
+          solana: solanaBalance,
+          evm: evmBalance,
+          total
+        }
+      }));
+    };
+    
+    fetchBalances();
+  }, [isWalletConnected, selectedToken, userWalletAddress, ethAddress]);
 
   // Handle deposit action - 支持 USDT/USDC 自动兑换成 PYUSD
   const handleDeposit = async () => {
@@ -376,65 +479,24 @@ const XFundPage = () => {
       if (solanaWallets.length > 0) {
         const solanaWallet = solanaWallets[0];
         
-        // Create a wrapper adapter that implements all required SignerWalletAdapter methods
-        const walletAdapter = {
-          publicKey: new PublicKey(solanaWallet.address),
-          signTransaction: async (transaction: Transaction | VersionedTransaction) => {
-            // Serialize transaction to bytes for Privy
-            const serializedTx = transaction.serialize({
-              requireAllSignatures: false,
-              verifySignatures: false,
-            });
-            
-            // Sign with Privy wallet
-            const result = await solanaWallet.signTransaction({ transaction: serializedTx });
-            
-            // Parse the signed transaction back
-            if ('version' in transaction) {
-              return VersionedTransaction.deserialize(new Uint8Array(result.signedTransaction));
-            } else {
-              return Transaction.from(new Uint8Array(result.signedTransaction));
-            }
-          },
-          signAllTransactions: async (transactions: (Transaction | VersionedTransaction)[]) => {
-            // Sign transactions one by one since Privy doesn't have signAllTransactions
-            const signedTxs = await Promise.all(
-              transactions.map(async (tx) => {
-                const serializedTx = tx.serialize({
-                  requireAllSignatures: false,
-                  verifySignatures: false,
-                });
-                const result = await solanaWallet.signTransaction({ transaction: serializedTx });
-                
-                if ('version' in tx) {
-                  return VersionedTransaction.deserialize(new Uint8Array(result.signedTransaction));
-                } else {
-                  return Transaction.from(new Uint8Array(result.signedTransaction));
-                }
-              })
-            );
-            return signedTxs;
-          },
-          signMessage: async (message: Uint8Array) => {
-            const result = await solanaWallet.signMessage({ message });
-            return result.signature;
-          },
-          // These properties are required by some wallet adapters
-          toString: () => solanaWallet.address,
-          toJSON: () => solanaWallet.address,
-        };
+        console.log('� Configuring Solana provider...');
+        console.log('🔌 Solana wallet address:', solanaWallet.address);
         
+        // Use Privy Solana wallet directly (it already implements SignerWalletAdapter)
         const solanaProvider = Solana({
           getWalletAdapter: async () => {
-            return walletAdapter as any;
+            console.log('✅ Solana wallet adapter requested');
+            return solanaWallet as any;
           }
         });
         
         providers.push(solanaProvider);
+        console.log('✅ Solana provider added');
       }
       
       // Add EVM provider if using Ethereum
       if (!useSolana && evmWallets.length > 0) {
+        console.log('🔧 Configuring EVM provider...');
         const evmWallet = evmWallets[0];
         const provider = await evmWallet.getEthereumProvider();
         
@@ -442,29 +504,46 @@ const XFundPage = () => {
           throw new Error('Failed to get EVM wallet provider');
         }
         
+        console.log('✅ EVM provider obtained, creating wallet client...');
         const walletClient = createWalletClient({
           account: evmWallet.address as `0x${string}`,
           chain: mainnet,
           transport: custom(provider)
         });
         
+        console.log('✅ Wallet client created:', evmWallet.address);
         const evmProvider = EVM({ 
-          getWalletClient: async () => walletClient 
+          getWalletClient: async () => {
+            console.log('✅ EVM wallet client requested');
+            return walletClient;
+          }
         });
         
         providers.push(evmProvider);
+        console.log('✅ EVM provider added');
       }
       
+      console.log(`🔧 Configuring LiFi SDK with ${providers.length} providers...`);
       createConfig({
         integrator: 'MarsLiquid',
         apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
         providers: providers,
       });
+      
+      console.log('📝 Executing route with LiFi SDK...');
+      console.log('📋 Route details:', {
+        fromChain: route.fromChainId,
+        toChain: route.toChainId,
+        fromToken: route.fromToken.symbol,
+        toToken: route.toToken.symbol,
+        fromAmount: route.fromAmount,
+        toAmount: route.toAmount,
+      });
 
       // Execute swap
       const result = await executeRoute(route, {
-        updateRouteHook: () => {
-          console.log('🔄 Swap in progress...');
+        updateRouteHook: (updatedRoute) => {
+          console.log('🔄 Route updated during execution:', updatedRoute);
         },
         executeInBackground: false,
       });
@@ -1552,13 +1631,28 @@ const XFundPage = () => {
                 </Box>
                 
                 {activeTab === 0 && (
-                  <Typography variant="body2" sx={{ color: '#94a3b8', mb: 1.5, fontSize: '0.85rem' }}>
-                    Available: {isWalletConnected ? 
-                      balanceLoading ? 
-                        'Loading...' : 
-                        `${getWalletBalance(selectedToken)} ${selectedToken}`
-                      : '0'}
-                  </Typography>
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#94a3b8', mb: 0.5, fontSize: '0.85rem' }}>
+                      Available: {isWalletConnected ? 
+                        balanceLoading ? 
+                          'Loading...' : 
+                          `${getWalletBalance(selectedToken)} ${selectedToken}`
+                        : '0'}
+                    </Typography>
+                    {isWalletConnected && tokenBalances[selectedToken] && (
+                      <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem', fontStyle: 'italic' }}>
+                        {parseFloat(tokenBalances[selectedToken].solana) > 0 && (
+                          <span>Solana: {tokenBalances[selectedToken].solana} </span>
+                        )}
+                        {parseFloat(tokenBalances[selectedToken].evm) > 0 && (
+                          <span>
+                            {parseFloat(tokenBalances[selectedToken].solana) > 0 && '| '}
+                            EVM: {tokenBalances[selectedToken].evm}
+                          </span>
+                        )}
+                      </Typography>
+                    )}
+                  </Box>
                 )}
 
                 <Box sx={{ display: 'flex', gap: 0.75 }}>
@@ -1796,9 +1890,24 @@ const XFundPage = () => {
                 </FormControl>
               </Box>
 
-              <Typography variant="body2" sx={{ mb: 0.5, color: '#94a3b8' }}>
-                Wallet: {isWalletConnected ? `${getWalletBalance(selectedToken)} ${selectedToken}` : 'Not Connected'}
-              </Typography>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 0.5, color: '#94a3b8' }}>
+                  Wallet: {isWalletConnected ? `${getWalletBalance(selectedToken)} ${selectedToken}` : 'Not Connected'}
+                </Typography>
+                {isWalletConnected && tokenBalances[selectedToken] && (
+                  <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem', fontStyle: 'italic', mb: 1, display: 'block' }}>
+                    {parseFloat(tokenBalances[selectedToken].solana) > 0 && (
+                      <span>Solana: {tokenBalances[selectedToken].solana} </span>
+                    )}
+                    {parseFloat(tokenBalances[selectedToken].evm) > 0 && (
+                      <span>
+                        {parseFloat(tokenBalances[selectedToken].solana) > 0 && '| '}
+                        EVM: {tokenBalances[selectedToken].evm}
+                      </span>
+                    )}
+                  </Typography>
+                )}
+              </Box>
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
