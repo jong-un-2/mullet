@@ -87,40 +87,7 @@ function createMarsClaimFarmRewardsInstruction(accounts: {
   });
 }
 
-/**
- * 动态读取 UserState 内部的 farm_state
- */
-async function readFarmStateFromUserState(
-  connection: Connection,
-  userState: PublicKey,
-  sdkFarmState: PublicKey
-): Promise<PublicKey> {
-  console.log(`\n🔍 [readFarmStateFromUserState] 开始读取`);
-  console.log(`   UserState: ${userState.toString()}`);
-  console.log(`   SDK farmState: ${sdkFarmState.toString()}`);
-  
-  const accountInfo = await connection.getAccountInfo(userState);
-  
-  if (!accountInfo || accountInfo.data.length < 40) {
-    console.warn(`⚠️  UserState 不存在或数据不足，使用 SDK farmState`);
-    return sdkFarmState;
-  }
-  
-  // UserState 结构：discriminator(8) + farm_state(32) + ...
-  const farmStateInUserState = new PublicKey(accountInfo.data.slice(8, 40));
-  
-  console.log(`📊 farm_state 对比:`);
-  console.log(`   SDK 提供: ${sdkFarmState.toString()}`);
-  console.log(`   链上实际: ${farmStateInUserState.toString()}`);
-  
-  if (!farmStateInUserState.equals(sdkFarmState)) {
-    console.warn(`⚠️ ⚠️ ⚠️  不匹配！必须使用链上实际值: ${farmStateInUserState.toString()}`);
-    return farmStateInUserState;
-  }
-  
-  console.log(`✅ 一致，使用: ${sdkFarmState.toString()}`);
-  return sdkFarmState;
-}
+// 直接使用 Kamino SDK 提供的 farm_state（已验证是正确的）
 
 /**
  * 处理单个 Farm 的所有奖励
@@ -158,18 +125,16 @@ async function processSingleFarm(params: {
   console.log(`\n${'='.repeat(80)}`);
   console.log(`🏦 处理 Farm`);
   console.log(`   UserState: ${userState.toString()}`);
-  console.log(`   SDK farmState: ${sdkFarmState.toString()}`);
+  console.log(`   Farm State: ${sdkFarmState.toString()}`);
   console.log(`   奖励数量: ${farmInstructions.length}`);
   console.log(`${'='.repeat(80)}`);
   
-  // 🔑 关键：动态读取 UserState 内部的 farm_state
-  const correctFarmState = await readFarmStateFromUserState(connection, userState, sdkFarmState);
-  console.log(`\n✅ ✅ ✅ 确定使用的 farm_state: ${correctFarmState.toString()}`);
-  console.log(`   (此 farm_state 将用于所有 ${farmInstructions.length} 个奖励)`);
+  // 直接使用 Kamino SDK 提供的 farm_state（已验证是正确的）
+  const farmState = sdkFarmState;
   
   // 推导 Farm Authority
   const [farmAuthority] = PublicKey.findProgramAddressSync(
-    [Buffer.from('authority'), correctFarmState.toBuffer()],
+    [Buffer.from('authority'), farmState.toBuffer()],
     KAMINO_FARMS_PROGRAM
   );
   
@@ -225,7 +190,7 @@ async function processSingleFarm(params: {
     
     // 创建 Mars claim 指令
     console.log(`\n     🏗️  创建 Mars claim 指令 #${rewardCounter}:`);
-    console.log(`        farmState: ${correctFarmState.toString()}`);
+    console.log(`        farmState: ${farmState.toString()}`);
     console.log(`        userFarm: ${userState.toString()}`);
     console.log(`        farmAuthority: ${farmAuthority.toString()}`);
     
@@ -234,7 +199,7 @@ async function processSingleFarm(params: {
       globalState: globalStatePda,
       vaultState: vaultStatePda,
       vaultMint: PYUSD_MINT,
-      farmState: correctFarmState,  // ✅ 使用正确的 farm_state
+      farmState: farmState,
       userFarm: userState,
       globalConfig: globalConfig,
       rewardMint: rewardMint,
