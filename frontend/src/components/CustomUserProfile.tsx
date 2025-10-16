@@ -686,15 +686,12 @@ const CustomUserProfile: React.FC = () => {
                       letterSpacing: '0.5px'
                     }}
                   >
-                    {walletInfo.externalSolConnected 
-                      ? `${solanaWallet?.address.slice(0, 8)}...${solanaWallet?.address.slice(-6)}`
-                      : `${walletInfo.solWallet?.address.slice(0, 8)}...${walletInfo.solWallet?.address.slice(-6)}`
-                    }
+                    {`${walletInfo.solWallet?.address.slice(0, 8)}...${walletInfo.solWallet?.address.slice(-6)}`}
                   </Typography>
                   <IconButton 
                     size="small" 
                     onClick={() => copyToClipboard(
-                      walletInfo.externalSolConnected ? solanaWallet!.address : walletInfo.solWallet.address, 
+                      walletInfo.solWallet.address, 
                       'sol'
                     )}
                     sx={{ 
@@ -707,7 +704,7 @@ const CustomUserProfile: React.FC = () => {
                   <IconButton 
                     size="small"
                     onClick={() => openInExplorer(
-                      walletInfo.externalSolConnected ? solanaWallet!.address : walletInfo.solWallet.address,
+                      walletInfo.solWallet.address,
                       'solana'
                     )}
                     sx={{ 
