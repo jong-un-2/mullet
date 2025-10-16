@@ -26,7 +26,7 @@ import {
 } from "@kamino-finance/klend-sdk";
 import { Farms } from "@kamino-finance/farms-sdk";
 import { Decimal } from "decimal.js";
-import { getCachedData, setCachedData } from './useVaultDataCache';
+import { getCachedData, setCachedData, clearCache } from './useVaultDataCache';
 
 // Kamino Vault 配置
 const VAULT_ADDRESS = "A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK";
@@ -69,7 +69,7 @@ const EMPTY_POSITION: UserVaultPosition = {
 /**
  * 获取用户在 Kamino Vault 中的持仓
  */
-export const useUserVaultPosition = (userAddress: string | null): UserVaultPosition => {
+export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?: number): UserVaultPosition => {
   const { connection } = useConnection();
   const [position, setPosition] = useState<UserVaultPosition>(EMPTY_POSITION);
 
@@ -78,6 +78,12 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
     let isCancelled = false;
 
     const fetchUserPosition = async () => {
+      // 如果 refreshTrigger 变化，清除缓存强制刷新
+      if (refreshTrigger !== undefined && refreshTrigger > 0) {
+        console.log('🔄 [useUserVaultPosition] refreshTrigger changed, clearing cache');
+        clearCache(userAddress);
+      }
+      
       // 1. 检查缓存
       const cachedData = getCachedData(userAddress);
       if (cachedData) {
@@ -374,7 +380,7 @@ export const useUserVaultPosition = (userAddress: string | null): UserVaultPosit
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [userAddress, connection]);
+  }, [userAddress, connection, refreshTrigger]);
 
   return position;
 };

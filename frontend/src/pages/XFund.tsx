@@ -221,7 +221,7 @@ const XFundPage = () => {
   const { getBalance: getSolanaBalance } = useSolanaBalance(userWalletAddress);
   
   // Get user's vault position (Total Supplied)
-  const userVaultPosition = useUserVaultPosition(userWalletAddress || null);
+  const userVaultPosition = useUserVaultPosition(userWalletAddress || null, refreshTrigger);
   
   // Calculate current vault stats from historical data
   const getCurrentVaultStats = () => {
