@@ -299,18 +299,25 @@ const XStockPage = () => {
       solanaWallets: solanaWallets.map(w => ({ address: w.address }))
     });
     
-    if (authenticated && wallets.length > 0) {
+    // 检查钱包是否连接，不依赖 authenticated 标志
+    if (wallets.length > 0) {
       const ethWallet = wallets.find(w => w.address.startsWith('0x'));
       if (ethWallet) {
         setUserAddress(ethWallet.address);
         console.log('✅ ETH wallet set:', ethWallet.address);
       } else {
         console.log('⚠️ No ETH wallet found in wallets array');
+        setUserAddress(''); // 清空地址
       }
+    } else {
+      setUserAddress(''); // 没有钱包时清空地址
     }
-    if (authenticated && solanaWallets.length > 0) {
+    
+    if (solanaWallets.length > 0) {
       setSolanaAddress(solanaWallets[0].address);
       console.log('✅ Solana wallet set:', solanaWallets[0].address);
+    } else {
+      setSolanaAddress(''); // 没有钱包时清空地址
     }
   }, [authenticated, wallets, solanaWallets]);
 
