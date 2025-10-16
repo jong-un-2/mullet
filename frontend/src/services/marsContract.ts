@@ -100,8 +100,7 @@ async function processSingleFarm(params: {
   vaultStatePda: PublicKey;
   transaction: Transaction;
   setupInstructions: TransactionInstruction[];
-  rewardCounter: number;
-}): Promise<number> {
+}): Promise<void> {
   const {
     connection,
     userPublicKey,
@@ -112,7 +111,8 @@ async function processSingleFarm(params: {
     setupInstructions,
   } = params;
   
-  let rewardCounter = params.rewardCounter;
+  // 每个 Farm 的 reward_index 从 0 开始！
+  let farmRewardIndex = 0;
   
   // 从第一个指令中提取 Farm 信息
   const firstIx = farmInstructions[0];
@@ -188,8 +188,8 @@ async function processSingleFarm(params: {
       );
     }
     
-    // 创建 Mars claim 指令
-    console.log(`\n     🏗️  创建 Mars claim 指令 #${rewardCounter}:`);
+    // 创建 Mars claim 指令（使用当前 Farm 的 reward_index）
+    console.log(`\n     🏗️  创建 Mars claim 指令 (reward_index=${farmRewardIndex}):`);
     console.log(`        farmState: ${farmState.toString()}`);
     console.log(`        userFarm: ${userState.toString()}`);
     console.log(`        farmAuthority: ${farmAuthority.toString()}`);
@@ -210,14 +210,12 @@ async function processSingleFarm(params: {
       scopePrices: scopePrices,
       farmsProgram: KAMINO_FARMS_PROGRAM,
       rewardTokenProgram: tokenProgram,
-    }, rewardCounter);
+    }, farmRewardIndex);  // 使用当前 Farm 的索引
     
     console.log(`     ✅ Mars 指令已创建并添加到交易`);
     transaction.add(claimIx);
-    rewardCounter++;
+    farmRewardIndex++;  // 该 Farm 的下一个奖励
   }
-  
-  return rewardCounter;
 }
 
 /**
@@ -280,11 +278,10 @@ export async function createClaimRewardsTransaction(
     transaction.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
     
     const setupInstructions: TransactionInstruction[] = [];
-    let rewardCounter = 0;
     
-    // 5. 分别处理每个 Farm
+    // 5. 分别处理每个 Farm（每个 Farm 的 reward_index 独立计数）
     for (const farmInstructions of Array.from(instructionsByFarm.values())) {
-      rewardCounter = await processSingleFarm({
+      await processSingleFarm({
         connection,
         userPublicKey,
         farmInstructions,
@@ -292,7 +289,6 @@ export async function createClaimRewardsTransaction(
         vaultStatePda,
         transaction,
         setupInstructions,
-        rewardCounter,
       });
     }
     
@@ -307,7 +303,7 @@ export async function createClaimRewardsTransaction(
     transaction.lastValidBlockHeight = lastValidBlockHeight;
     transaction.feePayer = userPublicKey;
     
-    console.log(`✅ 交易构建完成（共 ${rewardCounter} 个奖励）`);
+    console.log(`✅ 交易构建完成（共 ${instructionsByFarm.size} 个 Farm）`);
     return transaction;
     
   } catch (error) {
