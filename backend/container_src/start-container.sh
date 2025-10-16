@@ -53,7 +53,7 @@ echo "Starting health check server on port 9102..."
 cat > /tmp/health_server.sh << 'HEALTH_EOF'
 #!/bin/bash
 while true; do
-    echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHealthy" | nc -l -p 9102 -q 1 2>/dev/null || true
+    echo -e "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"status\":\"healthy\",\"service\":\"substreams-indexer\"}" | nc -l -p 9102 -q 1 2>/dev/null || true
 done
 HEALTH_EOF
 chmod +x /tmp/health_server.sh

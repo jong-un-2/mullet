@@ -89,14 +89,24 @@ export class SubstreamsIndexerContainer extends Container {
       method: "GET"
     });
     
-    // Container returns plain text "Healthy", wrap it in JSON
-    const text = await response.text();
-    return {
-      healthy: response.ok,
-      status: response.status,
-      message: text.trim(),
-      timestamp: Date.now()
-    };
+    // Container now returns JSON format
+    if (response.ok) {
+      const data = await response.json() as { status?: string; service?: string };
+      return {
+        healthy: true,
+        status: response.status,
+        message: data.status || 'healthy',
+        service: data.service || 'substreams-indexer',
+        timestamp: Date.now()
+      };
+    } else {
+      return {
+        healthy: false,
+        status: response.status,
+        message: 'Container unhealthy',
+        timestamp: Date.now()
+      };
+    }
   }
 
   /**
