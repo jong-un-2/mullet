@@ -574,7 +574,7 @@ const CustomUserProfile: React.FC = () => {
                     ETHEREUM_MAINNET
                   </Typography>
                   <Chip 
-                    label={walletInfo.externalEthConnected ? 'EXT' : 'EMB'} 
+                    label={walletInfo.externalEthConnected ? 'External' : 'Embedded'} 
                     size="small"
                     sx={{ 
                       fontSize: '0.65rem',
@@ -657,7 +657,7 @@ const CustomUserProfile: React.FC = () => {
                     SOLANA_MAINNET
                   </Typography>
                   <Chip 
-                    label={walletInfo.externalSolConnected ? 'EXT' : 'EMB'} 
+                    label={walletInfo.externalSolConnected ? 'External' : 'Embedded'} 
                     size="small"
                     sx={{ 
                       fontSize: '0.65rem',
