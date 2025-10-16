@@ -285,9 +285,11 @@ export const SUPPORTED_CHAINS = {
   POLYGON: 137, 
   OPTIMISM: 10,
   ARBITRUM: 42161,
+  SOLANA: 1151111081099710, // LI.FI 使用的 Solana Chain ID
 } as const;
 
-export const SOLANA_CHAIN_ID = 101;
+// 向后兼容
+export const SOLANA_CHAIN_ID = 1151111081099710;
 
 // 导出常用代币地址
 export const COMMON_TOKENS = {

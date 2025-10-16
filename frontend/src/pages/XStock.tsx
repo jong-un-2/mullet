@@ -21,7 +21,8 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import Navigation from '../components/Navigation';
 import { TransactionProgress } from '../components/TransactionProgress';
-import { marsLiFiService, SUPPORTED_CHAINS } from '../services/marsLiFiService';
+import { marsLiFiService, SUPPORTED_CHAINS, SOLANA_CHAIN_ID } from '../services/marsLiFiService';
+import { checkBalance } from '../services/balanceService';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
@@ -242,18 +243,34 @@ const TOKENIZED_STOCKS = [
   },
 ];
 
-// 支付代币选项
+// 支付代币选项 - 优先使用 Solana 链
 const PAYMENT_TOKENS = [
+  // Solana 链代币（优先）
   { 
-    symbol: 'USDC', 
-    name: 'USD Coin', 
-    chainId: SUPPORTED_CHAINS.ETHEREUM,
-    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // 正确的 Ethereum USDC 地址
+    symbol: 'USDC (Solana)', 
+    name: 'USD Coin on Solana', 
+    chainId: SOLANA_CHAIN_ID,
+    address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Solana USDC
     decimals: 6
   },
   { 
-    symbol: 'USDT', 
-    name: 'Tether', 
+    symbol: 'SOL', 
+    name: 'Solana', 
+    chainId: SOLANA_CHAIN_ID,
+    address: '0x0000000000000000000000000000000000000000', // Native SOL (LI.FI 会识别)
+    decimals: 9
+  },
+  // Ethereum 链代币
+  { 
+    symbol: 'USDC (Ethereum)', 
+    name: 'USD Coin on Ethereum', 
+    chainId: SUPPORTED_CHAINS.ETHEREUM,
+    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Ethereum USDC
+    decimals: 6
+  },
+  { 
+    symbol: 'USDT (Ethereum)', 
+    name: 'Tether on Ethereum', 
     chainId: SUPPORTED_CHAINS.ETHEREUM,
     address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     decimals: 6
@@ -281,6 +298,8 @@ const XStockPage = () => {
   const [quote, setQuote] = useState<any>(null);
   const [userAddress, setUserAddress] = useState(''); // EVM 地址
   const [solanaAddress, setSolanaAddress] = useState(''); // Solana 地址
+  const [tokenBalance, setTokenBalance] = useState<string>('0'); // 代币余额
+  const [checkingBalance, setCheckingBalance] = useState(false);
   
   // 进度提示状态
   const [showProgress, setShowProgress] = useState(false);
@@ -337,8 +356,13 @@ const XStockPage = () => {
       return;
     }
 
-    if (!userAddress) {
-      setError('Please connect your wallet');
+    const inputAmount = parseFloat(amount);
+
+    // 根据支付代币的链选择对应的钱包地址
+    const fromAddress = paymentToken.chainId === SOLANA_CHAIN_ID ? solanaAddress : userAddress;
+    
+    if (!fromAddress) {
+      setError(`Please connect your ${paymentToken.chainId === SOLANA_CHAIN_ID ? 'Solana' : 'EVM'} wallet first`);
       return;
     }
 
@@ -346,9 +370,27 @@ const XStockPage = () => {
     setError('');
     
     try {
-      // 转换金额为最小单位（wei）
-      // USDC/USDT 是 6 decimals，ETH 是 18 decimals
-      const decimals = paymentToken.symbol === 'ETH' ? 18 : 6;
+      // 🔍 检查余额
+      console.log('💰 Checking balance before quote...');
+      setCheckingBalance(true);
+      const balanceResult = await checkBalance(paymentToken.address, paymentToken.chainId, fromAddress);
+      setTokenBalance(balanceResult.formatted);
+      setCheckingBalance(false);
+      
+      const balanceNum = parseFloat(balanceResult.formatted);
+      console.log(`💰 Balance: ${balanceResult.formatted} ${paymentToken.symbol}, Required: ${amount}`);
+      
+      if (balanceNum < inputAmount) {
+        setError(`❌ Insufficient balance. You have ${balanceResult.formatted} ${paymentToken.symbol}, but need ${amount}`);
+        setLoading(false);
+        return;
+      }
+      
+      console.log('✅ Balance check passed');
+      
+      // 继续获取报价
+      // 转换金额为最小单位
+      const decimals = paymentToken.decimals;
       const fromAmount = (parseFloat(amount) * Math.pow(10, decimals)).toString();
 
       console.log('🔵 Fetching quote with:', {
@@ -357,8 +399,10 @@ const XStockPage = () => {
         decimals,
         paymentToken: paymentToken.symbol,
         paymentTokenAddress: paymentToken.address,
+        chainId: paymentToken.chainId,
         stock: selectedStock.symbol,
-        user: userAddress
+        fromAddress,
+        toAddress: solanaAddress
       });
 
       // 使用选中股票的 Solana 代币地址作为目标代币
@@ -372,7 +416,8 @@ const XStockPage = () => {
       }
 
       console.log('🔵 Using addresses:', {
-        fromAddress: userAddress,
+        fromChain: paymentToken.chainId,
+        fromAddress,
         toAddress: solanaAddress,
       });
 
@@ -383,7 +428,7 @@ const XStockPage = () => {
         fromToken: paymentToken.address, // 使用代币地址而不是符号
         toToken, // Solana上的对应代币地址
         fromAmount, // 使用最小单位
-        fromAddress: userAddress, // EVM 地址（付款地址）
+        fromAddress, // 使用正确的链地址（Solana 链用 Solana 地址，EVM 链用 EVM 地址）
         toAddress: solanaAddress, // Solana 地址（接收地址）
       });
 
@@ -923,6 +968,16 @@ const XStockPage = () => {
                     ),
                   }}
                 />
+
+                {/* 余额显示 */}
+                {tokenBalance !== '0' && (
+                  <Box sx={{ mb: 2, textAlign: 'right' }}>
+                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                      💰 Balance: <span style={{ color: '#60a5fa', fontWeight: 600 }}>{tokenBalance} {paymentToken.symbol}</span>
+                      {checkingBalance && <CircularProgress size={12} sx={{ ml: 1 }} />}
+                    </Typography>
+                  </Box>
+                )}
 
                 {/* Get Quote Button */}
                 <Button
