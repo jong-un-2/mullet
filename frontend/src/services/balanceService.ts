@@ -50,6 +50,7 @@ const checkSolanaSOLBalance = async (walletAddress: string): Promise<BalanceResu
 
 /**
  * 检查 Solana SPL Token 余额
+ * 支持标准 Token Program 和 Token-2022 Program
  */
 const checkSolanaSPLTokenBalance = async (
   tokenMintAddress: string,
@@ -61,16 +62,42 @@ const checkSolanaSPLTokenBalance = async (
     const publicKey = new PublicKey(walletAddress);
     const tokenMint = new PublicKey(tokenMintAddress);
     
+    console.log(`🔍 Checking SPL Token:`, {
+      mint: tokenMintAddress,
+      wallet: walletAddress,
+      decimals
+    });
+    
+    // PYUSD 使用 Token-2022 program
+    const PYUSD_MINT = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo';
+    const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+    
+    // 判断是否使用 Token-2022 program
+    const programId = tokenMintAddress === PYUSD_MINT ? TOKEN_2022_PROGRAM_ID : undefined;
+    
+    console.log(`📋 Using program: ${programId ? 'Token-2022' : 'Standard Token Program'}`);
+    
     // 获取关联代币账户地址
-    const tokenAccount = await getAssociatedTokenAddress(tokenMint, publicKey);
+    const tokenAccount = await getAssociatedTokenAddress(
+      tokenMint, 
+      publicKey,
+      false, // allowOwnerOffCurve
+      programId // 指定 program ID
+    );
+    console.log(`📍 Associated Token Account: ${tokenAccount.toBase58()}`);
     
     // 尝试获取账户信息
     try {
-      const accountInfo = await getAccount(connection, tokenAccount);
+      const accountInfo = await getAccount(
+        connection, 
+        tokenAccount,
+        undefined, // commitment
+        programId // 指定 program ID
+      );
       const balance = Number(accountInfo.amount);
       const formattedBalance = balance / Math.pow(10, decimals);
       
-      console.log(`✅ SPL Token (${tokenMintAddress.slice(0, 8)}...) Balance: ${formattedBalance}`);
+      console.log(`✅ SPL Token (${tokenMintAddress.slice(0, 8)}...) Balance: ${formattedBalance} (raw: ${balance})`);
       
       return {
         balance: balance.toString(),
@@ -79,7 +106,7 @@ const checkSolanaSPLTokenBalance = async (
       };
     } catch (err) {
       // 账户不存在或余额为 0
-      console.log('⚠️ Token account not found or has 0 balance');
+      console.log('⚠️ Token account not found or has 0 balance. Error:', err);
       return {
         balance: '0',
         formatted: '0.0000',
