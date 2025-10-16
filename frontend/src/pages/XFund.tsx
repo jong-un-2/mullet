@@ -523,11 +523,19 @@ const XFundPage = () => {
         console.log('✅ EVM provider added');
       }
       
+      // 使用 Helius RPC 而不是公共节点，避免 403 错误
+      const customRpcUrl = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
       console.log(`🔧 Configuring LiFi SDK with ${providers.length} providers...`);
+      console.log('🔗 Using custom Solana RPC:', customRpcUrl);
+      
       createConfig({
         integrator: 'MarsLiquid',
         apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
         providers: providers,
+        // 配置 Solana RPC URL，避免使用公共节点
+        rpcUrls: {
+          1151111081099710: [customRpcUrl], // Solana Mainnet
+        },
       });
       
       console.log('📝 Executing route with LiFi SDK...');
@@ -751,10 +759,18 @@ const XFundPage = () => {
         getWalletAdapter: async () => walletAdapter as any
       });
 
+      // 使用 Helius RPC 而不是公共节点，避免 403 错误
+      const customRpcUrl = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+      console.log('🔗 Using custom Solana RPC:', customRpcUrl);
+      
       createConfig({
         integrator: 'MarsLiquid',
         apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
         providers: [solanaProvider],
+        // 配置 Solana RPC URL，避免使用公共节点
+        rpcUrls: {
+          1151111081099710: [customRpcUrl], // Solana Mainnet
+        },
       });
 
       // Execute swap

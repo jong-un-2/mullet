@@ -194,6 +194,12 @@ const checkEVMERC20Balance = async (
   chainId: number
 ): Promise<BalanceResult> => {
   try {
+    console.log(`🔍 Checking ERC20 Token:`, {
+      token: tokenAddress,
+      wallet: walletAddress,
+      chainId
+    });
+    
     const provider = getEVMProvider(chainId);
     
     const contract = new ethers.Contract(
@@ -205,14 +211,16 @@ const checkEVMERC20Balance = async (
       provider
     );
     
+    console.log(`📞 Calling balanceOf and decimals...`);
     const [balance, decimals] = await Promise.all([
       contract.balanceOf(walletAddress),
       contract.decimals()
     ]);
     
+    console.log(`📊 Raw balance: ${balance.toString()}, decimals: ${decimals}`);
     const formattedBalance = parseFloat(ethers.formatUnits(balance, decimals));
     
-    console.log(`✅ ERC20 token (${tokenAddress.slice(0, 8)}...) balance: ${formattedBalance}`);
+    console.log(`✅ ERC20 token (${tokenAddress.slice(0, 8)}...) balance: ${formattedBalance} (formatted from ${balance.toString()})`);
     
     return {
       balance: balance.toString(),
