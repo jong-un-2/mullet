@@ -130,15 +130,30 @@ async function createClaimRewardsThroughMarsContract(
 ): Promise<Transaction | null> {
   console.log('📋 使用 Mars 合约方式 claim rewards');
   
+  // 0. 先检查 Pending Rewards（可选，用于更好的用户体验）
+  try {
+    const pendingRewards = await sdkHelper.getUserPendingRewards(PYUSD_VAULT);
+    console.log('💰 Pending Rewards:');
+    if (pendingRewards.size === 0) {
+      console.log('   ℹ️  暂无可领取的奖励');
+      return null;
+    }
+    for (const [mint, amount] of pendingRewards.entries()) {
+      console.log(`   💵 ${mint.slice(0, 8)}... : ${amount.toFixed(6)} tokens`);
+    }
+  } catch (error) {
+    console.warn('⚠️  无法获取 pending rewards，继续尝试构建交易:', error);
+  }
+  
   // 1. 使用 Kamino SDK 获取 claim 指令（这会告诉我们有哪些奖励）
   const kaminoClaimIxs = await sdkHelper.getClaimRewardsInstructions(PYUSD_VAULT);
   
   if (!kaminoClaimIxs || kaminoClaimIxs.length === 0) {
-    console.log('ℹ️  没有可领取的奖励');
+    console.log('ℹ️  SDK 未返回 claim 指令，可能没有可领取的奖励');
     return null;
   }
   
-  console.log(`✅ Kamino SDK 返回了 ${kaminoClaimIxs.length} 个奖励指令`);
+  console.log(`✅ Kamino SDK 返回了 ${kaminoClaimIxs.length} 个 harvestReward 指令`);
   
   // 2. 从 Kamino harvestReward 指令中提取真正的 farmState 地址
   // ⚠️ 重要：不要使用 getDepositAndStakeInfo 的 farmAccounts.farmState，那个是 token vault！
@@ -190,27 +205,30 @@ async function createClaimRewardsThroughMarsContract(
   const setupInstructions: TransactionInstruction[] = [];
   
   // 从 Kamino 指令中提取奖励信息
-  console.log(`📝 从 ${kaminoClaimIxs.length} 个 Kamino 指令中提取奖励信息`);
+  // ⚠️ 注意：Kamino SDK 现在只返回 harvestReward 指令（11个账户）
+  // ATA 创建指令（6个账户）已经被 SDK 内部处理
+  console.log(`📝 处理 ${kaminoClaimIxs.length} 个 Kamino harvestReward 指令`);
   
   for (let rewardIndex = 0; rewardIndex < kaminoClaimIxs.length; rewardIndex++) {
     const kaminoIx = kaminoClaimIxs[rewardIndex];
-    
-    // 🔍 调试：检查 Kamino SDK 返回的指令结构
-    console.log(`🔍 Kamino 指令 ${rewardIndex} 结构:`, {
-      hasKeys: !!kaminoIx.keys,
-      hasAccounts: !!kaminoIx.accounts,
-      keysLength: kaminoIx.keys?.length,
-      accountsLength: kaminoIx.accounts?.length,
-    });
     
     // Kamino SDK 可能返回的是它们自己的格式，而不是标准的 TransactionInstruction
     // 尝试访问 accounts 字段（Kamino 格式）或 keys 字段（标准格式）
     const accounts = kaminoIx.accounts || kaminoIx.keys;
     
-    if (!accounts || accounts.length < 6) {
-      console.warn(`⚠️  Reward ${rewardIndex} 指令账户不足，跳过`);
+    if (!accounts || accounts.length < 10) {
+      console.warn(`⚠️  指令 ${rewardIndex} 账户数不足 (${accounts?.length || 0})，跳过（可能是 ATA 创建指令）`);
+      
+      // 如果是 ATA 创建指令（6个账户），添加到 setupInstructions
+      if (accounts && accounts.length >= 6 && accounts.length < 10) {
+        console.log(`✅ 检测到 ATA 创建指令，添加到 setupInstructions`);
+        setupInstructions.push(kaminoIx);
+      }
       continue;
     }
+    
+    console.log(`✅ 处理 harvestReward 指令 ${rewardIndex + 1}/${kaminoClaimIxs.length} (${accounts.length} 个账户)`);
+    
     
     // 🔍 打印所有账户地址以确定正确的顺序
     console.log(`🔍 Kamino 指令 ${rewardIndex} 所有账户:`, accounts.map((acc: any, idx: number) => {
