@@ -38,6 +38,8 @@ import { useVaultHistoricalData } from '../hooks/useVaultHistoricalData';
 import { useMarsContract } from '../hooks/useMarsContract';
 import { useUserVaultPosition } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
+import { TokenIcon } from '../components/ChainIcons';
+import { SOLANA_CHAIN_ID, SUPPORTED_CHAINS } from '../services/marsLiFiService';
 import { createConfig, getRoutes, executeRoute, EVM, Solana } from '@lifi/sdk';
 import type { RoutesRequest } from '@lifi/sdk';
 import { createWalletClient, custom } from 'viem';
@@ -62,7 +64,7 @@ ChartJS.register(
 const XFundPage = () => {
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [selectedToken, setSelectedToken] = useState('USDC');
+  const [selectedToken, setSelectedToken] = useState('PYUSD-Solana'); // Format: TOKEN-Chain
   const [chartView, setChartView] = useState<'TVL' | 'APY'>('APY');
   const [activeTab, setActiveTab] = useState(0); // 0 = Deposit, 1 = Withdraw (default to Deposit)
   const [historyView, setHistoryView] = useState<'earning' | 'history'>('earning');
@@ -214,7 +216,7 @@ const XFundPage = () => {
   const currentOpportunity = getCurrentOpportunity();
 
   // Get real Solana wallet balances
-  const { getBalance: getSolanaBalance, loading: balanceLoading } = useSolanaBalance(userWalletAddress);
+  const { getBalance: getSolanaBalance } = useSolanaBalance(userWalletAddress);
   
   // Get user's vault position (Total Supplied)
   const userVaultPosition = useUserVaultPosition(userWalletAddress || null);
@@ -257,30 +259,6 @@ const XFundPage = () => {
 
   const vaultStats = getCurrentVaultStats();
   
-  // Token addresses mapping
-  const TOKEN_ADDRESSES: {[key: string]: {solana: string, ethereum: string, decimals: number}} = {
-    'USDC': {
-      solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC on Solana
-      ethereum: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC on Ethereum
-      decimals: 6
-    },
-    'USDT': {
-      solana: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT on Solana
-      ethereum: '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT on Ethereum
-      decimals: 6
-    },
-    'PYUSD': {
-      solana: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', // PYUSD on Solana
-      ethereum: '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8', // PYUSD on Ethereum
-      decimals: 6
-    },
-    'SOL': {
-      solana: '0x0000000000000000000000000000000000000000', // Native SOL
-      ethereum: '', // SOL 不在 Ethereum 上
-      decimals: 9
-    }
-  };
-  
   // Get unified wallet balance for selected token (checks both Solana and EVM)
   const getWalletBalance = (token: string) => {
     if (!isWalletConnected) return '0';
@@ -302,59 +280,46 @@ const XFundPage = () => {
     const fetchBalances = async () => {
       if (!isWalletConnected || !selectedToken) return;
       
-      const tokenConfig = TOKEN_ADDRESSES[selectedToken];
-      if (!tokenConfig) return;
+      const token = getCurrentToken();
+      if (!token) return;
       
-      let solanaBalance = '0';
-      let evmBalance = '0';
+      let balance = '0';
       
       try {
-        // 获取 Solana 余额
-        if (userWalletAddress && tokenConfig.solana) {
-          console.log(`🔍 Checking Solana balance for ${selectedToken}...`);
+        // 根据链类型检查余额
+        if (token.chain === 'solana' && userWalletAddress) {
+          console.log(`🔍 Checking Solana balance for ${token.symbol}...`);
           const solResult = await checkBalance(
-            tokenConfig.solana,
-            1151111081099710, // Solana Chain ID for LiFi
+            token.address,
+            token.chainId,
             userWalletAddress,
-            tokenConfig.decimals
+            token.decimals
           );
-          solanaBalance = solResult.formatted;
-          console.log(`✅ Solana ${selectedToken}: ${solanaBalance}`);
-        }
-      } catch (err) {
-        console.warn(`⚠️ Failed to check Solana balance for ${selectedToken}:`, err);
-      }
-      
-      try {
-        // 获取 EVM 余额 (如果有 EVM 钱包地址)
-        if (ethAddress && tokenConfig.ethereum) {
-          console.log(`🔍 Checking Ethereum balance for ${selectedToken}...`);
+          balance = solResult.formatted;
+          console.log(`✅ Solana ${token.symbol}: ${balance}`);
+        } else if (token.chain === 'ethereum' && ethAddress) {
+          console.log(`🔍 Checking Ethereum balance for ${token.symbol}...`);
           const ethResult = await checkBalance(
-            tokenConfig.ethereum,
-            1, // Ethereum Mainnet
+            token.address,
+            token.chainId,
             ethAddress,
-            tokenConfig.decimals
+            token.decimals
           );
-          evmBalance = ethResult.formatted;
-          console.log(`✅ Ethereum ${selectedToken}: ${evmBalance}`);
+          balance = ethResult.formatted;
+          console.log(`✅ Ethereum ${token.symbol}: ${balance}`);
         }
       } catch (err) {
-        console.warn(`⚠️ Failed to check Ethereum balance for ${selectedToken}:`, err);
+        console.warn(`⚠️ Failed to check balance for ${token.symbol}:`, err);
       }
       
-      // 计算总余额
-      const solNum = parseFloat(solanaBalance) || 0;
-      const evmNum = parseFloat(evmBalance) || 0;
-      const total = (solNum + evmNum).toFixed(4);
-      
-      console.log(`💰 Total ${selectedToken} balance: ${total} (Solana: ${solanaBalance}, EVM: ${evmBalance})`);
+      console.log(`💰 Total ${token.symbol} balance: ${balance} on ${token.chainName}`);
       
       setTokenBalances(prev => ({
         ...prev,
         [selectedToken]: {
-          solana: solanaBalance,
-          evm: evmBalance,
-          total
+          solana: token.chain === 'solana' ? balance : '0',
+          evm: token.chain === 'ethereum' ? balance : '0',
+          total: balance
         }
       }));
     };
@@ -375,10 +340,11 @@ const XFundPage = () => {
     }
 
     const amount = parseFloat(depositAmount);
+    const currentToken = getCurrentToken();
 
     try {
-      // 如果选择 PYUSD，直接存款
-      if (selectedToken === 'PYUSD') {
+      // 如果选择 PYUSD on Solana，直接存款
+      if (currentToken.symbol === 'PYUSD' && currentToken.chain === 'solana') {
         console.log('🚀 开始 PYUSD 存款并质押到 Farm...');
         
         setShowProgress(true);
@@ -868,13 +834,105 @@ const XFundPage = () => {
     }
   };
 
-  const tokenConfigs = {
-    USDC: { symbol: 'USDC', name: 'USD Coin', color: '#2775ca' },
-    USDT: { symbol: 'USDT', name: 'Tether USD', color: '#26a17b' },
-    PYUSD: { symbol: 'PYUSD', name: 'PayPal USD', color: '#0070ba' },
+  // 支付代币选项 - 支持多链，每个代币-链组合作为独立选项
+  const tokenConfigs: Record<string, { 
+    symbol: string; 
+    name: string; 
+    chainName: string;
+    chain: 'solana' | 'ethereum';
+    chainId: number;
+    address: string;
+    decimals: number;
+    color: string;
+  }> = {
+    // Solana 链代币
+    'PYUSD-Solana': {
+      symbol: 'PYUSD',
+      name: 'PayPal USD',
+      chainName: 'Solana',
+      chain: 'solana',
+      chainId: SOLANA_CHAIN_ID,
+      address: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',
+      decimals: 6,
+      color: '#0070ba'
+    },
+    'USDC-Solana': {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      chainName: 'Solana',
+      chain: 'solana',
+      chainId: SOLANA_CHAIN_ID,
+      address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      decimals: 6,
+      color: '#2775ca'
+    },
+    'USDT-Solana': {
+      symbol: 'USDT',
+      name: 'Tether',
+      chainName: 'Solana',
+      chain: 'solana',
+      chainId: SOLANA_CHAIN_ID,
+      address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+      decimals: 6,
+      color: '#26a17b'
+    },
+    'SOL-Solana': {
+      symbol: 'SOL',
+      name: 'Solana',
+      chainName: 'Solana',
+      chain: 'solana',
+      chainId: SOLANA_CHAIN_ID,
+      address: '0x0000000000000000000000000000000000000000',
+      decimals: 9,
+      color: '#14F195'
+    },
+    // Ethereum 链代币
+    'PYUSD-Ethereum': {
+      symbol: 'PYUSD',
+      name: 'PayPal USD',
+      chainName: 'Ethereum',
+      chain: 'ethereum',
+      chainId: SUPPORTED_CHAINS.ETHEREUM,
+      address: '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8',
+      decimals: 6,
+      color: '#0070ba'
+    },
+    'USDC-Ethereum': {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      chainName: 'Ethereum',
+      chain: 'ethereum',
+      chainId: SUPPORTED_CHAINS.ETHEREUM,
+      address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      decimals: 6,
+      color: '#2775ca'
+    },
+    'USDT-Ethereum': {
+      symbol: 'USDT',
+      name: 'Tether',
+      chainName: 'Ethereum',
+      chain: 'ethereum',
+      chainId: SUPPORTED_CHAINS.ETHEREUM,
+      address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      decimals: 6,
+      color: '#26a17b'
+    },
+    'ETH-Ethereum': {
+      symbol: 'ETH',
+      name: 'Ethereum',
+      chainName: 'Ethereum',
+      chain: 'ethereum',
+      chainId: SUPPORTED_CHAINS.ETHEREUM,
+      address: '0x0000000000000000000000000000000000000000',
+      decimals: 18,
+      color: '#627EEA'
+    },
   };
 
-  const getCurrentToken = () => tokenConfigs[selectedToken as keyof typeof tokenConfigs];
+  // 获取当前选中的代币配置
+  const getCurrentToken = () => {
+    return tokenConfigs[selectedToken] || tokenConfigs['PYUSD-Solana'];
+  };
 
   // Chart data - using real historical data from Neon PostgreSQL
   const getChartData = () => {
@@ -1524,7 +1582,11 @@ const XFundPage = () => {
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
                     {activeTab === 0 
-                      ? '~$0.00' 
+                      ? (() => {
+                          const token = getCurrentToken();
+                          const balance = getWalletBalance(token.symbol);
+                          return `${parseFloat(balance).toFixed(4)} ${token.symbol}`;
+                        })()
                       : isWalletConnected && userVaultPosition.totalSupplied > 0
                         ? `${userVaultPosition.totalSupplied.toFixed(4)} PYUSD`
                         : '0 PYUSD'
@@ -1533,40 +1595,35 @@ const XFundPage = () => {
                 </Box>
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1.5 }}>
-                  <FormControl size="small" sx={{ minWidth: 110 }}>
+                  <FormControl size="small" sx={{ minWidth: 140 }}>
                     <Select
                       value={selectedToken}
                       onChange={(e: any) => setSelectedToken(e.target.value)}
                       renderValue={() => {
                         const token = getCurrentToken();
                         return (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                            <Box
-                              sx={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: '6px',
-                                bgcolor: token.color,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '12px',
-                                color: 'white',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              {token.symbol[0]}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <TokenIcon 
+                              symbol={token.symbol} 
+                              chain={token.chain} 
+                              size={28} 
+                              showChainBadge={true} 
+                            />
+                            <Box>
+                              <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                                {token.symbol}
+                              </Typography>
+                              <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                {token.chainName}
+                              </Typography>
                             </Box>
-                            <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>
-                              {token.symbol}
-                            </Typography>
                           </Box>
                         );
                       }}
                       sx={{
                         backgroundColor: 'rgba(255, 255, 255, 0.1)',
                         borderRadius: 1.5,
-                        minHeight: 36,
+                        minHeight: 44,
                         '& .MuiOutlinedInput-notchedOutline': {
                           border: 'none',
                         },
@@ -1589,34 +1646,43 @@ const XFundPage = () => {
                             backdropFilter: 'blur(10px)',
                             border: '1px solid rgba(255, 255, 255, 0.2)',
                             borderRadius: 2,
+                            maxHeight: 400,
                           },
                         },
                       }}
                     >
-                      {Object.entries(tokenConfigs)
-                        .map(([key, config]) => (
-                        <MenuItem key={key} value={key} sx={{ color: 'white' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box
-                              sx={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: '4px',
-                                bgcolor: config.color,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '12px',
-                                color: 'white',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              {config.symbol[0]}
+                      {Object.entries(tokenConfigs).map(([key, token]) => {
+                        return (
+                          <MenuItem 
+                            key={key} 
+                            value={key} 
+                            sx={{ 
+                              color: 'white',
+                              py: 1.5,
+                              '&:hover': {
+                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                              }
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                              <TokenIcon 
+                                symbol={token.symbol} 
+                                chain={token.chain} 
+                                size={32} 
+                                showChainBadge={true} 
+                              />
+                              <Box sx={{ flex: 1 }}>
+                                <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                                  {token.symbol}
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                  {token.name} • {token.chainName}
+                                </Typography>
+                              </Box>
                             </Box>
-                            {config.symbol}
-                          </Box>
-                        </MenuItem>
-                      ))}
+                          </MenuItem>
+                        );
+                      })}
                     </Select>
                   </FormControl>
                   <Box sx={{ flex: 1 }} />
@@ -1645,31 +1711,6 @@ const XFundPage = () => {
                     }}
                   />
                 </Box>
-                
-                {activeTab === 0 && (
-                  <Box>
-                    <Typography variant="body2" sx={{ color: '#94a3b8', mb: 0.5, fontSize: '0.85rem' }}>
-                      Available: {isWalletConnected ? 
-                        balanceLoading ? 
-                          'Loading...' : 
-                          `${getWalletBalance(selectedToken)} ${selectedToken}`
-                        : '0'}
-                    </Typography>
-                    {isWalletConnected && tokenBalances[selectedToken] && (
-                      <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem', fontStyle: 'italic' }}>
-                        {parseFloat(tokenBalances[selectedToken].solana) > 0 && (
-                          <span>Solana: {tokenBalances[selectedToken].solana} </span>
-                        )}
-                        {parseFloat(tokenBalances[selectedToken].evm) > 0 && (
-                          <span>
-                            {parseFloat(tokenBalances[selectedToken].solana) > 0 && '| '}
-                            EVM: {tokenBalances[selectedToken].evm}
-                          </span>
-                        )}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
 
                 <Box sx={{ display: 'flex', gap: 0.75 }}>
                   <Button
@@ -1897,11 +1938,13 @@ const XFundPage = () => {
                       },
                     }}
                   >
-                    {Object.entries(tokenConfigs).map(([key, config]) => (
-                      <MenuItem key={key} value={key} sx={{ color: 'white' }}>
-                        {config.symbol}
-                      </MenuItem>
-                    ))}
+                    {Object.entries(tokenConfigs).map(([key, token]) => {
+                      return (
+                        <MenuItem key={key} value={key} sx={{ color: 'white' }}>
+                          {token.symbol}
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
                 </FormControl>
               </Box>
