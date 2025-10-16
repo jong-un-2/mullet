@@ -369,6 +369,43 @@ const XStockPage = () => {
     }
   }, [authenticated, wallets, solanaWallets]);
 
+  // 自动检查代币余额
+  useEffect(() => {
+    const checkTokenBalance = async () => {
+      // 确定使用哪个钱包地址
+      let fromAddress = '';
+      if (paymentToken.chain === 'solana') {
+        fromAddress = solanaAddress;
+      } else {
+        fromAddress = userAddress;
+      }
+
+      if (!fromAddress) {
+        setTokenBalance('0');
+        return;
+      }
+
+      try {
+        setCheckingBalance(true);
+        const balanceResult = await checkBalance(
+          paymentToken.address, 
+          paymentToken.chainId, 
+          fromAddress,
+          paymentToken.decimals
+        );
+        setTokenBalance(balanceResult.formatted);
+        console.log(`💰 Auto-checked balance: ${balanceResult.formatted} ${paymentToken.symbol}`);
+      } catch (error) {
+        console.error('Failed to check balance:', error);
+        setTokenBalance('0');
+      } finally {
+        setCheckingBalance(false);
+      }
+    };
+
+    checkTokenBalance();
+  }, [paymentToken, userAddress, solanaAddress]);
+
   // Auto-fetch quote when stock changes (if amount is already entered)
   useEffect(() => {
     // Only auto-fetch if user has already entered an amount and gotten a quote before
@@ -402,7 +439,12 @@ const XStockPage = () => {
       // 🔍 检查余额
       console.log('💰 Checking balance before quote...');
       setCheckingBalance(true);
-      const balanceResult = await checkBalance(paymentToken.address, paymentToken.chainId, fromAddress);
+      const balanceResult = await checkBalance(
+        paymentToken.address, 
+        paymentToken.chainId, 
+        fromAddress,
+        paymentToken.decimals
+      );
       setTokenBalance(balanceResult.formatted);
       setCheckingBalance(false);
       
@@ -1014,7 +1056,12 @@ const XStockPage = () => {
                       
                       return (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <TokenIcon symbol={token.symbol} chain={token.chain} size={28} showChainBadge={true} />
+                          <TokenIcon 
+                            symbol={token.symbol} 
+                            chain={token.chain} 
+                            size={28} 
+                            showChainBadge={token.symbol !== 'SOL' && token.symbol !== 'ETH'} 
+                          />
                           <Box>
                             <Typography sx={{ fontWeight: 600, fontSize: '1rem' }}>
                               {token.symbol}
@@ -1052,7 +1099,12 @@ const XStockPage = () => {
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
-                          <TokenIcon symbol={token.symbol} chain={token.chain} size={32} showChainBadge={true} />
+                          <TokenIcon 
+                            symbol={token.symbol} 
+                            chain={token.chain} 
+                            size={32} 
+                            showChainBadge={token.symbol !== 'SOL' && token.symbol !== 'ETH'} 
+                          />
                           <Box sx={{ flex: 1 }}>
                             <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
                               {token.symbol}
@@ -1131,11 +1183,14 @@ const XStockPage = () => {
                 />
 
                 {/* 余额显示 */}
-                {tokenBalance !== '0' && (
+                {(userAddress || solanaAddress) && (
                   <Box sx={{ mb: 2, textAlign: 'right' }}>
                     <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                      💰 Balance: <span style={{ color: '#60a5fa', fontWeight: 600 }}>{tokenBalance} {paymentToken.symbol}</span>
-                      {checkingBalance && <CircularProgress size={12} sx={{ ml: 1 }} />}
+                      💰 Balance: {checkingBalance ? (
+                        <CircularProgress size={12} sx={{ ml: 1 }} />
+                      ) : (
+                        <span style={{ color: '#60a5fa', fontWeight: 600 }}>{tokenBalance} {paymentToken.symbol}</span>
+                      )}
                     </Typography>
                   </Box>
                 )}
