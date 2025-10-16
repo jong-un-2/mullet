@@ -405,10 +405,11 @@ export class KaminoSDKHelper {
 
   /**
    * 获取 Claim Rewards 指令
-   * 从 Kamino Farm 领取所有 pending rewards
+   * 从 Kamino Farm 领取所有 pending rewards（包括 Vault Farm 和 Reserve Farms）
    * 
    * ⚠️ 重要修复（2025-10-16）：
    * - Vault Farm: isDelegated = false（直接查询用户的 UserState）
+   * - Reserve Farm: isDelegated = true + 提供 delegatees（避免 getProgramAccounts）
    * - 避免触发 getProgramAccounts 导致 RPC 限制
    */
   async getClaimRewardsInstructions(vaultAddress: PublicKey): Promise<any[] | null> {
@@ -417,59 +418,113 @@ export class KaminoSDKHelper {
     try {
       // 导入 Farms SDK
       const { Farms, getUserStatePDA } = await import('@kamino-finance/farms-sdk');
-      const { UserState } = await import('@kamino-finance/klend-sdk');
+      const { UserState, Reserve, DEFAULT_PUBLIC_KEY } = await import('@kamino-finance/klend-sdk');
       const farmsClient = new Farms(this.rpc);
 
       // 获取 vault 状态
       const vault = new KaminoVault(vaultAddress.toBase58() as any);
       const vaultState = await vault.getState(this.rpc);
 
-      // 检查 vault 是否有 farm
-      if (!vaultState.vaultFarm || vaultState.vaultFarm.toString() === '11111111111111111111111111111111') {
-        console.log('ℹ️  Vault 没有关联 Farm，无需 claim rewards');
-        return null;
-      }
-
       const user = {
         address: this.userPublicKey.toBase58() as any,
         signAndSendTransactions: async () => [] as any,
       };
 
-      console.log('🔍 检查 Vault Farm pending rewards...');
-      console.log(`  - Farm: ${vaultState.vaultFarm.toString()}`);
-      console.log(`  - Vault: ${vault.address.toString()}`);
+      const allClaimIxs: any[] = [];
 
-      // ✅ 修复：检查 UserState 是否存在
-      const userStateAddress = await getUserStatePDA(
-        farmsClient.getProgramID(),
-        vaultState.vaultFarm,
-        this.userPublicKey.toBase58() as any
-      );
+      // 1. 处理 Vault Farm
+      if (vaultState.vaultFarm && vaultState.vaultFarm.toString() !== '11111111111111111111111111111111') {
+        console.log('🔍 检查 Vault Farm pending rewards...');
+        console.log(`  - Farm: ${vaultState.vaultFarm.toString()}`);
+        console.log(`  - Vault: ${vault.address.toString()}`);
 
-      // 检查 UserState 是否已初始化
-      const userState = await UserState.fetch(this.rpc, userStateAddress, farmsClient.getProgramID());
-      if (!userState) {
-        console.log('ℹ️  Vault Farm 的 UserState 不存在，跳过');
-        return null;
+        // ✅ 检查 UserState 是否存在
+        const userStateAddress = await getUserStatePDA(
+          farmsClient.getProgramID(),
+          vaultState.vaultFarm,
+          this.userPublicKey.toBase58() as any
+        );
+
+        const userState = await UserState.fetch(this.rpc, userStateAddress, farmsClient.getProgramID());
+        if (userState) {
+          console.log(`✅ Vault Farm UserState 存在: ${userStateAddress.toString()}`);
+
+          // ✅ Vault Farm: isDelegated = false
+          const vaultClaimIxs = await farmsClient.claimForUserForFarmAllRewardsIx(
+            user,
+            vaultState.vaultFarm,
+            false  // isDelegated = false（Vault Farm 不使用委托）
+          );
+
+          if (vaultClaimIxs && vaultClaimIxs.length > 0) {
+            console.log(`✅ 找到 ${vaultClaimIxs.length} 个 Vault Farm claim rewards 指令`);
+            allClaimIxs.push(...vaultClaimIxs);
+          }
+        } else {
+          console.log('ℹ️  Vault Farm 的 UserState 不存在，跳过');
+        }
       }
 
-      console.log(`✅ Vault Farm UserState 存在: ${userStateAddress.toString()}`);
+      // 2. 处理 Reserve Farms
+      const reserves = this.manager!.getVaultAllocations(vaultState);
+      console.log(`🔍 检查 ${reserves.size} 个 Reserve Farms...`);
 
-      // ✅ 修复：Vault Farm 设置 isDelegated = false
-      // 这样会直接查询用户的 UserState，不会触发 getProgramAccounts
-      const claimIxs = await farmsClient.claimForUserForFarmAllRewardsIx(
-        user,
-        vaultState.vaultFarm,
-        false  // isDelegated = false（Vault Farm 不使用委托）
-      );
+      for (const [reserveAddress] of reserves) {
+        try {
+          const reserveState = await Reserve.fetch(this.rpc, reserveAddress);
+          
+          if (!reserveState || reserveState.farmCollateral === DEFAULT_PUBLIC_KEY) {
+            continue;
+          }
 
-      if (!claimIxs || claimIxs.length === 0) {
+          // 计算 delegatee PDA (vault 的 farm user state)
+          const delegateePDA = await this.manager!.computeUserFarmStateForUserInVault(
+            farmsClient.getProgramID(),
+            vault.address,
+            reserveAddress,
+            this.userPublicKey.toBase58() as any
+          );
+
+          const userFarmStateAddress = await getUserStatePDA(
+            farmsClient.getProgramID(),
+            reserveState.farmCollateral,
+            delegateePDA[0]
+          );
+
+          // 检查 UserState 是否存在
+          const farmUserState = await UserState.fetch(this.rpc, userFarmStateAddress, farmsClient.getProgramID());
+          
+          if (!farmUserState) {
+            console.log(`ℹ️  Reserve Farm ${reserveState.farmCollateral.toString().slice(0, 8)}... 的 UserState 不存在，跳过`);
+            continue;
+          }
+
+          console.log(`✅ Reserve Farm ${reserveState.farmCollateral.toString().slice(0, 8)}... UserState 存在`);
+
+          // ✅ Reserve Farm: isDelegated = true + 提供 delegatees
+          const reserveClaimIxs = await farmsClient.claimForUserForFarmAllRewardsIx(
+            user,
+            reserveState.farmCollateral,
+            true,  // isDelegated = true（Reserve Farm 使用委托）
+            [delegateePDA[0]]  // 提供 delegatees，避免 getProgramAccounts
+          );
+
+          if (reserveClaimIxs && reserveClaimIxs.length > 0) {
+            console.log(`✅ 找到 ${reserveClaimIxs.length} 个 Reserve Farm claim rewards 指令`);
+            allClaimIxs.push(...reserveClaimIxs);
+          }
+        } catch (error: any) {
+          console.warn(`⚠️  处理 Reserve Farm ${reserveAddress.toString().slice(0, 8)}... 失败:`, error.message);
+        }
+      }
+
+      if (allClaimIxs.length === 0) {
         console.log('ℹ️  没有 pending rewards 可领取');
         return null;
       }
 
-      console.log(`✅ 找到 ${claimIxs.length} 个 Vault Farm claim rewards 指令`);
-      return claimIxs;
+      console.log(`✅ 总共找到 ${allClaimIxs.length} 个 claim rewards 指令（Vault Farm + Reserve Farms）`);
+      return allClaimIxs;
     } catch (error: any) {
       console.warn('⚠️  获取 claim rewards 指令失败:', error.message);
       return null;
