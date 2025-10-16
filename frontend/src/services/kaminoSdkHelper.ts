@@ -406,13 +406,18 @@ export class KaminoSDKHelper {
   /**
    * 获取 Claim Rewards 指令
    * 从 Kamino Farm 领取所有 pending rewards
+   * 
+   * ⚠️ 重要修复（2025-10-16）：
+   * - Vault Farm: isDelegated = false（直接查询用户的 UserState）
+   * - 避免触发 getProgramAccounts 导致 RPC 限制
    */
   async getClaimRewardsInstructions(vaultAddress: PublicKey): Promise<any[] | null> {
     this.ensureInitialized();
 
     try {
       // 导入 Farms SDK
-      const { Farms } = await import('@kamino-finance/farms-sdk');
+      const { Farms, getUserStatePDA } = await import('@kamino-finance/farms-sdk');
+      const { UserState } = await import('@kamino-finance/klend-sdk');
       const farmsClient = new Farms(this.rpc);
 
       // 获取 vault 状态
@@ -430,15 +435,32 @@ export class KaminoSDKHelper {
         signAndSendTransactions: async () => [] as any,
       };
 
-      console.log('🔍 检查 pending rewards...');
+      console.log('🔍 检查 Vault Farm pending rewards...');
       console.log(`  - Farm: ${vaultState.vaultFarm.toString()}`);
       console.log(`  - Vault: ${vault.address.toString()}`);
 
-      // 尝试获取 claim 指令
+      // ✅ 修复：检查 UserState 是否存在
+      const userStateAddress = await getUserStatePDA(
+        farmsClient.getProgramID(),
+        vaultState.vaultFarm,
+        this.userPublicKey.toBase58() as any
+      );
+
+      // 检查 UserState 是否已初始化
+      const userState = await UserState.fetch(this.rpc, userStateAddress, farmsClient.getProgramID());
+      if (!userState) {
+        console.log('ℹ️  Vault Farm 的 UserState 不存在，跳过');
+        return null;
+      }
+
+      console.log(`✅ Vault Farm UserState 存在: ${userStateAddress.toString()}`);
+
+      // ✅ 修复：Vault Farm 设置 isDelegated = false
+      // 这样会直接查询用户的 UserState，不会触发 getProgramAccounts
       const claimIxs = await farmsClient.claimForUserForFarmAllRewardsIx(
         user,
         vaultState.vaultFarm,
-        true  // claimAll = true
+        false  // isDelegated = false（Vault Farm 不使用委托）
       );
 
       if (!claimIxs || claimIxs.length === 0) {
@@ -446,7 +468,7 @@ export class KaminoSDKHelper {
         return null;
       }
 
-      console.log(`✅ 找到 ${claimIxs.length} 个 claim rewards 指令`);
+      console.log(`✅ 找到 ${claimIxs.length} 个 Vault Farm claim rewards 指令`);
       return claimIxs;
     } catch (error: any) {
       console.warn('⚠️  获取 claim rewards 指令失败:', error.message);
