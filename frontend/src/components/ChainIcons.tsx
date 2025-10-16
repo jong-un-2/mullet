@@ -122,14 +122,11 @@ export const TokenIcon = ({ symbol, chain, size = 32, showChainBadge = true }: T
       <Box
         sx={{
           position: 'absolute',
-          bottom: -2,
-          right: -2,
-          borderRadius: '50%',
-          border: '2px solid #0f172a',
-          backgroundColor: '#0f172a',
+          bottom: -4,
+          right: -4,
         }}
       >
-        <ChainIcon chain={chain} size={size * 0.5} />
+        <ChainIcon chain={chain} size={size * 0.4} />
       </Box>
     </Box>
   );
