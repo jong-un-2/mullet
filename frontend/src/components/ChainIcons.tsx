@@ -4,7 +4,7 @@
 import { Box } from '@mui/material';
 
 interface ChainIconProps {
-  chain: 'ethereum' | 'solana' | 'bsc' | 'arbitrum' | 'base' | 'polygon';
+  chain: 'ethereum' | 'solana';
   size?: number;
 }
 
@@ -35,32 +35,6 @@ export const ChainIcon = ({ chain, size = 24 }: ChainIconProps) => {
         <path d="M8.5 16h13v1H8.5v-1z" fill="#000"/>
       </svg>
     ),
-    bsc: (
-      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="16" fill="#F3BA2F"/>
-        <path d="M16 8l-2 2-2-2-4 4 2 2-2 2 4 4 2-2 2 2 4-4-2-2 2-2-4-4z" fill="#fff"/>
-      </svg>
-    ),
-    arbitrum: (
-      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="16" fill="#28A0F0"/>
-        <path d="M16 6l8 14H8L16 6z" fill="#fff"/>
-        <path d="M16 10l-5 8.5h10L16 10z" fill="#28A0F0"/>
-      </svg>
-    ),
-    base: (
-      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="16" fill="#0052FF"/>
-        <path d="M16 24c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8z" fill="#fff"/>
-        <path d="M16 20c2.209 0 4-1.791 4-4s-1.791-4-4-4-4 1.791-4 4 1.791 4 4 4z" fill="#0052FF"/>
-      </svg>
-    ),
-    polygon: (
-      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="16" fill="#8247E5"/>
-        <path d="M21 11l-5 3-3-2-5 3v8l5-3 3 2 5-3v-8z" fill="#fff"/>
-      </svg>
-    ),
   };
 
   return (
@@ -83,7 +57,7 @@ export const ChainIcon = ({ chain, size = 24 }: ChainIconProps) => {
  */
 interface TokenIconProps {
   symbol: string;
-  chain: 'ethereum' | 'solana' | 'bsc' | 'arbitrum' | 'base' | 'polygon';
+  chain: 'ethereum' | 'solana';
   size?: number;
   showChainBadge?: boolean;
 }
