@@ -291,11 +291,26 @@ const XStockPage = () => {
   const [totalTxSteps, setTotalTxSteps] = useState(0);
 
   useEffect(() => {
+    console.log('🔍 XStock wallet check:', {
+      authenticated,
+      walletsCount: wallets.length,
+      solanaWalletsCount: solanaWallets.length,
+      wallets: wallets.map(w => ({ address: w.address, walletClientType: w.walletClientType })),
+      solanaWallets: solanaWallets.map(w => ({ address: w.address }))
+    });
+    
     if (authenticated && wallets.length > 0) {
-      setUserAddress(wallets[0].address);
+      const ethWallet = wallets.find(w => w.address.startsWith('0x'));
+      if (ethWallet) {
+        setUserAddress(ethWallet.address);
+        console.log('✅ ETH wallet set:', ethWallet.address);
+      } else {
+        console.log('⚠️ No ETH wallet found in wallets array');
+      }
     }
     if (authenticated && solanaWallets.length > 0) {
       setSolanaAddress(solanaWallets[0].address);
+      console.log('✅ Solana wallet set:', solanaWallets[0].address);
     }
   }, [authenticated, wallets, solanaWallets]);
 
@@ -769,7 +784,7 @@ const XStockPage = () => {
                   </Box>
                 </Box>
 
-                {!authenticated && (
+                {(!userAddress || !solanaAddress) && (
                   <Alert 
                     severity="warning" 
                     sx={{ 
@@ -781,7 +796,12 @@ const XStockPage = () => {
                     }}
                   >
                     <Typography variant="body2">
-                      🔐 Please connect your wallet to trade stocks
+                      {!userAddress && !solanaAddress
+                        ? '🔐 Please connect your wallet to trade stocks'
+                        : !userAddress
+                        ? '🔐 Please add an Ethereum wallet to pay for stocks'
+                        : '🔐 Please add a Solana wallet to receive xStock tokens'
+                      }
                     </Typography>
                   </Alert>
                 )}
@@ -902,7 +922,7 @@ const XStockPage = () => {
                   fullWidth
                   variant="outlined"
                   onClick={fetchQuote}
-                  disabled={loading || !authenticated}
+                  disabled={loading || !userAddress || !solanaAddress}
                   startIcon={loading ? <CircularProgress size={20} /> : <SwapHorizIcon />}
                   sx={{
                     mb: 3,
@@ -1029,18 +1049,18 @@ const XStockPage = () => {
                   fullWidth
                   variant="contained"
                   onClick={handleBuy}
-                  disabled={!quote || loading || !authenticated}
+                  disabled={!quote || loading || !userAddress || !solanaAddress}
                   startIcon={loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <AccountBalanceWalletIcon />}
                   sx={{
                     py: 2.5,
-                    background: !quote || loading || !authenticated
+                    background: !quote || loading || !userAddress || !solanaAddress
                       ? 'rgba(59, 130, 246, 0.2)'
                       : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                     color: 'white',
                     fontWeight: 700,
                     fontSize: '1.1rem',
                     borderRadius: 2,
-                    boxShadow: !quote || loading || !authenticated
+                    boxShadow: !quote || loading || !userAddress || !solanaAddress
                       ? 'none'
                       : '0 8px 24px rgba(59, 130, 246, 0.4)',
                     '&:hover': {
