@@ -11,7 +11,9 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
@@ -110,6 +112,7 @@ const CustomUserProfile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState<string>('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showCopySnackbar, setShowCopySnackbar] = useState(false);
   // Distinguish between connect and disconnect flows to avoid showing "Connecting..." after a disconnect
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
@@ -307,10 +310,18 @@ const CustomUserProfile: React.FC = () => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
+      setShowCopySnackbar(true);
       setTimeout(() => setCopied(''), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
+  };
+
+  const openInExplorer = (address: string, network: 'ethereum' | 'solana') => {
+    const url = network === 'ethereum'
+      ? `https://etherscan.io/address/${address}`
+      : `https://solscan.io/account/${address}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (!authenticated && !ethConnected && !solConnected) {
@@ -607,6 +618,10 @@ const CustomUserProfile: React.FC = () => {
                   </IconButton>
                   <IconButton 
                     size="small"
+                    onClick={() => openInExplorer(
+                      walletInfo.externalEthConnected ? ethAddress! : walletInfo.ethWallet.address,
+                      'ethereum'
+                    )}
                     sx={{ 
                       color: 'rgba(255, 255, 255, 0.5)',
                       '&:hover': { color: '#627eea' }
@@ -686,6 +701,10 @@ const CustomUserProfile: React.FC = () => {
                   </IconButton>
                   <IconButton 
                     size="small"
+                    onClick={() => openInExplorer(
+                      walletInfo.externalSolConnected ? solanaWallet!.address : walletInfo.solWallet.address,
+                      'solana'
+                    )}
                     sx={{ 
                       color: 'rgba(255, 255, 255, 0.5)',
                       '&:hover': { color: '#9945ff' }
@@ -793,6 +812,30 @@ const CustomUserProfile: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Copy Success Snackbar */}
+      <Snackbar
+        open={showCopySnackbar}
+        autoHideDuration={2000}
+        onClose={() => setShowCopySnackbar(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowCopySnackbar(false)} 
+          severity="success"
+          sx={{ 
+            fontFamily: 'monospace',
+            backgroundColor: '#1a1a2e',
+            color: '#4ecdc4',
+            border: '1px solid #4ecdc4',
+            '& .MuiAlert-icon': {
+              color: '#4ecdc4'
+            }
+          }}
+        >
+          Address copied to clipboard!
+        </Alert>
+      </Snackbar>
 
       <style>{`
         @keyframes pulse {
