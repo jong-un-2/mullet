@@ -294,15 +294,24 @@ async function createClaimRewardsThroughMarsContract(
     
     // 推导正确的 UserState PDA
     // ⚠️ 重要：使用从指令中提取的真实 farmState，不是 SDK 返回的 token vault！
-    // seeds: [b"user", farmState, owner]
-    const [userState] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('user'),
-        farmStateFromIx.toBuffer(),  // ✅ 使用指令中的真实 farmState
-        userPublicKey.toBuffer(),
-      ],
-      KAMINO_FARMS_PROGRAM
-    );
+    // 
+    // 从 Kamino harvestReward 指令提取：
+    // - accounts[0]: authority (用户公钥或 delegatee)
+    // - accounts[1]: userState (UserState PDA)
+    // 
+    // UserState PDA seeds: [b"user", farmState, owner]
+    // - owner 可能是用户公钥（Vault Farm）或 delegatee PDA（Reserve Farm）
+    
+    // ✅ 从 Kamino 指令提取 UserState（已经计算好的）
+    const userStateFromIx = new PublicKey(accounts[1].pubkey || accounts[1].address);
+    
+    // ✅ 从 Kamino 指令提取 owner（accounts[0] 是 authority，也是 owner/delegatee）
+    // 对于 Vault Farm: owner = 用户公钥
+    // 对于 Reserve Farm: owner = delegatee PDA
+    const ownerFromIx = new PublicKey(accounts[0].pubkey || accounts[0].address);
+    
+    // 使用从指令提取的 UserState（更可靠）
+    const userState = userStateFromIx;
     
     // 🔍 检查 UserState 是否已初始化，如果没有则创建初始化指令
     const userStateInfo = await connection.getAccountInfo(userState);
@@ -313,13 +322,17 @@ async function createClaimRewardsThroughMarsContract(
       // Discriminator: [111, 17, 185, 250, 60, 122, 38, 254]
       const SYSVAR_RENT = new PublicKey('SysvarRent111111111111111111111111111111111');
       
+      // ✅ 对于 Reserve Farm：
+      // - authority: 用户公钥（签名者）
+      // - owner: delegatee PDA（从 accounts[0] 提取）
+      // - delegatee: delegatee PDA（与 owner 相同）
       const initUserIx = new TransactionInstruction({
         programId: KAMINO_FARMS_PROGRAM,
         keys: [
-          { pubkey: userPublicKey, isSigner: true, isWritable: false },   // authority
+          { pubkey: userPublicKey, isSigner: true, isWritable: false },   // authority (签名者)
           { pubkey: userPublicKey, isSigner: true, isWritable: true },    // payer
-          { pubkey: userPublicKey, isSigner: false, isWritable: false },  // owner
-          { pubkey: userPublicKey, isSigner: false, isWritable: false },  // delegatee (= owner)
+          { pubkey: ownerFromIx, isSigner: false, isWritable: false },    // owner ✅ 使用从指令提取的
+          { pubkey: ownerFromIx, isSigner: false, isWritable: false },    // delegatee ✅ 与 owner 相同
           { pubkey: userState, isSigner: false, isWritable: true },       // userState (PDA)
           { pubkey: farmStateFromIx, isSigner: false, isWritable: true }, // farmState ✅ 真实的 FarmState
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // systemProgram
@@ -329,7 +342,7 @@ async function createClaimRewardsThroughMarsContract(
       });
       
       setupInstructions.push(initUserIx);
-      console.log(`✅ 已添加 initializeUser 指令 (farmState: ${farmStateFromIx.toString().slice(0, 8)}...)`);
+      console.log(`✅ 已添加 initializeUser 指令 (farmState: ${farmStateFromIx.toString().slice(0, 8)}..., owner: ${ownerFromIx.toString().slice(0, 8)}...)`);
     }
     
     console.log(`🔍 Reward ${rewardIndex} 关键账户:`, {
