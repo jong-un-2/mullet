@@ -132,14 +132,22 @@ const CustomUserProfile: React.FC = () => {
   // Helper functions (defined before hooks)
   const getWalletInfo = (): WalletInfo => {
     const ethWallet = wallets.find(w => w.address.startsWith('0x'));
-    // Use the final Solana wallet (external or embedded)
+    
+    // For Solana, we need to check in the general wallets array (which has walletClientType)
+    // because solanaWallets from useSolanaWallets() doesn't have this property
+    const solWalletFromGeneral = wallets.find(w => !w.address.startsWith('0x'));
     const solWallet = finalSolanaWallet;
+    
+    // Check if wallets are external (not embedded)
+    // Privy embedded wallets have walletClientType === 'privy'
+    const isEthExternal = ethWallet?.walletClientType !== 'privy';
+    const isSolExternal = solWalletFromGeneral?.walletClientType !== 'privy';
     
     return { 
       ethWallet, 
       solWallet,
-      externalEthConnected: ethConnected && !!ethAddress,
-      externalSolConnected: solConnected
+      externalEthConnected: !!ethWallet && isEthExternal,
+      externalSolConnected: !!solWallet && isSolExternal
     };
   };
 
@@ -598,15 +606,12 @@ const CustomUserProfile: React.FC = () => {
                       letterSpacing: '0.5px'
                     }}
                   >
-                    {walletInfo.externalEthConnected 
-                      ? `${ethAddress?.slice(0, 8)}...${ethAddress?.slice(-6)}`
-                      : `${walletInfo.ethWallet?.address.slice(0, 8)}...${walletInfo.ethWallet?.address.slice(-6)}`
-                    }
+                    {`${walletInfo.ethWallet?.address.slice(0, 8)}...${walletInfo.ethWallet?.address.slice(-6)}`}
                   </Typography>
                   <IconButton 
                     size="small" 
                     onClick={() => copyToClipboard(
-                      walletInfo.externalEthConnected ? ethAddress! : walletInfo.ethWallet.address, 
+                      walletInfo.ethWallet.address, 
                       'eth'
                     )}
                     sx={{ 
@@ -619,7 +624,7 @@ const CustomUserProfile: React.FC = () => {
                   <IconButton 
                     size="small"
                     onClick={() => openInExplorer(
-                      walletInfo.externalEthConnected ? ethAddress! : walletInfo.ethWallet.address,
+                      walletInfo.ethWallet.address,
                       'ethereum'
                     )}
                     sx={{ 
