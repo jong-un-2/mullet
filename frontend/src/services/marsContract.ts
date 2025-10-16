@@ -9,6 +9,7 @@ import {
   Transaction, 
   TransactionInstruction,
   ComputeBudgetProgram,
+  SystemProgram,
 } from '@solana/web3.js';
 import { 
   TOKEN_2022_PROGRAM_ID,
@@ -76,6 +77,7 @@ function createMarsClaimFarmRewardsInstruction(accounts: {
     { pubkey: accounts.scopePrices, isSigner: false, isWritable: false },
     { pubkey: accounts.farmsProgram, isSigner: false, isWritable: false },
     { pubkey: accounts.rewardTokenProgram, isSigner: false, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
   ];
   
   return new TransactionInstruction({
