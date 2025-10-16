@@ -69,6 +69,7 @@ const XFundPage = () => {
   const [activeTab, setActiveTab] = useState(0); // 0 = Deposit, 1 = Withdraw (default to Deposit)
   const [historyView, setHistoryView] = useState<'earning' | 'history'>('earning');
   const [amountError, setAmountError] = useState<string>('');
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // 用于触发余额和持仓刷新
   
   // Calendar state management - Default to today's date
   const today = new Date();
@@ -326,7 +327,7 @@ const XFundPage = () => {
     };
     
     fetchBalances();
-  }, [isWalletConnected, selectedToken, userWalletAddress, ethAddress]);
+  }, [isWalletConnected, selectedToken, userWalletAddress, ethAddress, refreshTrigger]);
 
   // Handle deposit action - 支持 USDT/USDC 自动兑换成 PYUSD
   const handleDeposit = async () => {
@@ -559,6 +560,12 @@ const XFundPage = () => {
         setProgressMessage(`Transaction confirmed!`);
         setDepositAmount('');
         
+        // 触发余额和持仓刷新
+        setTimeout(() => {
+          console.log('🔄 Refreshing balances and position...');
+          setRefreshTrigger(prev => prev + 1);
+        }, 2000); // 等待 2 秒确保链上数据更新
+        
         setTimeout(() => {
           setShowProgress(false);
           setTxSignature(undefined);
@@ -589,11 +596,12 @@ const XFundPage = () => {
 
     try {
       const amount = parseFloat(withdrawAmount);
-      const needsSwap = selectedToken !== 'PYUSD'; // 如果不是 PYUSD，需要 swap
+      const currentToken = getCurrentToken();
+      const needsSwap = currentToken.symbol !== 'PYUSD' || currentToken.chain !== 'solana'; // 如果不是 Solana 上的 PYUSD，需要 swap
       
       console.log('🚀 Starting withdrawal process...');
       if (needsSwap) {
-        console.log(`  Withdraw PYUSD from vault → Swap to ${selectedToken}`);
+        console.log(`  Withdraw PYUSD from vault → Swap to ${currentToken.symbol} on ${currentToken.chainName}`);
       } else {
         console.log('  Withdraw PYUSD from vault (no swap needed)');
       }
@@ -636,6 +644,12 @@ const XFundPage = () => {
         // Clear form
         setWithdrawAmount('');
         
+        // 触发余额和持仓刷新
+        setTimeout(() => {
+          console.log('🔄 Refreshing balances and position...');
+          setRefreshTrigger(prev => prev + 1);
+        }, 2000); // 等待 2 秒确保链上数据更新
+        
         // Hide progress after 6 seconds
         setTimeout(() => {
           setShowProgress(false);
@@ -648,34 +662,37 @@ const XFundPage = () => {
       // 需要 swap 的情况：继续执行 swap 逻辑
       const finalStep = 4; // Last step is the swap
       setCurrentTxStep(finalStep);
-      setProgressMessage(`Step ${finalStep} of ${finalStep}: Swapping PYUSD to ${selectedToken}...`);
+      setProgressMessage(`Step ${finalStep} of ${finalStep}: Swapping PYUSD to ${currentToken.symbol}...`);
       
-      // Token addresses on Solana
-      const tokenAddresses = {
-        PYUSD: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',
-        USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-        USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
-      };
-
-      const fromToken = tokenAddresses.PYUSD;
-      const toToken = tokenAddresses[selectedToken as 'USDC' | 'USDT'];
+      // PYUSD address on Solana (从 vault 取出的代币)
+      const fromTokenAddress = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo';
+      const toTokenAddress = currentToken.address;
+      
+      // 确定钱包地址
+      const walletAddress = currentToken.chain === 'solana' 
+        ? solanaWallets[0].address 
+        : ethAddress;
+      
+      if (!walletAddress) {
+        throw new Error(`No ${currentToken.chainName} wallet connected`);
+      }
       
       // Request LiFi swap route
       const routesRequest: RoutesRequest = {
-        fromChainId: 1151111081099710, // Solana
-        toChainId: 1151111081099710,   // Solana
-        fromTokenAddress: fromToken,
-        toTokenAddress: toToken,
-        fromAddress: solanaWallets[0].address,
-        toAddress: solanaWallets[0].address,
+        fromChainId: SOLANA_CHAIN_ID, // Solana (PYUSD 来源)
+        toChainId: currentToken.chainId, // 目标链
+        fromTokenAddress: fromTokenAddress,
+        toTokenAddress: toTokenAddress,
+        fromAddress: solanaWallets[0].address, // PYUSD 在 Solana
+        toAddress: walletAddress, // 目标代币接收地址
         fromAmount: (amount * 1_000_000).toString(), // PYUSD uses 6 decimals
       };
 
-      console.log('📡 Requesting LiFi swap route (PYUSD → ' + selectedToken + ')...');
+      console.log('📡 Requesting LiFi swap route (PYUSD → ' + currentToken.symbol + ' on ' + currentToken.chainName + ')...');
       const routesResponse = await getRoutes(routesRequest);
       
       if (!routesResponse || !routesResponse.routes || routesResponse.routes.length === 0) {
-        throw new Error('No swap routes found for PYUSD → ' + selectedToken);
+        throw new Error(`No swap routes found for PYUSD → ${currentToken.symbol} on ${currentToken.chainName}`);
       }
 
       const route = routesResponse.routes[0];
@@ -759,6 +776,12 @@ const XFundPage = () => {
       
       // Clear form
       setWithdrawAmount('');
+      
+      // 触发余额和持仓刷新
+      setTimeout(() => {
+        console.log('🔄 Refreshing balances and position...');
+        setRefreshTrigger(prev => prev + 1);
+      }, 2000); // 等待 2 秒确保链上数据更新
       
       // Hide progress after 6 seconds
       setTimeout(() => {
@@ -1290,7 +1313,7 @@ const XFundPage = () => {
                             <Box key={reward.rewardMint} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Box
                                 component="img"
-                                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2360a5fa'%3E%3Cpath d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/%3E%3C/svg%3E"
+                                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23003087' d='M20.905 9.5c.16 2.167-.77 3.66-2.661 4.78-2.128 1.287-4.784 1.64-7.152 1.578-1.186-.03-2.37-.185-3.538-.396-.238-.042-.394-.22-.448-.45l-1.092-5.203c-.086-.41.137-.645.536-.645h2.655c.325 0 .528.182.595.502l.52 2.488c.067.32.281.489.595.489 1.478 0 2.956-.038 4.408-.398 1.427-.354 2.533-1.116 2.952-2.59.368-1.293-.04-2.346-1.186-3.058-1.042-.648-2.225-.907-3.448-.99-2.188-.145-4.366.028-6.52.534-.253.06-.48.014-.604-.214-.182-.332-.358-.668-.537-1.002-.16-.298-.1-.536.214-.686 2.575-1.226 5.285-1.656 8.094-1.414 1.607.138 3.125.588 4.474 1.524 1.666 1.158 2.456 2.757 2.143 4.851z'/%3E%3Cpath fill='%23009cde' d='M11.5 14.5c-.234.026-.468.052-.703.071-1.186.094-2.375.107-3.564.044-.238-.013-.394-.157-.448-.387l-1.092-5.203c-.086-.41.137-.645.536-.645h2.655c.325 0 .528.182.595.502l.52 2.488c.067.32.281.489.595.489.469 0 .937-.013 1.406-.044z'/%3E%3C/svg%3E"
                                 sx={{ width: 20, height: 20 }}
                               />
                               <Typography variant="h6" fontWeight={600} sx={{ color: 'white' }}>
@@ -1614,15 +1637,17 @@ const XFundPage = () => {
                               symbol={token.symbol} 
                               chain={token.chain} 
                               size={28} 
-                              showChainBadge={true} 
+                              showChainBadge={token.symbol !== 'SOL' && token.symbol !== 'ETH'} 
                             />
                             <Box>
                               <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
                                 {token.symbol}
                               </Typography>
-                              <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                                {token.chainName}
-                              </Typography>
+                              {token.symbol !== 'SOL' && token.symbol !== 'ETH' && (
+                                <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                  {token.chainName}
+                                </Typography>
+                              )}
                             </Box>
                           </Box>
                         );
@@ -1676,14 +1701,14 @@ const XFundPage = () => {
                                 symbol={token.symbol} 
                                 chain={token.chain} 
                                 size={32} 
-                                showChainBadge={true} 
+                                showChainBadge={token.symbol !== 'SOL' && token.symbol !== 'ETH'} 
                               />
                               <Box sx={{ flex: 1 }}>
                                 <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
                                   {token.symbol}
                                 </Typography>
                                 <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                                  {token.name} • {token.chainName}
+                                  {token.name}
                                 </Typography>
                               </Box>
                             </Box>
