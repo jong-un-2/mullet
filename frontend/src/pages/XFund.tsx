@@ -68,6 +68,7 @@ const XFundPage = () => {
   const [chartView, setChartView] = useState<'TVL' | 'APY'>('APY');
   const [activeTab, setActiveTab] = useState(0); // 0 = Deposit, 1 = Withdraw (default to Deposit)
   const [historyView, setHistoryView] = useState<'earning' | 'history'>('earning');
+  const [amountError, setAmountError] = useState<string>('');
   
   // Calendar state management - Default to today's date
   const today = new Date();
@@ -1497,7 +1498,10 @@ const XFundPage = () => {
               {/* Tabs for Deposit/Withdraw */}
               <Box sx={{ display: 'flex', mb: 1.5, borderRadius: 2, p: 0.25, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
                 <Button
-                  onClick={() => setActiveTab(0)}
+                  onClick={() => {
+                    setActiveTab(0);
+                    setAmountError('');
+                  }}
                   sx={{
                     flex: 1,
                     py: 0.75,
@@ -1532,7 +1536,10 @@ const XFundPage = () => {
                   Deposit
                 </Button>
                 <Button
-                  onClick={() => setActiveTab(1)}
+                  onClick={() => {
+                    setActiveTab(1);
+                    setAmountError('');
+                  }}
                   sx={{
                     flex: 1,
                     py: 0.75,
@@ -1688,9 +1695,33 @@ const XFundPage = () => {
                   <Box sx={{ flex: 1 }} />
                   <TextField
                     value={activeTab === 0 ? depositAmount : withdrawAmount}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                      activeTab === 0 ? setDepositAmount(e.target.value) : setWithdrawAmount(e.target.value)
-                    }
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const value = e.target.value;
+                      // Allow empty string or valid numbers
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        setAmountError(''); // Clear error when typing
+                        const numValue = parseFloat(value) || 0;
+                        
+                        if (activeTab === 0) {
+                          // Deposit: check against wallet balance
+                          const token = getCurrentToken();
+                          const maxBalance = parseFloat(getWalletBalance(token.symbol).replace(',', ''));
+                          if (numValue <= maxBalance || value === '') {
+                            setDepositAmount(value);
+                          } else {
+                            setAmountError(`Insufficient balance. Max: ${maxBalance.toFixed(4)} ${token.symbol}`);
+                          }
+                        } else {
+                          // Withdraw: check against deposited amount
+                          const maxDeposited = userVaultPosition.totalSupplied;
+                          if (numValue <= maxDeposited || value === '') {
+                            setWithdrawAmount(value);
+                          } else {
+                            setAmountError(`Insufficient deposited amount. Max: ${maxDeposited.toFixed(4)} PYUSD`);
+                          }
+                        }
+                      }
+                    }}
                     placeholder="0"
                     size="small"
                     sx={{
@@ -1712,6 +1743,22 @@ const XFundPage = () => {
                   />
                 </Box>
 
+                {/* Error message */}
+                {amountError && (
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#ef4444', 
+                      fontSize: '0.75rem',
+                      display: 'block',
+                      mt: 0.5,
+                      textAlign: 'center'
+                    }}
+                  >
+                    {amountError}
+                  </Typography>
+                )}
+
                 <Box sx={{ display: 'flex', gap: 0.75 }}>
                   <Button
                     variant="outlined"
@@ -1719,6 +1766,7 @@ const XFundPage = () => {
                     disabled={!isWalletConnected}
                     onClick={() => {
                       if (isWalletConnected) {
+                        setAmountError(''); // Clear error
                         if (activeTab === 0) {
                           const balance = parseFloat(getWalletBalance(selectedToken).replace(',', ''));
                           setDepositAmount((balance / 2).toString());
@@ -1758,6 +1806,7 @@ const XFundPage = () => {
                     disabled={!isWalletConnected}
                     onClick={() => {
                       if (isWalletConnected) {
+                        setAmountError(''); // Clear error
                         if (activeTab === 0) {
                           const balance = getWalletBalance(selectedToken).replace(',', '');
                           setDepositAmount(balance);
@@ -1851,7 +1900,17 @@ const XFundPage = () => {
                 <TextField
                   fullWidth
                   value={depositAmount}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDepositAmount(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      const numValue = parseFloat(value) || 0;
+                      const token = getCurrentToken();
+                      const maxBalance = parseFloat(getWalletBalance(token.symbol).replace(',', ''));
+                      if (numValue <= maxBalance) {
+                        setDepositAmount(value);
+                      }
+                    }
+                  }}
                   placeholder="$0.00"
                   variant="outlined"
                   size="small"
