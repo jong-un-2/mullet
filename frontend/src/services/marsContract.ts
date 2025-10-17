@@ -36,6 +36,66 @@ const DISCRIMINATOR_WITHDRAW = Buffer.from([199, 101, 41, 45, 213, 98, 224, 200]
 const DISCRIMINATOR_CLAIM_FARM_REWARDS = Buffer.from([102, 40, 223, 149, 90, 81, 228, 23]);
 
 /**
+ * 获取平台费用钱包地址（从 GlobalState 读取）
+ */
+async function getPlatformFeeWallet(
+  connection: Connection,
+  globalStatePda: PublicKey
+): Promise<PublicKey> {
+  try {
+    const accountInfo = await connection.getAccountInfo(globalStatePda);
+    if (!accountInfo) {
+      throw new Error('GlobalState account not found');
+    }
+    
+    // GlobalState 布局:
+    // - discriminator: 8 bytes
+    // - admin: 32 bytes
+    // - pending_admin: 33 bytes (1 byte option + 32 bytes pubkey)
+    // - rebalance_threshold: 2 bytes
+    // - cross_chain_fee_bps: 2 bytes
+    // - base_mint: 32 bytes
+    // - frozen: 1 byte
+    // - max_order_amount: 8 bytes
+    // - platform_fee_wallet: 32 bytes (从这里开始)
+    
+    const offset = 8 + 32 + 33 + 2 + 2 + 32 + 1 + 8; // = 118 bytes
+    const platformFeeWalletBytes = accountInfo.data.slice(offset, offset + 32);
+    const platformFeeWallet = new PublicKey(platformFeeWalletBytes);
+    
+    console.log(`📋 Platform Fee Wallet: ${platformFeeWallet.toString()}`);
+    return platformFeeWallet;
+  } catch (error) {
+    console.error('❌ 获取平台费用钱包失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 获取平台费用 ATA（用于接收平台费用）
+ */
+async function getPlatformFeeAta(
+  connection: Connection,
+  globalStatePda: PublicKey,
+  rewardMint: PublicKey,
+  tokenProgram: PublicKey
+): Promise<PublicKey> {
+  const platformFeeWallet = await getPlatformFeeWallet(connection, globalStatePda);
+  
+  const platformFeeAta = getAssociatedTokenAddressSync(
+    rewardMint,
+    platformFeeWallet,
+    false,
+    tokenProgram
+  );
+  
+  console.log(`💰 Platform Fee ATA for ${rewardMint.toString().slice(0, 8)}...: ${platformFeeAta.toString()}`);
+  
+  return platformFeeAta;
+}
+
+
+/**
  * 创建 Mars claim_farm_rewards 指令
  */
 function createMarsClaimFarmRewardsInstruction(accounts: {
@@ -50,6 +110,7 @@ function createMarsClaimFarmRewardsInstruction(accounts: {
   rewardVault: PublicKey;
   treasuryVault: PublicKey;
   userRewardAta: PublicKey;
+  platformFeeAta: PublicKey;  // 新增：平台费用接收账户
   farmAuthority: PublicKey;
   scopePrices: PublicKey;
   farmsProgram: PublicKey;
@@ -73,6 +134,7 @@ function createMarsClaimFarmRewardsInstruction(accounts: {
     { pubkey: accounts.rewardVault, isSigner: false, isWritable: true },
     { pubkey: accounts.treasuryVault, isSigner: false, isWritable: true },
     { pubkey: accounts.userRewardAta, isSigner: false, isWritable: true },
+    { pubkey: accounts.platformFeeAta, isSigner: false, isWritable: true },  // 新增
     { pubkey: accounts.farmAuthority, isSigner: false, isWritable: false },
     { pubkey: accounts.scopePrices, isSigner: false, isWritable: false },
     { pubkey: accounts.farmsProgram, isSigner: false, isWritable: false },
@@ -173,10 +235,10 @@ async function processSingleFarm(params: {
       tokenProgram
     );
     
-    // 检查并创建 ATA
+    // 检查并创建用户 ATA
     const ataInfo = await connection.getAccountInfo(userAta);
     if (!ataInfo) {
-      console.log(`     创建 ATA...`);
+      console.log(`     创建用户 ATA...`);
       setupInstructions.push(
         createAssociatedTokenAccountInstruction(
           userPublicKey,
@@ -188,11 +250,28 @@ async function processSingleFarm(params: {
       );
     }
     
+    // 获取平台费用 ATA
+    const platformFeeAta = await getPlatformFeeAta(
+      connection,
+      globalStatePda,
+      rewardMint,
+      tokenProgram
+    );
+    
+    // 检查平台费用 ATA 是否存在（不自动创建，需要管理员预先创建）
+    const platformFeeAtaInfo = await connection.getAccountInfo(platformFeeAta);
+    if (!platformFeeAtaInfo) {
+      console.warn(`⚠️  警告: 平台费用 ATA 不存在，需要管理员创建: ${platformFeeAta.toString()}`);
+      console.warn(`     Reward Mint: ${rewardMint.toString()}`);
+      // 注意: 我们不自动创建平台费用 ATA，这应该由管理员提前创建
+    }
+    
     // 创建 Mars claim 指令（使用当前 Farm 的 reward_index）
     console.log(`\n     🏗️  创建 Mars claim 指令 (reward_index=${farmRewardIndex}):`);
     console.log(`        farmState: ${farmState.toString()}`);
     console.log(`        userFarm: ${userState.toString()}`);
     console.log(`        farmAuthority: ${farmAuthority.toString()}`);
+    console.log(`        platformFeeAta: ${platformFeeAta.toString()}`);
     
     const claimIx = createMarsClaimFarmRewardsInstruction({
       user: userPublicKey,
@@ -206,6 +285,7 @@ async function processSingleFarm(params: {
       rewardVault: rewardVault,
       treasuryVault: treasuryVault,
       userRewardAta: userAta,
+      platformFeeAta: platformFeeAta,  // 新增：平台费用 ATA
       farmAuthority: farmAuthority,
       scopePrices: scopePrices,
       farmsProgram: KAMINO_FARMS_PROGRAM,
