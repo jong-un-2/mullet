@@ -13,13 +13,12 @@ export const privyConfig = {
       logo: '/mars-logo.svg',
       showWalletLoginFirst: true,
       walletChainType: 'solana', // Prioritize Solana globally
-      // Simplified wallet list - Essential wallets only
+      // Top wallets for Solana ecosystem
       walletList: [
-        'metamask',         // multichain support
-        'phantom',          // Solana & Ethereum support
-        'backpack',         // Backpack wallet (Solana native)
-        'detected_wallets', // All detected browser wallets
-        'wallet_connect',   // WalletConnect support
+        'phantom',          // #1 - Most popular Solana & Ethereum wallet
+        'metamask',         // #2 - Most popular Ethereum wallet
+        'solflare',         // #3 - Popular Solana-native wallet
+        'wallet_connect',   // WalletConnect support for mobile wallets
       ],
       // WalletConnect configuration
       walletConnectCloudProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '', // Get WalletConnect Project ID from https://cloud.walletconnect.com
@@ -70,13 +69,13 @@ export const privyConfig = {
     supportedChains: [mainnet, sepolia],
     defaultChain: mainnet,
     
-    // Embedded wallet settings - Disable Ethereum, enable Solana
+    // Embedded wallet settings - Disable all embedded wallets, only use external wallets
     embeddedWallets: {
       ethereum: {
         createOnLogin: 'off', // Completely disable ETH wallet creation
       },
       solana: {
-        createOnLogin: 'users-without-wallets', // Only create for users without existing wallets
+        createOnLogin: 'off', // Completely disable Solana wallet creation - only use external wallets
       },
     },
     

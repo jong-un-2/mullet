@@ -131,17 +131,53 @@ const CustomUserProfile: React.FC = () => {
 
   // Helper functions (defined before hooks)
   const getWalletInfo = (): WalletInfo => {
-    const ethWallet = wallets.find(w => w.address.startsWith('0x'));
+    // 详细调试：查看所有钱包数据
+    console.log('🔍 All Wallets Debug:', {
+      allWallets: wallets.map(w => ({
+        address: w.address,
+        walletClientType: w.walletClientType,
+        connectorType: w.connectorType,
+        chainType: (w as any).chainType
+      })),
+      allSolanaWallets: solanaWallets.map(w => ({
+        address: w.address,
+        walletClientType: (w as any).walletClientType,
+        connectorType: (w as any).connectorType
+      }))
+    });
     
-    // For Solana, we need to check in the general wallets array (which has walletClientType)
-    // because solanaWallets from useSolanaWallets() doesn't have this property
-    const solWalletFromGeneral = wallets.find(w => !w.address.startsWith('0x'));
+    // Find external wallets (not embedded) from EVM wallets
+    // 优先选择特定钱包类型，避免多钱包冲突
+    let ethWallet = wallets.find(w => w.address.startsWith('0x') && w.walletClientType === 'phantom');
+    if (!ethWallet) {
+      ethWallet = wallets.find(w => w.address.startsWith('0x'));
+    }
+    const isEthExternal = ethWallet?.walletClientType !== 'privy' && ethWallet?.connectorType !== 'embedded';
+    
+    // For Solana wallets - use the dedicated solanaWallets from useSolanaWallets()
     const solWallet = finalSolanaWallet;
     
-    // Check if wallets are external (not embedded)
-    // Privy embedded wallets have walletClientType === 'privy'
-    const isEthExternal = ethWallet?.walletClientType !== 'privy';
-    const isSolExternal = solWalletFromGeneral?.walletClientType !== 'privy';
+    // To check if Solana wallet is external, we need to look in the general wallets array
+    // because it has the walletClientType property
+    // 同样优先选择 phantom
+    let solWalletFromGeneral = wallets.find(w => !w.address.startsWith('0x') && w.walletClientType === 'phantom');
+    if (!solWalletFromGeneral) {
+      solWalletFromGeneral = wallets.find(w => !w.address.startsWith('0x'));
+    }
+    const isSolExternal = solWalletFromGeneral?.walletClientType !== 'privy' && 
+                          solWalletFromGeneral?.connectorType !== 'embedded';
+    
+    // Log for debugging
+    console.log('🔍 Wallet Info:', {
+      ethWallet: ethWallet?.address,
+      solWallet: solWallet?.address,
+      isEthExternal,
+      isSolExternal,
+      ethWalletType: ethWallet?.walletClientType,
+      solWalletType: solWalletFromGeneral?.walletClientType,
+      ethConnectorType: ethWallet?.connectorType,
+      solConnectorType: solWalletFromGeneral?.connectorType
+    });
     
     return { 
       ethWallet, 

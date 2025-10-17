@@ -232,19 +232,37 @@ export const getUserWalletAddress = (
   user?: any,
   solanaPublicKey?: any  // Direct Solana wallet adapter public key
 ): string | undefined => {
-  // Priority: Direct Solana wallet > Privy Solana wallet > ETH wallet > Privy user
+  // Priority: Direct Solana wallet > External Solana wallet > Embedded Solana wallet > ETH wallet > Privy user
+  
+  // 1. Direct Solana wallet adapter (highest priority - e.g., Phantom, Backpack connected directly)
   if (solanaPublicKey) {
     return solanaPublicKey.toString();
   }
   
+  // 2. Privy Solana wallets - prioritize external wallets over embedded wallets
   if (solanaWallets && solanaWallets.length > 0) {
+    // Find external wallet first (walletClientType === 'privy' means embedded)
+    const externalWallet = solanaWallets.find(w => 
+      w.walletClientType !== 'privy' && 
+      w.connectorType !== 'embedded'
+    );
+    
+    if (externalWallet) {
+      console.log('✅ Using external Solana wallet:', externalWallet.address);
+      return externalWallet.address;
+    }
+    
+    // Fallback to first wallet (could be embedded)
+    console.log('⚠️ Using first Solana wallet (possibly embedded):', solanaWallets[0].address);
     return solanaWallets[0].address;
   }
   
+  // 3. ETH wallet address
   if (ethAddress) {
     return ethAddress;
   }
   
+  // 4. Privy user wallet (fallback)
   if (authenticated && user?.wallet?.address) {
     return user.wallet.address;
   }
