@@ -289,26 +289,30 @@ const XFundPage = () => {
       
       try {
         // 根据链类型检查余额
-        if (token.chain === 'solana' && userWalletAddress) {
+        // EVM 链（USDC, USDT, ETH, PYUSD on Ethereum）使用 ETH 钱包地址
+        // Solana 链使用 Solana 钱包地址
+        const walletAddress = token.chainId === SOLANA_CHAIN_ID ? userWalletAddress : ethAddress;
+        
+        if (token.chainId === SOLANA_CHAIN_ID && userWalletAddress) {
           console.log(`🔍 Checking Solana balance for ${token.symbol}...`);
           const solResult = await checkBalance(
             token.address,
             token.chainId,
-            userWalletAddress,
+            walletAddress!,
             token.decimals
           );
           balance = solResult.formatted;
           console.log(`✅ Solana ${token.symbol}: ${balance}`);
-        } else if (token.chain === 'ethereum' && ethAddress) {
-          console.log(`🔍 Checking Ethereum balance for ${token.symbol}...`);
+        } else if (token.chainId !== SOLANA_CHAIN_ID && ethAddress) {
+          console.log(`🔍 Checking EVM balance for ${token.symbol}...`);
           const ethResult = await checkBalance(
             token.address,
             token.chainId,
-            ethAddress,
+            walletAddress!,
             token.decimals
           );
           balance = ethResult.formatted;
-          console.log(`✅ Ethereum ${token.symbol}: ${balance}`);
+          console.log(`✅ EVM ${token.symbol}: ${balance}`);
         }
       } catch (err) {
         console.warn(`⚠️ Failed to check balance for ${token.symbol}:`, err);
@@ -319,8 +323,8 @@ const XFundPage = () => {
       setTokenBalances(prev => ({
         ...prev,
         [selectedToken]: {
-          solana: token.chain === 'solana' ? balance : '0',
-          evm: token.chain === 'ethereum' ? balance : '0',
+          solana: token.chainId === SOLANA_CHAIN_ID ? balance : '0',
+          evm: token.chainId !== SOLANA_CHAIN_ID ? balance : '0',
           total: balance
         }
       }));
@@ -346,7 +350,7 @@ const XFundPage = () => {
 
     try {
       // 如果选择 PYUSD on Solana，直接存款
-      if (currentToken.symbol === 'PYUSD' && currentToken.chain === 'solana') {
+      if (currentToken.symbol === 'PYUSD' && currentToken.chainId === SOLANA_CHAIN_ID) {
         console.log('🚀 开始 PYUSD 存款并质押到 Farm...');
         
         setShowProgress(true);
@@ -597,7 +601,7 @@ const XFundPage = () => {
     try {
       const amount = parseFloat(withdrawAmount);
       const currentToken = getCurrentToken();
-      const needsSwap = currentToken.symbol !== 'PYUSD' || currentToken.chain !== 'solana'; // 如果不是 Solana 上的 PYUSD，需要 swap
+      const needsSwap = currentToken.symbol !== 'PYUSD' || currentToken.chainId !== SOLANA_CHAIN_ID; // 如果不是 Solana 上的 PYUSD，需要 swap
       
       console.log('🚀 Starting withdrawal process...');
       if (needsSwap) {
@@ -669,7 +673,9 @@ const XFundPage = () => {
       const toTokenAddress = currentToken.address;
       
       // 确定钱包地址
-      const walletAddress = currentToken.chain === 'solana' 
+      // EVM 链（USDC, USDT, ETH, PYUSD on Ethereum）使用 ETH 钱包地址
+      // Solana 链使用 Solana 钱包地址
+      const walletAddress = currentToken.chainId === SOLANA_CHAIN_ID 
         ? solanaWallets[0].address 
         : ethAddress;
       

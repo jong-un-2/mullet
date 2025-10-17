@@ -167,18 +167,6 @@ const CustomUserProfile: React.FC = () => {
     const isSolExternal = solWalletFromGeneral?.walletClientType !== 'privy' && 
                           solWalletFromGeneral?.connectorType !== 'embedded';
     
-    // Log for debugging
-    console.log('🔍 Wallet Info:', {
-      ethWallet: ethWallet?.address,
-      solWallet: solWallet?.address,
-      isEthExternal,
-      isSolExternal,
-      ethWalletType: ethWallet?.walletClientType,
-      solWalletType: solWalletFromGeneral?.walletClientType,
-      ethConnectorType: ethWallet?.connectorType,
-      solConnectorType: solWalletFromGeneral?.connectorType
-    });
-    
     return { 
       ethWallet, 
       solWallet,

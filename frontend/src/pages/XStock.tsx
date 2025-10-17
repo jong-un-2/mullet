@@ -373,12 +373,9 @@ const XStockPage = () => {
   useEffect(() => {
     const checkTokenBalance = async () => {
       // 确定使用哪个钱包地址
-      let fromAddress = '';
-      if (paymentToken.chain === 'solana') {
-        fromAddress = solanaAddress;
-      } else {
-        fromAddress = userAddress;
-      }
+      // EVM 链（USDC, USDT, ETH, PYUSD on Ethereum）使用 ETH 钱包地址
+      // Solana 链使用 Solana 钱包地址
+      const fromAddress = paymentToken.chainId === SOLANA_CHAIN_ID ? solanaAddress : userAddress;
 
       if (!fromAddress) {
         setTokenBalance('0');
@@ -594,12 +591,6 @@ const XStockPage = () => {
       if (!solanaWallet.signTransaction) {
         throw new Error('Solana wallet does not support signTransaction');
       }
-      
-      console.log('🔌 Solana wallet info:', {
-        address: solanaWallet.address,
-        hasSignTransaction: !!solanaWallet.signTransaction,
-        walletType: typeof solanaWallet,
-      });
       
       // 配置 Solana provider with proper wallet adapter
       const solanaProvider = Solana({
