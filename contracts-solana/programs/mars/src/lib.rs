@@ -234,6 +234,15 @@ pub mod mars {
         UpdateVaultPlatformFee::process_instruction(ctx, new_platform_fee_bps)
     }
 
+    /// 管理员更新平台费用钱包地址
+    /// new_platform_fee_wallet: 新的平台费用接收钱包地址
+    pub fn update_platform_fee_wallet(
+        ctx: Context<UpdatePlatformFeeWallet>,
+        new_platform_fee_wallet: Pubkey,
+    ) -> Result<()> {
+        UpdatePlatformFeeWallet::process_instruction(ctx, new_platform_fee_wallet)
+    }
+
     // set protocol fee fraction
     pub fn set_protocol_fee_fraction(
         ctx: Context<SetProtocolFeeFraction>,

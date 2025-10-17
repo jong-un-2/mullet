@@ -84,7 +84,8 @@ pub struct ClaimFarmRewards<'info> {
     pub user_reward_ata: UncheckedAccount<'info>,
 
     /// Platform Fee Reward Token ATA (平台收取费用的账户)
-    /// CHECK: Platform fee account for reward tokens
+    /// 必须与 global_state.platform_fee_wallet 匹配以确保安全性
+    /// CHECK: Verified against global_state.platform_fee_wallet in instruction
     #[account(mut)]
     pub platform_fee_ata: UncheckedAccount<'info>,
 
@@ -121,7 +122,31 @@ impl<'info> ClaimFarmRewards<'info> {
             ctx.accounts.global_state.cross_chain_fee_bps = 30; // 0.3%
             ctx.accounts.global_state.rebalance_threshold = 0;
             ctx.accounts.global_state.max_order_amount = 100_000_000_000; // 100k
+            // 默认设置平台费用钱包为 admin
+            ctx.accounts.global_state.platform_fee_wallet = ctx.accounts.user.key();
         }
+
+        // 验证 platform_fee_ata 的所有权
+        // 读取 platform_fee_ata 的 owner 字段（偏移量 32，即 mint 之后）
+        let platform_fee_data = ctx.accounts.platform_fee_ata.try_borrow_data()?;
+        require!(
+            platform_fee_data.len() >= 72,
+            MarsError::InvalidTokenAccount
+        );
+        
+        let platform_fee_owner_bytes: [u8; 32] = platform_fee_data[32..64]
+            .try_into()
+            .map_err(|_| MarsError::InvalidTokenAccount)?;
+        let platform_fee_owner = Pubkey::new_from_array(platform_fee_owner_bytes);
+        
+        // 验证 platform_fee_ata 的所有者必须是 global_state 中设置的平台费用钱包
+        require!(
+            platform_fee_owner == ctx.accounts.global_state.platform_fee_wallet,
+            MarsError::InvalidPlatformFeeAccount
+        );
+        
+        msg!("✅ Platform fee account verified: owner = {}", platform_fee_owner);
+        drop(platform_fee_data); // 释放 borrow
 
         // 如果 vault_state 是新创建的，初始化默认值
         if ctx.accounts.vault_state.base_token_mint == Pubkey::default() {

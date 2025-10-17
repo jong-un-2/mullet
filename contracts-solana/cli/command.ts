@@ -11,6 +11,7 @@ import {
   setFeeTiers,
   setInsuranceFeeTiers,
   setProtocolFeeFraction,
+  updatePlatformFeeWallet,
 } from "./scripts";
 
 import { homedir } from "os"; // Import os module to get home directory
@@ -217,6 +218,25 @@ programCommand("update-vault-platform-fee")
 
     const { updateVaultPlatformFee } = await import("./scripts");
     await updateVaultPlatformFee(vault_mint, parseInt(fee_bps));
+  });
+
+programCommand("update-platform-fee-wallet")
+  .option("-w, --wallet <string>", "new platform fee wallet address")
+  .action(async (directory, cmd) => {
+    const { env, keypair, rpc, wallet } = cmd.opts();
+
+    console.log("Solana Cluster:", env);
+    console.log("Keypair Path:", keypair);
+    console.log("RPC URL:", rpc);
+    await setClusterConfig(env, keypair, rpc);
+
+    if (!wallet) {
+      console.log("Error: wallet address is required");
+      console.log("Example: yarn script update-platform-fee-wallet -w 9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
+      return;
+    }
+
+    await updatePlatformFeeWallet(wallet);
   });
 
 function programCommand(name: string) {

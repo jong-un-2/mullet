@@ -203,6 +203,9 @@ pub enum CustomError {
 
     #[msg("Invalid token account data")]
     InvalidTokenAccount,
+
+    #[msg("Platform fee account owner does not match configured platform fee wallet")]
+    InvalidPlatformFeeAccount,
 }
 
 pub type MarsError = CustomError;

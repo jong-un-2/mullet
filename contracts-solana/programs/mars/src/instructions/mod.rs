@@ -46,3 +46,5 @@ pub mod claim_farm_rewards;
 pub use claim_farm_rewards::*;
 pub mod update_vault_platform_fee;
 pub use update_vault_platform_fee::*;
+pub mod update_platform_fee_wallet;
+pub use update_platform_fee_wallet::*;

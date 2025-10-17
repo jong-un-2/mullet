@@ -490,3 +490,52 @@ export const updateVaultPlatformFee = async (
     throw error;
   }
 };
+
+/**
+ * Update platform fee wallet address (admin only)
+ * @param newPlatformFeeWallet - new wallet address to receive platform fees
+ */
+export const updatePlatformFeeWallet = async (
+  newPlatformFeeWallet: string
+) => {
+  try {
+    const newWalletPubkey = new PublicKey(newPlatformFeeWallet);
+
+    // Derive global state PDA
+    const [globalStatePDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("global-state")],
+      program.programId
+    );
+
+    console.log("\n⚙️  Updating Platform Fee Wallet:");
+    console.log("  Global State:", globalStatePDA.toBase58());
+    console.log("  Admin:", payer.publicKey.toBase58());
+    console.log("  New Platform Fee Wallet:", newPlatformFeeWallet);
+
+    // Validate address is not default
+    if (newWalletPubkey.equals(PublicKey.default)) {
+      throw new Error("Platform fee wallet cannot be the default public key");
+    }
+
+    const tx = await program.methods
+      .updatePlatformFeeWallet(newWalletPubkey)
+      .accountsPartial({
+        admin: payer.publicKey,
+        globalState: globalStatePDA,
+      })
+      .rpc();
+
+    console.log("\n✅ Platform fee wallet updated successfully!");
+    console.log("Transaction:", tx);
+
+    // Fetch updated global state
+    const updatedGlobalState = await program.account.globalState.fetch(globalStatePDA);
+    console.log("\n📊 Updated Global State:");
+    console.log("  Platform Fee Wallet:", updatedGlobalState.platformFeeWallet.toBase58());
+    console.log("  Admin:", updatedGlobalState.admin.toBase58());
+  } catch (error) {
+    console.error("Error updating platform fee wallet:", error);
+    throw error;
+  }
+};
+

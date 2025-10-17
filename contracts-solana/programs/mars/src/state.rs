@@ -32,6 +32,9 @@ pub struct GlobalState {
     // maximum allowed amount for an order
     pub max_order_amount: u64,
 
+    // Platform fee wallet address for collecting fees from farm rewards
+    pub platform_fee_wallet: Pubkey,
+
     // unused u64, can be used in future, added to avoid data migration
     pub unused_u64_1: u64,
 
