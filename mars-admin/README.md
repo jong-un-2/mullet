@@ -5,8 +5,8 @@ Mars Protocol 管理后台 - 基于 [Ant Design Pro](https://pro.ant.design) 构
 ## 登录信息
 
 **默认账号密码：**
-- 账号：`jerry`
-- 密码：`Aa123456.`
+- 账号：`jong-un`
+- 密码：`marspwd123!@#`
 
 ## Environment Prepare
 

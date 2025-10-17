@@ -16,11 +16,13 @@ export const privyConfig = {
       // Simplified wallet list - Essential wallets only
       walletList: [
         'metamask',         // multichain support
-        'phantom',           // Solana & Ethereum support
-        'binance',          // Binance Wallet
+        'phantom',          // Solana & Ethereum support
+        'backpack',         // Backpack wallet (Solana native)
+        'detected_wallets', // All detected browser wallets
+        'wallet_connect',   // WalletConnect support
       ],
-      // Browser extension prioritization settings
-      walletConnectCloudProjectId: undefined, // Don't force WalletConnect
+      // WalletConnect configuration
+      walletConnectCloudProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '', // Get WalletConnect Project ID from https://cloud.walletconnect.com
       disableWalletConnect: false,
     },
     
