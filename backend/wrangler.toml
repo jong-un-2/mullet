@@ -33,7 +33,7 @@ account_id = "ec9b597fa02615ca6a0e62b7ff35d0cc"
 [triggers]
 crons = [
   "*/1 * * * *",    # Every 1 minute - Cache warming & container heartbeat
-  "0 * * * *",      # Every hour - Hourly data updates  
+  "0 */2 * * *",    # Every 2 hours - Vault historical data collection
   "0 2 * * 7"       # Every Sunday at 2 AM - Weekly cleanup (0 = Sunday)
 ]
 

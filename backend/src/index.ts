@@ -164,7 +164,7 @@ export default {
 			// Lightweight tasks for pure GraphQL architecture
 			switch (controller.cron) {
 				case "*/1 * * * *": // Every 1 minute - Substreams batch indexing & cache warming
-					console.log("� Running Substreams incremental sync...");
+					console.log("🔄 Running Substreams incremental sync...");
 					try {
 						const stats = await runIncrementalSync(env);
 						console.log(`✅ Synced ${stats.blocksProcessed} blocks, ${stats.eventsIndexed} events in ${stats.duration}ms`);
@@ -176,7 +176,7 @@ export default {
 					await runCacheWarming(env);
 					break;
 
-				case "0 * * * *": // Hourly - Collect vault historical data & metrics
+				case "0 */2 * * *": // Every 2 hours - Collect vault historical data
 					console.log("📊 Collecting vault historical data...");
 					try {
 						// 使用环境变量中的 Solana RPC URL
@@ -185,12 +185,40 @@ export default {
 						// 使用 Hyperdrive 连接 Neon PostgreSQL
 						const dbConnectionString = env.HYPERDRIVE?.connectionString;
 						
-						const result = await collectVaultHistoricalData(rpcUrl, dbConnectionString);
+						if (!dbConnectionString) {
+							console.error("❌ Hyperdrive connection string not available");
+							break;
+						}
 						
-						if (result.success && result.snapshot) {
+						console.log("🔗 Database connection: Using Hyperdrive");
+						
+						// 带重试的数据收集
+						let result;
+						let retryCount = 0;
+						const maxRetries = 2;
+						
+						while (retryCount <= maxRetries) {
+							try {
+								result = await collectVaultHistoricalData(rpcUrl, dbConnectionString);
+								if (result.success) break;
+								
+								retryCount++;
+								if (retryCount <= maxRetries) {
+									console.log(`⚠️ Retry ${retryCount}/${maxRetries} after 2s...`);
+									await new Promise(resolve => setTimeout(resolve, 2000));
+								}
+							} catch (error) {
+								retryCount++;
+								if (retryCount > maxRetries) throw error;
+								console.log(`⚠️ Retry ${retryCount}/${maxRetries} after 2s...`);
+								await new Promise(resolve => setTimeout(resolve, 2000));
+							}
+						}
+						
+						if (result?.success && result.snapshot) {
 							console.log(`✅ Vault data collected: Total APY ${(result.snapshot.totalApy * 100).toFixed(2)}% (Lending: ${(result.snapshot.lendingApy * 100).toFixed(2)}%, Incentives: ${(result.snapshot.incentivesApy * 100).toFixed(2)}%), TVL $${(result.snapshot.totalSuppliedUsd / 1_000_000).toFixed(2)}M in ${result.duration}ms`);
 						} else {
-							console.error(`❌ Vault data collection failed: ${result.error}`);
+							console.error(`❌ Vault data collection failed after ${retryCount} retries: ${result?.error}`);
 						}
 					} catch (error) {
 						console.error("❌ Vault historical collection failed:", error);

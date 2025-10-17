@@ -1059,12 +1059,24 @@ const XFundPage = () => {
   const getTransactionHistory = () => {
     // Use real Neon data only
     if (vaultTransactionsData?.transactions && vaultTransactionsData.transactions.length > 0) {
-      return vaultTransactionsData.transactions.map(tx => ({
-        date: tx.date,
-        type: tx.type,
-        tokens: `${tx.asset} ${tx.amount}`,
-        value: `$${tx.amountUsd.toFixed(2)}`
-      }));
+      return vaultTransactionsData.transactions.map(tx => {
+        // 格式化日期为本地时间
+        const date = new Date(tx.date);
+        const formattedDate = date.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        return {
+          date: formattedDate,
+          type: tx.type,
+          tokens: `${tx.asset} ${tx.amount}`,
+          value: `$${tx.amountUsd.toFixed(2)}`
+        };
+      });
     }
     
     // Empty state - no fallback to mock data
@@ -1075,16 +1087,28 @@ const XFundPage = () => {
   const getEarningDetails = () => {
     // Use real Neon data if available
     if (vaultEarningDetailsData?.earningDetails && vaultEarningDetailsData.earningDetails.length > 0) {
-      return vaultEarningDetailsData.earningDetails.map(detail => ({
-        date: detail.date,
-        type: detail.type,
-        tokens: `${detail.rewardAmount} Rewards`,
-        value: `$${(parseFloat(detail.rewardAmount) * 1).toFixed(2)}`, // Assuming $1 per token
-        rewardMint: detail.rewardMint,
-        totalClaimed: detail.totalRewardsClaimed,
-        timestamp: detail.timestamp,
-        rewardAmount: parseFloat(detail.rewardAmount)
-      }));
+      return vaultEarningDetailsData.earningDetails.map(detail => {
+        // 格式化日期为本地时间
+        const date = new Date(detail.date);
+        const formattedDate = date.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        return {
+          date: formattedDate,
+          type: detail.type,
+          tokens: `${detail.rewardAmount} Rewards`,
+          value: `$${(parseFloat(detail.rewardAmount) * 1).toFixed(2)}`, // Assuming $1 per token
+          rewardMint: detail.rewardMint,
+          totalClaimed: detail.totalRewardsClaimed,
+          timestamp: detail.timestamp,
+          rewardAmount: parseFloat(detail.rewardAmount)
+        };
+      });
     }
     
     // Empty state

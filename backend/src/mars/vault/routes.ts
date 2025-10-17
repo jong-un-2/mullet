@@ -87,12 +87,8 @@ marsVaultRoutes.post('/transactions',
           .map((tx) => ({
             id: tx.id,
             signature: tx.signature,
-            date: new Date(tx.timestamp).toLocaleString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
+            // 返回 ISO 时间戳，让前端根据用户本地时区格式化
+            date: new Date(tx.timestamp).toISOString(),
             type: tx.type,
             asset: 'PYUSD', // TODO: Get from vault state or token mint
             amount: (Number(tx.amount) / 1e6).toFixed(2), // Assuming 6 decimals
@@ -459,12 +455,8 @@ marsVaultRoutes.post('/earning-details',
         // Format earning details for frontend
         const formattedDetails = earningDetails.map((detail) => ({
           id: detail.id,
-          date: new Date(detail.block_timestamp).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
+          // 返回 ISO 时间戳，让前端根据用户本地时区格式化
+          date: new Date(detail.block_timestamp).toISOString(),
           type: 'claim' as const,
           rewardMint: detail.reward_mint,
           rewardAmount: (Number(detail.reward_amount) / 1e6).toFixed(6), // Assuming 6 decimals
