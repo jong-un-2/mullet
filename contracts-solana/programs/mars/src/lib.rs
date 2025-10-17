@@ -19,8 +19,6 @@ use instructions::*;
 use state::*;
 use util::*;
 
-use anchor_lang::prelude::*;
-
 // V19 deployment - Added FarmRewardsClaimedEvent for Substreams indexing
 // Emits event when users claim farming rewards
 // Enables tracking of all reward claims in PostgreSQL via Neon

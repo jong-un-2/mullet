@@ -286,7 +286,7 @@ export const removeBridgeLiquidityTx = async (
   const tx = await program.methods
     .removeBridgeLiquidity(new BN(amount * 1_000_000))
     .accounts({
-      orchestrator,
+      admin: orchestrator,
     })
     .transaction();
 

@@ -297,7 +297,6 @@ npm run script accept-authority
 npm run script update-global-state-params -rt 80 -cfb 5 -moa 110000000000
 npm run script set-target-chain-min-fee -d 10 -f 1
 npm run script set-fee-tiers
-npm run script add-orchestrator -o F3cNzVaHEvrLwYNzWYvvQwZ7DtW6gcbFVE4Y5EiCpD7k
 npm run script add-bridge-liquidity -a 100 -k ./user.json
 npm run script remove-bridge-liquidity -a 10 -k ./user.json
 npm run script migrate-asset

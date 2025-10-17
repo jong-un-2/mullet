@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
-use anchor_spl::token::{Token, TokenAccount, Mint};
+use anchor_spl::token::{TokenAccount, Mint};
 
 #[derive(Accounts)]
 pub struct KaminoStakeInFarm<'info> {

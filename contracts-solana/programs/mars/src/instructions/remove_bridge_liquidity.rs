@@ -6,15 +6,16 @@ use anchor_spl::{
 
 #[derive(Accounts)]
 pub struct RemoveBridgeLiquidity<'info> {
-    // only orchestrator can remove bridge liquidity
+    // only admin can remove bridge liquidity
     // receives USDC
     #[account(mut)]
-    pub orchestrator: Signer<'info>,
+    pub admin: Signer<'info>,
 
     //  Global state
     #[account(
         seeds = [GLOBAL_SEED],
         bump,
+        constraint = global_state.admin == admin.key() @MarsError::InvalidAdmin,
         constraint = global_state.frozen == false @MarsError::GlobalStateFrozen
     )]
     pub global_state: Box<Account<'info, GlobalState>>,
@@ -26,23 +27,14 @@ pub struct RemoveBridgeLiquidity<'info> {
     )]
     pub asset: Box<Account<'info, Asset>>,
 
-    //  Stores orchestrator info
-    #[account(
-        seeds = [orchestrator.key().as_ref(), ORCHESTRATOR_SEED],
-        bump,
-        constraint = orchestrator_state.authorized == true @MarsError::IllegalOrchestrator,
-        constraint = orchestrator_state.remove_bridge_liquidity_permission == true @MarsError::InvalidOrchestratorPermission
-    )]
-    pub orchestrator_state: Box<Account<'info, OrchestratorState>>,
-
-    //  USDC token account of the orchestrator
+    //  USDC token account of the admin
     #[account(
         init_if_needed,
-        payer = orchestrator,
+        payer = admin,
         associated_token::mint = usdc_mint,
-        associated_token::authority = orchestrator,
+        associated_token::authority = admin,
     )]
-    pub ata_orchestrator: Box<Account<'info, TokenAccount>>,
+    pub ata_admin: Box<Account<'info, TokenAccount>>,
 
     //  Needed to check vault authority
     #[account(	
@@ -95,20 +87,20 @@ impl RemoveBridgeLiquidity<'_> {
 
         msg!(
             "RemoveBridgeLiquidity: {{\
-            \"orchestrator\":\"{:?}\",\
+            \"admin\":\"{:?}\",\
             \"current_balance\":\"{:?}\",\
             \"amount\":\"{:?}\"\
             }}",
-            ctx.accounts.orchestrator.key(),
+            ctx.accounts.admin.key(),
             current_balance,
             amount
         );
 
-        // Transfer USDC from vault to orchestrator
+        // Transfer USDC from vault to admin
         token_transfer_with_signer(
             ctx.accounts.ata_vault.to_account_info().clone(),
             ctx.accounts.vault.to_account_info().clone(),
-            ctx.accounts.ata_orchestrator.to_account_info().clone(),
+            ctx.accounts.ata_admin.to_account_info().clone(),
             ctx.accounts.token_program.to_account_info().clone(),
             &[&[VAULT_SEED, &[ctx.bumps.vault]]],
             amount,
