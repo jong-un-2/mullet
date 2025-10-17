@@ -29,6 +29,8 @@ export interface Env {
 	// Solana RPC
 	SOLANA_RPC_URL?: string;
 	SOLANA_CLUSTER?: string;
+	// Neon Database direct connection (fallback)
+	NEON_DATABASE_URL?: string;
 }
 
 // Export Durable Objects for wrangler
@@ -182,15 +184,15 @@ export default {
 						// 使用环境变量中的 Solana RPC URL
 						const rpcUrl = env.SOLANA_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
 						
-						// 使用 Hyperdrive 连接 Neon PostgreSQL
-						const dbConnectionString = env.HYPERDRIVE?.connectionString;
+						// 使用直连 Neon 数据库（不通过 Hyperdrive）
+						const dbConnectionString = env.NEON_DATABASE_URL;
 						
 						if (!dbConnectionString) {
-							console.error("❌ Hyperdrive connection string not available");
+							console.error("❌ NEON_DATABASE_URL not configured");
 							break;
 						}
 						
-						console.log("🔗 Database connection: Using Hyperdrive");
+						console.log("🔗 Database connection: Direct Neon connection");
 						
 						// 带重试的数据收集
 						let result;
