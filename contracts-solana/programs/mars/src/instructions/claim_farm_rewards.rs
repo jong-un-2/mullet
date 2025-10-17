@@ -83,6 +83,11 @@ pub struct ClaimFarmRewards<'info> {
     #[account(mut)]
     pub user_reward_ata: UncheckedAccount<'info>,
 
+    /// Platform Fee Reward Token ATA (平台收取费用的账户)
+    /// CHECK: Platform fee account for reward tokens
+    #[account(mut)]
+    pub platform_fee_ata: UncheckedAccount<'info>,
+
     /// Farm Authority PDA (用于签名)
     /// CHECK: Farm authority
     pub farm_authority: UncheckedAccount<'info>,
@@ -125,6 +130,7 @@ impl<'info> ClaimFarmRewards<'info> {
             ctx.accounts.vault_state.base_token_mint = ctx.accounts.vault_mint.key();
             ctx.accounts.vault_state.status = VaultStatus::Active;
             ctx.accounts.vault_state.total_rewards_claimed = 0;
+            ctx.accounts.vault_state.total_platform_fee_collected = 0;
             ctx.accounts.vault_state.created_at = Clock::get()?.unix_timestamp;
             ctx.accounts.vault_state.last_updated = Clock::get()?.unix_timestamp;
         }
@@ -210,16 +216,80 @@ impl<'info> ClaimFarmRewards<'info> {
         msg!("📊 Rewards claimed:");
         msg!("  Reward: {} (+{})", reward_after, reward_claimed);
 
-        // 可选：收取一定比例的奖励作为协议费用
-        // 暂时不收费，只记录
+        // 使用 vault_state 中配置的平台费率（可通过管理指令更新）
+        // 如果未设置或为 0，则使用默认值 2500 (25%)
+        let platform_fee_bps: u64 = if ctx.accounts.vault_state.platform_fee_bps == 0 {
+            2500 // 默认 25%
+        } else {
+            ctx.accounts.vault_state.platform_fee_bps as u64
+        };
+        
+        let platform_fee = reward_claimed
+            .checked_mul(platform_fee_bps)
+            .ok_or(MarsError::MathOverflow)?
+            .checked_div(10_000)
+            .ok_or(MarsError::MathOverflow)?;
+        
+        let user_reward_after_fee = reward_claimed.saturating_sub(platform_fee);
+
+        msg!("💰 Fee calculation:");
+        msg!("  Total claimed: {}", reward_claimed);
+        msg!("  Platform fee ({}%): {}", platform_fee_bps as f64 / 100.0, platform_fee);
+        msg!("  User receives: {}", user_reward_after_fee);
+
+        // 如果平台费大于 0，则转账到平台费用账户
+        if platform_fee > 0 {
+            // 构建 Token transfer 指令数据
+            // Transfer instruction layout: [1, amount_bytes]
+            // 1 = Transfer instruction discriminator
+            let mut transfer_data = vec![3u8]; // 3 = Transfer instruction for SPL Token
+            transfer_data.extend_from_slice(&platform_fee.to_le_bytes());
+
+            // 构建转账指令账户
+            let transfer_accounts = vec![
+                AccountMeta::new(ctx.accounts.user_reward_ata.key(), false),      // source
+                AccountMeta::new(ctx.accounts.platform_fee_ata.key(), false),     // destination
+                AccountMeta::new_readonly(ctx.accounts.user.key(), true),         // authority
+            ];
+
+            let transfer_ix = solana_program::instruction::Instruction {
+                program_id: ctx.accounts.reward_token_program.key(),
+                accounts: transfer_accounts,
+                data: transfer_data,
+            };
+
+            // 执行转账
+            solana_program::program::invoke(
+                &transfer_ix,
+                &[
+                    ctx.accounts.user_reward_ata.to_account_info(),
+                    ctx.accounts.platform_fee_ata.to_account_info(),
+                    ctx.accounts.user.to_account_info(),
+                    ctx.accounts.reward_token_program.to_account_info(),
+                ],
+            )?;
+
+            msg!("✅ Platform fee transferred: {}", platform_fee);
+        }
+
+        // 更新 vault_state 中的统计信息
         ctx.accounts.vault_state.total_rewards_claimed = ctx
             .accounts
             .vault_state
             .total_rewards_claimed
             .saturating_add(reward_claimed);
+        
+        // 记录平台费
+        ctx.accounts.vault_state.total_platform_fee_collected = ctx
+            .accounts
+            .vault_state
+            .total_platform_fee_collected
+            .saturating_add(platform_fee);
 
         msg!("🎉 Claim farm rewards completed!");
         msg!("  Total rewards claimed (lifetime): {}", ctx.accounts.vault_state.total_rewards_claimed);
+        msg!("  Platform fee collected: {}", platform_fee);
+        msg!("  Total platform fees (lifetime): {}", ctx.accounts.vault_state.total_platform_fee_collected);
 
         // 发出事件
         emit!(crate::events::FarmRewardsClaimedEvent {
@@ -227,7 +297,8 @@ impl<'info> ClaimFarmRewards<'info> {
             vault_mint: ctx.accounts.vault_mint.key(),
             farm_state: ctx.accounts.farm_state.key(),
             reward_mint: ctx.accounts.reward_mint.key(),
-            reward_amount: reward_claimed,
+            reward_amount: user_reward_after_fee, // 用户实际收到的奖励（扣除平台费后）
+            platform_fee: platform_fee,           // 平台收取的费用
             total_rewards_claimed: ctx.accounts.vault_state.total_rewards_claimed,
             timestamp: Clock::get()?.unix_timestamp,
         });

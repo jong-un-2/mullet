@@ -219,8 +219,16 @@ export const getJitoTip = async () => {
     }
 
     //  calculate average amount excluding extremes
+    if (tipAmounts.length === 0) {
+      console.log("⚠️  No tip data available (using default: 1000 lamports)");
+      return 1000;
+    }
+    
     if (tipAmounts.length <= 2) {
-      throw new Error("Array must contain more than 2 elements");
+      // If we have 1 or 2 samples, just use the average
+      const average = tipAmounts.reduce((sum, num) => sum + num, 0) / tipAmounts.length;
+      console.log("average (small sample):", average);
+      return average;
     }
 
     const max_value = Math.max(...tipAmounts);
@@ -414,7 +422,7 @@ export const claimAllFees = async (vaultIdHex: string) => {
 
     const tx = await program.methods
       .claimAllFees()
-      .accounts({
+      .accountsPartial({
         admin: payer.publicKey,
         vaultState: vaultStatePDA,
         vaultTreasury: vaultTreasuryPDA,
@@ -428,6 +436,57 @@ export const claimAllFees = async (vaultIdHex: string) => {
     console.log("Total amount claimed:", totalFees.toString());
   } catch (error) {
     console.error("Error claiming all vault fees:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update vault platform fee rate
+ * @param vaultMint - vault's base token mint address (e.g., PYUSD)
+ * @param newPlatformFeeBps - new platform fee in basis points (e.g., 2500 = 25%)
+ */
+export const updateVaultPlatformFee = async (
+  vaultMint: string,
+  newPlatformFeeBps: number
+) => {
+  try {
+    const vaultMintPubkey = new PublicKey(vaultMint);
+
+    // Derive vault state PDA
+    const [vaultStatePDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault-state"), vaultMintPubkey.toBuffer()],
+      program.programId
+    );
+
+    console.log("\n⚙️  Updating Vault Platform Fee:");
+    console.log("  Vault Mint:", vaultMint);
+    console.log("  Vault State:", vaultStatePDA.toBase58());
+    console.log("  Admin:", payer.publicKey.toBase58());
+    console.log("  New Platform Fee:", newPlatformFeeBps, "bps (", newPlatformFeeBps / 100, "%)");
+
+    // Validate fee range
+    if (newPlatformFeeBps < 0 || newPlatformFeeBps > 10000) {
+      throw new Error("Platform fee must be between 0 and 10000 bps (0%-100%)");
+    }
+
+    const tx = await program.methods
+      .updateVaultPlatformFee(newPlatformFeeBps)
+      .accountsPartial({
+        admin: payer.publicKey,
+        vaultState: vaultStatePDA,
+      })
+      .rpc();
+
+    console.log("\n✅ Platform fee updated successfully!");
+    console.log("Transaction:", tx);
+
+    // Fetch updated vault state
+    const updatedVaultState = await program.account.vaultState.fetch(vaultStatePDA);
+    console.log("\n📊 Updated Vault Configuration:");
+    console.log("  Platform Fee:", updatedVaultState.platformFeeBps, "bps (", updatedVaultState.platformFeeBps / 100, "%)");
+    console.log("  Last Updated:", new Date(updatedVaultState.lastUpdated.toNumber() * 1000).toISOString());
+  } catch (error) {
+    console.error("Error updating vault platform fee:", error);
     throw error;
   }
 };

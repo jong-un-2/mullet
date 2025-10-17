@@ -114,7 +114,8 @@ pub struct FarmRewardsClaimedEvent {
     pub vault_mint: Pubkey,
     pub farm_state: Pubkey,
     pub reward_mint: Pubkey,
-    pub reward_amount: u64,
+    pub reward_amount: u64,        // 用户实际收到的奖励（扣除平台费后）
+    pub platform_fee: u64,         // 平台收取的费用
     pub total_rewards_claimed: u64, // vault lifetime total
     pub timestamp: i64,
 }

@@ -260,67 +260,6 @@ export const setTargetChainMinFeeTx = async (
   return tx;
 };
 
-export const addOrchestratorTx = async (
-  admin: PublicKey,
-  orchestrator: PublicKey,
-  program: Program<Mars>
-) => {
-  const [globalState, bump] = PublicKey.findProgramAddressSync(
-    [Buffer.from(GLOBAL_STATE_SEED)],
-    program.programId
-  );
-  console.log("globalState: ", globalState.toBase58());
-
-  const fillOrderPermission = true;
-  const revertOrderPermission = true;
-  const removeBridgeLiquidityPermission = true;
-  const claimBaseFeePermission = true;
-  const claimLpFeePermission = true;
-  const claimProtocolFeePermission = true;
-
-  const tx = new Transaction();
-  tx.add(
-    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 })
-  ).add(
-    await program.methods
-      .addOrchestrator(
-        fillOrderPermission,
-        revertOrderPermission,
-        removeBridgeLiquidityPermission,
-        claimBaseFeePermission,
-        claimLpFeePermission,
-        claimProtocolFeePermission
-      )
-      .accounts({
-        admin,
-        orchestrator,
-      })
-      .transaction()
-  );
-
-  tx.feePayer = admin;
-
-  return tx;
-};
-
-export const removeOrchestratorTx = async (
-  admin: PublicKey,
-  orchestrator: PublicKey,
-  program: Program<Mars>
-) => {
-  const tx = await program.methods
-    .removeOrchestrator()
-    .accounts({
-      admin,
-      orchestrator,
-    })
-    .transaction();
-
-  tx.feePayer = admin;
-
-  return tx;
-};
-
 export const removeBridgeLiquidityTx = async (
   orchestrator: PublicKey,
   amount: number,
@@ -470,3 +409,45 @@ export const removeBridgeLiquidityTx = async (
 
 //   return fillOrderTx;
 // };
+
+/**
+ * Admin can update vault platform fee rate
+ * @param admin - admin public key
+ * @param vaultMint - vault's base token mint (e.g., PYUSD)
+ * @param newPlatformFeeBps - new platform fee in basis points (e.g., 2500 = 25%)
+ * @param program - Mars program
+ */
+export const updateVaultPlatformFeeTx = async (
+  admin: PublicKey,
+  vaultMint: PublicKey,
+  newPlatformFeeBps: number,
+  program: Program<Mars>
+) => {
+  // Derive vault state PDA
+  const [vaultState] = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault-state"), vaultMint.toBuffer()],
+    program.programId
+  );
+
+  console.log("Updating vault platform fee:");
+  console.log("  Admin:", admin.toBase58());
+  console.log("  Vault Mint:", vaultMint.toBase58());
+  console.log("  Vault State:", vaultState.toBase58());
+  console.log("  New Platform Fee:", newPlatformFeeBps, "bps (", newPlatformFeeBps / 100, "%)");
+
+  const tx = new Transaction();
+  
+  tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }))
+    .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 50_000 }))
+    .add(
+      await program.methods
+        .updateVaultPlatformFee(newPlatformFeeBps)
+        .accountsPartial({
+          admin: admin,
+          vaultState: vaultState,
+        })
+        .instruction()
+    );
+
+  return tx;
+};

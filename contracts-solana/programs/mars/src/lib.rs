@@ -225,6 +225,15 @@ pub mod mars {
         ClaimFarmRewards::process_instruction(ctx, reward_index)
     }
 
+    /// 管理员更新 Vault 的平台费率配置
+    /// new_platform_fee_bps: 新的平台费率（basis points，如 2500 = 25%）
+    pub fn update_vault_platform_fee(
+        ctx: Context<UpdateVaultPlatformFee>,
+        new_platform_fee_bps: u16,
+    ) -> Result<()> {
+        UpdateVaultPlatformFee::process_instruction(ctx, new_platform_fee_bps)
+    }
+
     // set protocol fee fraction
     pub fn set_protocol_fee_fraction(
         ctx: Context<SetProtocolFeeFraction>,

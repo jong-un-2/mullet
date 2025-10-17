@@ -84,6 +84,9 @@ pub enum CustomError {
     #[msg("Invalid fee configuration")]
     InvalidFeeConfig,
 
+    #[msg("Invalid parameter value")]
+    InvalidParameter,
+
     #[msg("Incorrect repay address")]
     IncorrectRepay,
 

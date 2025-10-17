@@ -44,3 +44,5 @@ pub mod kamino_farm;
 pub use kamino_farm::*;
 pub mod claim_farm_rewards;
 pub use claim_farm_rewards::*;
+pub mod update_vault_platform_fee;
+pub use update_vault_platform_fee::*;

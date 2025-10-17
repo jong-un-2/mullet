@@ -62,9 +62,9 @@ programCommand("accept-authority").action(async (directory, cmd) => {
 });
 
 programCommand("update-global-state-params")
-  .option("-rt, --rebalance_threshold <number>", "new rebalabce threshold")
-  .option("-cfb, --cross_chain_fee_bps <number>", "new cross chain fee bps")
-  .option("-moa, --max_order_amount <number>", "new max order amount")
+  .option("-t, --rebalance_threshold <number>", "new rebalabce threshold")
+  .option("-c, --cross_chain_fee_bps <number>", "new cross chain fee bps")
+  .option("-m, --max_order_amount <number>", "new max order amount")
   .action(async (directory, cmd) => {
     const {
       env,
@@ -198,6 +198,27 @@ programCommand("claim-all-fees")
     await claimAllFees(vault_id);
   });
 
+programCommand("update-vault-platform-fee")
+  .option("-m, --vault_mint <string>", "vault base token mint address (e.g., PYUSD)")
+  .option("-f, --fee_bps <number>", "new platform fee in basis points (e.g., 2500 = 25%)")
+  .action(async (directory, cmd) => {
+    const { env, keypair, rpc, vault_mint, fee_bps } = cmd.opts();
+
+    console.log("Solana Cluster:", env);
+    console.log("Keypair Path:", keypair);
+    console.log("RPC URL:", rpc);
+    await setClusterConfig(env, keypair, rpc);
+
+    if (!vault_mint || !fee_bps) {
+      console.log("Error: vault_mint and fee_bps are required");
+      console.log("Example: yarn script update-vault-platform-fee -m 2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo -f 2500");
+      return;
+    }
+
+    const { updateVaultPlatformFee } = await import("./scripts");
+    await updateVaultPlatformFee(vault_mint, parseInt(fee_bps));
+  });
+
 function programCommand(name: string) {
   return program
     .command(name)
@@ -250,24 +271,25 @@ program.parse(process.argv);
 
 /*
 
-yarn script init
-yarn script change-admin -n A9WxRgrw9m3PMU7X3kgN9baSaBnLyNMpxnb3ENBzXaGr
-yarn script accept-authority
-yarn script update-global-state-params -rt 80 -cfb 5 -moa 110000000000
-yarn script set-target-chain-min-fee -d 10 -f 1
-yarn script set-fee-tiers
-yarn script add-orchestrator -o F3cNzVaHEvrLwYNzWYvvQwZ7DtW6gcbFVE4Y5EiCpD7k
-yarn script add-bridge-liquidity -a 100 -k ./user.json
-yarn script remove-bridge-liquidity -a 10 -k ./user.json
-yarn script migrate-asset
+npm run script init
+npm run script change-admin -n A9WxRgrw9m3PMU7X3kgN9baSaBnLyNMpxnb3ENBzXaGr
+npm run script accept-authority
+npm run script update-global-state-params -rt 80 -cfb 5 -moa 110000000000
+npm run script set-target-chain-min-fee -d 10 -f 1
+npm run script set-fee-tiers
+npm run script add-orchestrator -o F3cNzVaHEvrLwYNzWYvvQwZ7DtW6gcbFVE4Y5EiCpD7k
+npm run script add-bridge-liquidity -a 100 -k ./user.json
+npm run script remove-bridge-liquidity -a 10 -k ./user.json
+npm run script migrate-asset
 
-yarn script create-order -u /Users/satyamkumar/.config/solana/mars-temp-admin.json -a 30 -s 0xd5989bd90276a444016205e273b24260335717aac81676df8d53affd77bdb439 -oh 0xd5989bd90276a444016205e273b24260335717aac81676df8d53affd77bdb449 -rcv 0x8A1c0E832f60bf45bBB5DD777147706Ed5cB6602 -sid 1399811149 -did 10 -ti EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v -f 2 -m 1  -to 0x4200000000000000000000000000000000000042
+npm run script create-order -u /Users/satyamkumar/.config/solana/mars-temp-admin.json -a 30 -s 0xd5989bd90276a444016205e273b24260335717aac81676df8d53affd77bdb439 -oh 0xd5989bd90276a444016205e273b24260335717aac81676df8d53affd77bdb449 -rcv 0x8A1c0E832f60bf45bBB5DD777147706Ed5cB6602 -sid 1399811149 -did 10 -ti EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v -f 2 -m 1  -to 0x4200000000000000000000000000000000000042
 
-yarn script fill-order -a 20 -s seed11 -tr 0x96A1fD6ae178a40ce6E8872d8d11465f1ED7eb9B -rcv F3cNzVaHEvrLwYNzWYvvQwZ7DtW6gcbFVE4Y5EiCpD7k -sid 1 -did 1399811149 -ti 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 -f 11 -m 1  -to EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+npm run script fill-order -a 20 -s seed11 -tr 0x96A1fD6ae178a40ce6E8872d8d11465f1ED7eb9B -rcv F3cNzVaHEvrLwYNzWYvvQwZ7DtW6gcbFVE4Y5EiCpD7k -sid 1 -did 1399811149 -ti 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 -f 11 -m 1  -to EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
 
 
-yarn script swap-withdraw -u ../key/gnus.json -t So11111111111111111111111111111111111111112 -a 10000 -k ../key/uu.json
-yarn script swap-withdraw -u ../key/gnus.json -t 27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4 -a 5000 -k ../key/uu.json
-yarn script withdraw-stable-coin -u ../key/gnus.json -a 10000 -k ../key/uu.json
+npm run script swap-withdraw -u ../key/gnus.json -t So11111111111111111111111111111111111111112 -a 10000 -k ../key/uu.json
+npm run script swap-withdraw -u ../key/gnus.json -t 27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4 -a 5000 -k ../key/uu.json
+npm run script withdraw-stable-coin -u ../key/gnus.json -a 10000 -k ../key/uu.json
 
 */
+
