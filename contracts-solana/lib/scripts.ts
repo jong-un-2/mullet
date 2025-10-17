@@ -261,12 +261,12 @@ export const setTargetChainMinFeeTx = async (
 };
 
 export const removeBridgeLiquidityTx = async (
-  orchestrator: PublicKey,
+  admin: PublicKey,
   amount: number,
   program: Program<Mars>
 ) => {
-  const ataOrchestrator = getAssociatedTokenAccount(orchestrator, USDC_ADDRESS);
-  console.log("ataOrchestrator: ", ataOrchestrator.toBase58());
+  const ataAdmin = getAssociatedTokenAccount(admin, USDC_ADDRESS);
+  console.log("ataAdmin: ", ataAdmin.toBase58());
 
   const [globalState, bump] = PublicKey.findProgramAddressSync(
     [Buffer.from(GLOBAL_STATE_SEED)],
@@ -286,11 +286,11 @@ export const removeBridgeLiquidityTx = async (
   const tx = await program.methods
     .removeBridgeLiquidity(new BN(amount * 1_000_000))
     .accounts({
-      admin: orchestrator,
+      admin: admin,
     })
     .transaction();
 
-  tx.feePayer = orchestrator;
+  tx.feePayer = admin;
 
   return tx;
 };
