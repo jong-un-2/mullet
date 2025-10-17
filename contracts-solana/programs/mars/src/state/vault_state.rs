@@ -341,7 +341,6 @@ pub struct GlobalState {
     pub pending_admin: Option<Pubkey>,
     pub freeze_authorities: Vec<Pubkey>,
     pub thaw_authorities: Vec<Pubkey>,
-    pub orchestrators: Vec<Pubkey>,
     pub frozen: bool,
     pub fee_tiers: Vec<FeeTier>,
     pub insurance_fee_tiers: Vec<InsuranceFeeTier>,

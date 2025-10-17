@@ -334,7 +334,6 @@ pub struct GlobalState {
     pub is_paused: bool,            // 合约是否暂停
     pub platform_fee_bps: u16,      // 平台费用（基点）
     pub total_deposited: u64,       // 总存款量
-    pub orchestrators: Vec<Pubkey>, // 编排者列表
 }
 ```
 
@@ -513,50 +512,10 @@ git push origin feature/your-feature
 
 <br/>
 
-### Add bridge liquidity
-
-Orchestrator can adds liquidity to the program
-
-```js
-   yarn script add-bridge-liquidity -a <USDC_AMOUNT>
-```
-
-<br/>
-
-### Remove bridge liquidity
-
-Orchestrator can remove liquidity to the program
-
-```js
-   yarn script remove-bridge-liquidity -a <USDC_AMOUNT>
-```
-
-<br/>
-
 ### Swap deposit
 
 User can deposit any token to the program
 
 ```js
    yarn script swap-deposit -t <TOKEN_ADDRESS> -a <TOKEN_AMOUNT>
-```
-
-<br/>
-
-### Swap withdraw
-
-Orchestrator can withdraw to any token and transfter to a user
-
-```js
-   yarn script swap-withdraw -u <USER_ADDRESS> -t <TOKEN_ADDRESS> -a <TOKEN_AMOUNT>
-```
-
-<br/>
-
-### Withdraw stable coin
-
-Orchestrator can withdraw USDC and transfter to a user
-
-```js
-   yarn script swap-withdraw -u <USER_ADDRESS> -a <TOKEN_AMOUNT>
 ```

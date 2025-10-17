@@ -6,8 +6,3 @@ export interface GlobalState {
   totalAssets: anchor.BN;
   rebalanceThreshold: number;
 }
-
-export interface OrchestratorState {
-  orchestrator: PublicKey;
-  authorized: number;
-}

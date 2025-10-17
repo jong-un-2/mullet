@@ -6,7 +6,6 @@ pub const GLOBAL_SEED: &[u8] = b"genius-global-state-seed";
 pub const GLOBAL_AUTHORITY_SEED: &[u8] = b"genius-global-authority";
 pub const ASSET_SEED: &[u8] = b"asset-seed";
 pub const FEE_TIERS_SEED: &[u8] = b"fee-tiers-seed";
-pub const ORCHESTRATOR_SEED: &[u8] = b"genius-orchestrator-seed";
 pub const TARGET_CHAIN_MIN_FEE_SEED: &[u8] = b"genius-target-chain-min-fee";
 pub const PROTOCOL_FEE_FRACTION_SEED: &[u8] = b"protocol-fee-fraction-seed";
 pub const INSURANCE_FEE_TIERS_SEED: &[u8] = b"insurance-fee-tiers-seed";

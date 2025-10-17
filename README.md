@@ -310,7 +310,6 @@ pub struct GlobalState {
     pub is_paused: bool,            // 合约是否暂停
     pub platform_fee_bps: u16,      // 平台费用（基点）
     pub total_deposited: u64,       // 总存款量
-    pub orchestrators: Vec<Pubkey>, // 编排者列表
 }
 
 #[account]

@@ -11,7 +11,7 @@ pub use vault_state::*;
 #[account]
 #[derive(Default, Debug)]
 pub struct GlobalState {
-    //  admin manages orchestrators
+    //  admin address
     pub admin: Pubkey,
 
     //  use this for 2 step ownership transfer
@@ -62,7 +62,7 @@ pub struct Asset {
     // Insurance fee collected, this is the fee that will be used in case of loss of funds due to block reorganisation
     pub insurance_fee_collected: u64,
 
-    // Unclaimed base fee, this is the fee that can be claimed by the orchestrator
+    // Unclaimed base fee
     pub unclaimed_base_fee: u64,
 
     // Unclaimed lp fee, this is the fee that can be claimed by the investors
@@ -131,40 +131,6 @@ pub struct GlobalStateAuthority {
 
     // thaw authority
     pub thaw_authority: Vec<Pubkey>,
-}
-
-/**
- * State of an orchestrator
- */
-#[account]
-#[derive(Default)]
-pub struct OrchestratorState {
-    //  orchestrator address
-    pub orchestrator: Pubkey,
-
-    //  authorized/unauthorized
-    pub authorized: bool,
-
-    // fill order permission
-    pub fill_order_permission: bool,
-
-    // revert order permission
-    pub revert_order_permission: bool,
-
-    // remove bridge liquidity permission
-    pub remove_bridge_liquidity_permission: bool,
-
-    // claim base fee permission
-    pub claim_base_fee_permission: bool,
-
-    // claim lp fee permission
-    pub claim_lp_fee_permission: bool,
-
-    // claim protocol fee permission
-    pub claim_protocol_fee_permission: bool,
-
-    // unused space for future use
-    pub unused_space: [bool; 8],
 }
 
 #[account]

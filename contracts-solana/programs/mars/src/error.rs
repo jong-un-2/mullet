@@ -5,12 +5,6 @@ pub enum CustomError {
     #[msg("Admin address dismatch")]
     InvalidAdmin,
 
-    #[msg("Admin can not be the orchestrator")]
-    InvalidOrchestrator,
-
-    #[msg("Orchestrator is not authorized")]
-    IllegalOrchestrator,
-
     #[msg("Invalid withdraw amount")]
     InvalidAmount,
 
@@ -191,9 +185,6 @@ pub enum CustomError {
 
     #[msg("The insurance fee should be less than 10_000")]
     InvalidInsuranceFee,
-
-    #[msg("Orchestrator is not authorized to perform this action")]
-    InvalidOrchestratorPermission,
 
     #[msg("Math operation overflow")]
     MathOverflow,

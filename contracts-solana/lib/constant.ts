@@ -1,7 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const GLOBAL_STATE_SEED = "mars-global-state-seed";
-export const ORCHESTRATOR_SEED = "mars-orchestrator-seed";
 export const TARGET_CHAIN_MIN_FEE_SEED = "mars-target-chain-min-fee";
 
 export const VAULT_SEED = "mars-vault";

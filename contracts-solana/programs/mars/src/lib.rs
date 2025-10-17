@@ -167,8 +167,6 @@ pub mod mars {
         FreezeThawGlobalState::thaw_global_state(ctx)
     }
 
-    // 已移除 add_orchestrator 指令以优化合约大小
-
     //  Admin can set target chain min fee
     pub fn set_fee_tiers(
         ctx: Context<SetFeeTiers>,
@@ -187,8 +185,6 @@ pub mod mars {
         SetTargetChainMinFee::process_instruction(ctx, dest_chain_id, min_fee)
     }
 
-    // 已移除 remove_orchestrator 指令以优化合约大小
-
     //  admin can update threshold amount
     pub fn update_global_state_params(
         ctx: Context<UpdateGlobalStateParams>,
@@ -204,7 +200,6 @@ pub mod mars {
         )
     }
 
-    //  orchestrator can remove bridge liquidity
     pub fn remove_bridge_liquidity(ctx: Context<RemoveBridgeLiquidity>, amount: u64) -> Result<()> {
         RemoveBridgeLiquidity::process_instruction(ctx, amount)
     }
