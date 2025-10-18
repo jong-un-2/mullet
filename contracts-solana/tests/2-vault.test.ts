@@ -329,15 +329,15 @@ describe("🏦 Mars Vault Core Tests", () => {
       } catch (err: any) {
         failed = true;
         console.log(`   ✅ Correctly rejected: ${err.message}`);
-        // 验证错误代码
+        // 验证错误代码 - OnlyAdmin error
         assert.include(
           err.message.toLowerCase(),
-          "constraint",
-          "Should fail with constraint error"
+          "onlyadmin",
+          "Should fail with OnlyAdmin error"
         );
       }
 
-      assert.isTrue(failed, "Should fail with admin constraint error");
+      assert.isTrue(failed, "Should fail with OnlyAdmin error");
       console.log("   ✅ Access control working correctly!");
     });
 
@@ -378,10 +378,10 @@ describe("🏦 Mars Vault Core Tests", () => {
       } catch (err: any) {
         failed = true;
         console.log(`   ✅ Correctly rejected: ${err.message}`);
-        // 验证错误码为InvalidParameter (6000)
+        // 验证错误码为InvalidParameter (6025)
         assert.include(
           err.message,
-          "6000",
+          "invalidparameter",
           "Should fail with InvalidParameter error"
         );
       }
@@ -446,12 +446,12 @@ describe("🏦 Mars Vault Core Tests", () => {
         console.log(`   ✅ Correctly rejected: ${err.message}`);
         assert.include(
           err.message.toLowerCase(),
-          "constraint",
-          "Should fail with constraint error"
+          "onlyadmin",
+          "Should fail with OnlyAdmin error"
         );
       }
 
-      assert.isTrue(failed, "Should fail with admin constraint");
+      assert.isTrue(failed, "Should fail with OnlyAdmin error");
       console.log("   ✅ Access control working correctly!");
     });
   });
@@ -512,12 +512,12 @@ describe("🏦 Mars Vault Core Tests", () => {
         console.log(`   ✅ Correctly rejected: ${err.message}`);
         assert.include(
           err.message.toLowerCase(),
-          "constraint",
-          "Should fail with constraint error"
+          "onlyadmin",
+          "Should fail with OnlyAdmin error"
         );
       }
 
-      assert.isTrue(failed, "Should fail with admin constraint");
+      assert.isTrue(failed, "Should fail with OnlyAdmin error");
       console.log("   ✅ Access control working correctly!");
     });
   });

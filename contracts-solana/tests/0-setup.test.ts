@@ -23,6 +23,7 @@ import {
   mintTo,
 } from "@solana/spl-token";
 import { assert } from "chai";
+import { SharedTestState } from "./shared-state";
 
 describe("🏗️ Setup - Base Initialization", () => {
   const provider = anchor.AnchorProvider.env();
@@ -150,6 +151,14 @@ describe("🏗️ Setup - Base Initialization", () => {
       console.log(`   ✅ Platform Fee Wallet: ${globalStateAccount.platformFeeWallet.toBase58()}`);
 
       console.log("   ✅ Global State initialized successfully!");
+      
+      // 保存到共享状态，供其他测试文件使用
+      SharedTestState.setUsdcMint(usdcMint);
+      SharedTestState.setGlobalState(globalState);
+      SharedTestState.setAsset(asset);
+      SharedTestState.setVault(vault);
+      SharedTestState.setVaultAta(vaultAta);
+
       console.log("\n" + "=".repeat(80));
       console.log("🎉 Setup complete! Other tests can now run.");
       console.log("=".repeat(80) + "\n");

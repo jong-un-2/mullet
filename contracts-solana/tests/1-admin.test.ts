@@ -26,6 +26,7 @@ import {
 } from "@solana/spl-token";
 import { assert } from "chai";
 import bs58 from "bs58";
+import { SharedTestState } from "./shared-state";
 
 describe("🛡️ Mars Admin & Management Tests", () => {
   // ============================================================================
@@ -600,7 +601,7 @@ describe("🛡️ Mars Admin & Management Tests", () => {
         .setTargetChainMinFee(destChainId, minFee)
         .accounts({
           admin: wallet.publicKey,
-          usdcMint: usdcMint,
+          usdcMint: SharedTestState.usdcMint, // 使用 setup.test.ts 初始化的 USDC mint
         })
         .rpc();
 
