@@ -348,7 +348,7 @@ export async function createClaimRewardsTransaction(
     );
     
     const [vaultStatePda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('vault-state'), PYUSD_MINT.toBuffer()],
+      [Buffer.from('vault-state'), PYUSD_VAULT.toBuffer()],
       MARS_PROGRAM_ID
     );
     
