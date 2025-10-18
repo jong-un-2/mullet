@@ -30,7 +30,7 @@ modules:
   # 1. Parse all blocks and extract Mars vault transactions
   - name: map_blocks
     kind: map
-    initialBlock: 372182088
+    initialBlock: 374121131
     inputs:
       - source: sf.solana.type.v1.Block
     output:
@@ -39,7 +39,7 @@ modules:
   # 2. Filter and transform vault events
   - name: map_vault_events
     kind: map
-    initialBlock: 372182088
+    initialBlock: 374121131
     inputs:
       - map: map_blocks
     output:
@@ -48,7 +48,7 @@ modules:
   # 3. Maintain vault state snapshots (aggregation)
   - name: store_vault_states
     kind: store
-    initialBlock: 372182088
+    initialBlock: 374121131
     updatePolicy: set
     valueType: proto:mars.vaults.v1.VaultSnapshot
     inputs:
@@ -59,7 +59,7 @@ modules:
   # which is compatible with substreams-sink-postgres
   - name: db_out
     kind: map
-    initialBlock: 372182088
+    initialBlock: 374121131
     inputs:
       - map: map_vault_events
       - store: store_vault_states
@@ -76,7 +76,7 @@ network: solana-mainnet
 #     "$POSTGRES_DSN" \
 #     substreams.yaml \
 #     map_vault_events \
-#     --start-block 372182088 \
+#     --start-block 374121131 \
 #     --final-blocks-only
 #
 # This will automatically:
