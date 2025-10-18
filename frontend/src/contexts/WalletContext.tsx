@@ -59,47 +59,69 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         solWallet: info.solWallet?.address,
         ethWallet: info.ethWallet?.address,
         walletsLength: wallets.length,
-        solanaWalletsLength: solanaWallets.length
+        solanaWalletsLength: solanaWallets.length,
+        linkedAccounts: user?.linkedAccounts
       });
 
-      // Determine primary based on which wallet was connected
-      if (info.externalSolConnected && !info.externalEthConnected) {
-        console.log('✅ WalletContext - Setting primary wallet: SOL (external)');
-        setPrimaryWallet('sol');
-      } else if (info.externalEthConnected && !info.externalSolConnected) {
-        console.log('✅ WalletContext - Setting primary wallet: ETH (external)');
-        setPrimaryWallet('eth');
-      } else if (info.solWallet && !info.ethWallet) {
-        console.log('✅ WalletContext - Setting primary wallet: SOL (embedded)');
-        setPrimaryWallet('sol');
-      } else if (info.ethWallet && !info.solWallet) {
-        console.log('✅ WalletContext - Setting primary wallet: ETH (embedded)');
-        setPrimaryWallet('eth');
-      } else if (wallets.length === 1) {
-        // Only one wallet total, determine by address format
-        const wallet = wallets[0];
-        if (wallet.address.startsWith('0x')) {
-          console.log('✅ WalletContext - Setting primary wallet: ETH (single wallet)');
-          setPrimaryWallet('eth');
-        } else {
-          console.log('✅ WalletContext - Setting primary wallet: SOL (single wallet)');
-          setPrimaryWallet('sol');
-        }
-      }
-      // If both exist, check linked accounts order
-      else if (user?.linkedAccounts && user.linkedAccounts.length > 0) {
-        const firstAccount = user.linkedAccounts[0];
-        if (firstAccount.type === 'wallet') {
-          const firstAddress = (firstAccount as any).address;
-          if (firstAddress?.startsWith('0x')) {
-            console.log('✅ WalletContext - Setting primary wallet: ETH (first linked account)');
-            setPrimaryWallet('eth');
-          } else {
-            console.log('✅ WalletContext - Setting primary wallet: SOL (first linked account)');
+      // PRIORITY 1: Check Privy linkedAccounts - this tells us what the user actually selected
+      if (user?.linkedAccounts && user.linkedAccounts.length > 0) {
+        // Find the first wallet account (skip email, phone, etc.)
+        const firstWalletAccount = user.linkedAccounts.find(acc => acc.type === 'wallet');
+        
+        if (firstWalletAccount) {
+          const firstAddress = (firstWalletAccount as any).address;
+          console.log('🔍 First linked wallet address:', firstAddress);
+          
+          // Check if this address is a Solana address (not starting with 0x)
+          if (firstAddress && !firstAddress.startsWith('0x')) {
+            console.log('✅ WalletContext - Setting primary wallet: SOL (from linkedAccounts - user selected Solana)');
             setPrimaryWallet('sol');
+            return;
+          } else if (firstAddress && firstAddress.startsWith('0x')) {
+            console.log('✅ WalletContext - Setting primary wallet: ETH (from linkedAccounts - user selected Ethereum)');
+            setPrimaryWallet('eth');
+            return;
           }
         }
       }
+
+      // PRIORITY 2: Check if ONLY Solana wallet exists (no ETH wallet)
+      if (info.solWallet && !info.ethWallet) {
+        console.log('✅ WalletContext - Setting primary wallet: SOL (only Solana wallet exists)');
+        setPrimaryWallet('sol');
+        return;
+      }
+      
+      // PRIORITY 3: Check if ONLY ETH wallet exists (no Solana wallet)
+      if (info.ethWallet && !info.solWallet) {
+        console.log('✅ WalletContext - Setting primary wallet: ETH (only ETH wallet exists)');
+        setPrimaryWallet('eth');
+        return;
+      }
+
+      // PRIORITY 4: Check dedicated solanaWallets array (stronger signal for Solana)
+      if (solanaWallets.length > 0 && wallets.length > 0) {
+        console.log('✅ WalletContext - Setting primary wallet: SOL (solanaWallets array has entries)');
+        setPrimaryWallet('sol');
+        return;
+      }
+
+      // PRIORITY 5: Single wallet - determine by address format
+      if (wallets.length === 1) {
+        const wallet = wallets[0];
+        if (wallet.address.startsWith('0x')) {
+          console.log('✅ WalletContext - Setting primary wallet: ETH (single wallet, ETH address)');
+          setPrimaryWallet('eth');
+        } else {
+          console.log('✅ WalletContext - Setting primary wallet: SOL (single wallet, Solana address)');
+          setPrimaryWallet('sol');
+        }
+        return;
+      }
+
+      // FALLBACK: Default to Solana (as per privyConfig.walletChainType)
+      console.log('⚠️ WalletContext - Defaulting to SOL (fallback)');
+      setPrimaryWallet('sol');
     }
   }, [authenticated, wallets, solanaWallets, primaryWallet, user?.linkedAccounts]);
 
