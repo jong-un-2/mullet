@@ -18,6 +18,7 @@ import {
   getMedianSlotDurationInMsFromLastEpochs,
   KaminoManager,
   KaminoVault,
+  kaminoVaultId,
 } from "@kamino-finance/klend-sdk";
 import { Farms } from "@kamino-finance/farms-sdk";
 import { Decimal } from "decimal.js";
@@ -137,7 +138,7 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
         
         // 2. 获取 Vault 状态
         const vaultPubkey = new PublicKey(VAULT_ADDRESS);
-        const vault = new KaminoVault(vaultPubkey as any);
+        const vault = new KaminoVault(vaultPubkey as any, undefined, kaminoVaultId as any);
         const vaultState = await vault.getState(kaminoConnection);
         console.log('📦 [useUserVaultPosition] Vault state loaded');
 
