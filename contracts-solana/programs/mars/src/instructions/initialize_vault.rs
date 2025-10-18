@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token};
 use crate::state::*;
 use crate::error::MarsError;
+use crate::constant::GLOBAL_SEED;
 
 #[derive(Accounts)]
 #[instruction(vault_id: [u8; 32])]
@@ -15,7 +16,7 @@ pub struct InitializeVault<'info> {
 
     /// Global state - 必须已经初始化
     #[account(
-        seeds = [b"global-state"],
+        seeds = [GLOBAL_SEED],
         bump,
     )]
     pub global_state: Account<'info, GlobalState>,

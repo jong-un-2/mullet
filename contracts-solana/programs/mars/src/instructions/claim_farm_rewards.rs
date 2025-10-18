@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use crate::state::*;
 use crate::error::MarsError;
+use crate::constant::GLOBAL_SEED;
 
 /// 读取 Token Account 的 amount 字段（支持 SPL Token 和 Token-2022）
 /// Token Account 布局：mint(32) + owner(32) + amount(8) + ...
@@ -29,7 +30,7 @@ pub struct ClaimFarmRewards<'info> {
     /// Must be initialized via initialize instruction
     #[account(
         mut,
-        seeds = [b"global-state"],
+        seeds = [GLOBAL_SEED],
         bump,
         constraint = global_state.admin != Pubkey::default() @ MarsError::OnlyAdmin,
     )]

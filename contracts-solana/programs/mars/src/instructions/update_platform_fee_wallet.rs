@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use crate::state::*;
 use crate::error::MarsError;
+use crate::constant::GLOBAL_SEED;
 
 /// 更新平台费用钱包地址
 /// 只有管理员可以调用此指令
@@ -13,7 +14,7 @@ pub struct UpdatePlatformFeeWallet<'info> {
     /// Global state
     #[account(
         mut,
-        seeds = [b"global-state"],
+        seeds = [GLOBAL_SEED],
         bump,
         constraint = global_state.admin == admin.key() @ MarsError::OnlyAdmin,
     )]
