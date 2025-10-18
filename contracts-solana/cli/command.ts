@@ -239,6 +239,27 @@ programCommand("update-platform-fee-wallet")
     await updatePlatformFeeWallet(wallet);
   });
 
+programCommand("initialize-vault")
+  .option("-v, --vault_id <string>", "vault ID (32 byte hex string or base58)")
+  .option("-f, --fee_bps <number>", "platform fee in basis points (default 2500 = 25%)", "2500")
+  .action(async (directory, cmd) => {
+    const { env, keypair, rpc, vault_id, fee_bps } = cmd.opts();
+
+    console.log("Solana Cluster:", env);
+    console.log("Keypair Path:", keypair);
+    console.log("RPC URL:", rpc);
+    await setClusterConfig(env, keypair, rpc);
+
+    if (!vault_id) {
+      console.log("Error: vault_id is required");
+      console.log("Example: yarn script initialize-vault -v 0x1234567890abcdef... -f 2500");
+      return;
+    }
+
+    const { initializeVault } = await import("./scripts");
+    await initializeVault(vault_id, parseInt(fee_bps));
+  });
+
 function programCommand(name: string) {
   return program
     .command(name)
@@ -305,9 +326,6 @@ npm run script create-order -u /Users/satyamkumar/.config/solana/mars-temp-admin
 
 npm run script fill-order -a 20 -s seed11 -tr 0x96A1fD6ae178a40ce6E8872d8d11465f1ED7eb9B -rcv F3cNzVaHEvrLwYNzWYvvQwZ7DtW6gcbFVE4Y5EiCpD7k -sid 1 -did 1399811149 -ti 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 -f 11 -m 1  -to EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
 
-
-npm run script swap-withdraw -u ../key/gnus.json -t So11111111111111111111111111111111111111112 -a 10000 -k ../key/uu.json
-npm run script swap-withdraw -u ../key/gnus.json -t 27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4 -a 5000 -k ../key/uu.json
 npm run script withdraw-stable-coin -u ../key/gnus.json -a 10000 -k ../key/uu.json
 
 */

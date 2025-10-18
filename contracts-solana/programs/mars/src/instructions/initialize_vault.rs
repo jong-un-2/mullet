@@ -6,15 +6,17 @@ use crate::error::MarsError;
 #[derive(Accounts)]
 #[instruction(vault_id: [u8; 32])]
 pub struct InitializeVault<'info> {
-    /// 管理员账户
-    #[account(mut)]
+    /// 管理员账户 - 必须是 global admin
+    #[account(
+        mut,
+        constraint = admin.key() == global_state.admin @ MarsError::OnlyAdmin,
+    )]
     pub admin: Signer<'info>,
 
     /// Global state - 必须已经初始化
     #[account(
         seeds = [b"global-state"],
         bump,
-        constraint = global_state.admin != Pubkey::default() @ MarsError::OnlyAdmin,
     )]
     pub global_state: Account<'info, GlobalState>,
 

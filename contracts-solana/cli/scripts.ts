@@ -539,3 +539,83 @@ export const updatePlatformFeeWallet = async (
   }
 };
 
+/**
+ * Initialize a new vault (admin only)
+ * @param vaultId - vault ID as hex string (0x...) or base58 string (32 bytes)
+ * @param platformFeeBps - platform fee in basis points (default 2500 = 25%)
+ */
+export const initializeVault = async (
+  vaultId: string,
+  platformFeeBps: number = 2500
+) => {
+  try {
+    // Convert vault ID string to Uint8Array[32]
+    const { initializeVaultTx } = await import("../lib/scripts");
+    
+    console.log("\n⚙️  Initializing Vault:");
+    console.log("  Vault ID:", vaultId);
+    console.log("  Admin:", payer.publicKey.toBase58());
+    console.log("  Platform Fee:", platformFeeBps, "bps (", platformFeeBps / 100, "%)");
+
+    // Validate fee range
+    if (platformFeeBps < 0 || platformFeeBps > 10000) {
+      throw new Error("Platform fee must be between 0 and 10000 bps (0%-100%)");
+    }
+
+    const tx = await initializeVaultTx(
+      payer.publicKey,
+      vaultId,
+      platformFeeBps,
+      program
+    );
+
+    tx.recentBlockhash = (await solConnection.getLatestBlockhash()).blockhash;
+    tx.feePayer = payer.publicKey;
+
+    // Sign and send transaction
+    const signedTx = await payer.signTransaction(tx);
+    const signature = await solConnection.sendRawTransaction(signedTx.serialize());
+    await solConnection.confirmTransaction(signature, "confirmed");
+
+    console.log("\n✅ Vault initialized successfully!");
+    console.log("Transaction:", signature);
+
+    // Derive and fetch vault state to confirm
+    const vaultIdArray = stringToUint8Array(vaultId);
+    const [vaultStatePDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault-state"), Buffer.from(vaultIdArray)],
+      program.programId
+    );
+
+    const vaultState = await program.account.vaultState.fetch(vaultStatePDA);
+    console.log("\n📊 New Vault State:");
+    console.log("  Vault State PDA:", vaultStatePDA.toBase58());
+    console.log("  Platform Fee:", vaultState.platformFeeBps, "bps (", vaultState.platformFeeBps / 100, "%)");
+    console.log("  Admin:", vaultState.admin.toBase58());
+  } catch (error) {
+    console.error("Error initializing vault:", error);
+    throw error;
+  }
+};
+
+// Helper to convert hex or base58 string to Uint8Array[32]
+const stringToUint8Array = (str: string): Uint8Array => {
+  if (str.startsWith("0x")) {
+    // Hex string
+    const hex = str.slice(2);
+    if (hex.length !== 64) {
+      throw new Error("Hex string must be 64 characters (32 bytes)");
+    }
+    const buffer = Buffer.from(hex, "hex");
+    return new Uint8Array(buffer);
+  } else {
+    // Assume base58
+    const bs58 = require("bs58");
+    const decoded = bs58.decode(str);
+    if (decoded.length !== 32) {
+      throw new Error("Base58 string must decode to 32 bytes");
+    }
+    return new Uint8Array(decoded);
+  }
+};
+

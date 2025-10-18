@@ -3,16 +3,19 @@ mod pb;
 use pb::mars::vaults::v1::{Events, VaultEvent};
 use substreams::prelude::*;
 use substreams::Hex;
-use substreams_solana::pb::sf::solana::r#type::v1::{Block, ConfirmedTransaction};
+use substreams_solana::pb::sf::solana::r#type::v1::Block;
 
-// V19 deployment - Added FarmRewardsClaimedEvent
 const MARS_PROGRAM_ID: &str = "83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N";
 
 // Kamino Vaults Program ID (V2 - Current Mainnet Version)
 // V1 (Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE) is deprecated
+// Kept for potential future cross-program analysis
+#[allow(dead_code)]
 const KAMINO_PROGRAM_ID: &str = "KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd";
 
 // Jupiter Aggregator Program ID
+// Kept for potential future DEX integration tracking
+#[allow(dead_code)]
 const JUPITER_PROGRAM_ID: &str = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
 
 // ============================================================
@@ -22,10 +25,6 @@ const JUPITER_PROGRAM_ID: &str = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
 // Core Vault Operations
 const VAULT_DEPOSIT_DISCRIMINATOR: [u8; 8] = [231, 150, 41, 113, 180, 104, 162, 120];
 const VAULT_WITHDRAW_DISCRIMINATOR: [u8; 8] = [98, 28, 187, 98, 87, 69, 46, 64];
-const SWAP_AND_DEPOSIT_DISCRIMINATOR: [u8; 8] = [50, 21, 140, 74, 249, 6, 205, 24];
-const WITHDRAW_WITH_SWAP_DISCRIMINATOR: [u8; 8] = [190, 187, 37, 126, 6, 142, 207, 219];
-const REBALANCE_WITH_SWAP_DISCRIMINATOR: [u8; 8] = [79, 169, 67, 48, 112, 17, 34, 112];
-const ESTIMATE_SWAP_COST_DISCRIMINATOR: [u8; 8] = [169, 64, 98, 153, 217, 56, 220, 111];
 
 // Kamino Integration Operations
 const KAMINO_DEPOSIT_DISCRIMINATOR: [u8; 8] = [237, 8, 188, 187, 115, 99, 49, 85];
@@ -34,13 +33,21 @@ const KAMINO_STAKE_IN_FARM_DISCRIMINATOR: [u8; 8] = [24, 191, 24, 158, 110, 190,
 const KAMINO_START_UNSTAKE_DISCRIMINATOR: [u8; 8] = [69, 169, 100, 27, 224, 93, 160, 125];
 const KAMINO_UNSTAKE_FROM_FARM_DISCRIMINATOR: [u8; 8] = [147, 182, 155, 59, 74, 113, 23, 203];
 const KAMINO_DEPOSIT_AND_STAKE_DISCRIMINATOR: [u8; 8] = [42, 143, 36, 40, 74, 180, 200, 42];
+// Farm rewards are tracked via event logs, not instruction discriminator
+#[allow(dead_code)]
 const CLAIM_FARM_REWARDS_DISCRIMINATOR: [u8; 8] = [102, 40, 223, 149, 90, 81, 228, 23];
 
-// Admin Operations (optional, for comprehensive tracking)
+// Admin Operations (for future comprehensive tracking)
+// These are kept for potential future use in tracking admin activities
+#[allow(dead_code)]
 const INITIALIZE_DISCRIMINATOR: [u8; 8] = [175, 175, 109, 31, 13, 152, 155, 237];
+#[allow(dead_code)]
 const NOMINATE_AUTHORITY_DISCRIMINATOR: [u8; 8] = [148, 182, 144, 91, 186, 12, 118, 18];
+#[allow(dead_code)]
 const ACCEPT_AUTHORITY_DISCRIMINATOR: [u8; 8] = [107, 86, 198, 91, 33, 12, 107, 160];
+#[allow(dead_code)]
 const FREEZE_GLOBAL_STATE_DISCRIMINATOR: [u8; 8] = [34, 7, 180, 252, 211, 157, 15, 159];
+#[allow(dead_code)]
 const THAW_GLOBAL_STATE_DISCRIMINATOR: [u8; 8] = [4, 19, 152, 159, 108, 253, 65, 170];
 
 #[substreams::handlers::map]
@@ -132,15 +139,6 @@ fn parse_mars_instruction(
         }
         VAULT_WITHDRAW_DISCRIMINATOR => {
             parse_vault_withdraw(data, signature, slot, timestamp, account_keys, accounts)
-        }
-        SWAP_AND_DEPOSIT_DISCRIMINATOR => {
-            parse_swap_and_deposit(data, signature, slot, timestamp, account_keys, accounts)
-        }
-        WITHDRAW_WITH_SWAP_DISCRIMINATOR => {
-            parse_withdraw_with_swap(data, signature, slot, timestamp, account_keys, accounts)
-        }
-        REBALANCE_WITH_SWAP_DISCRIMINATOR => {
-            parse_rebalance_event(data, signature, slot, timestamp, account_keys, accounts)
         }
         KAMINO_DEPOSIT_DISCRIMINATOR => {
             parse_kamino_deposit(data, signature, slot, timestamp, account_keys, accounts)
@@ -282,6 +280,9 @@ fn store_vault_states(
                     protocols: vec![],
                     users: vec![],
                     fee_config: None,
+                    platform_fee_bps: 2500,  // 默认 25%
+                    total_rewards_claimed: 0,
+                    total_platform_fee_collected: 0,
                     created_at: deposit.timestamp,
                     last_updated: deposit.timestamp,
                 };
@@ -337,69 +338,6 @@ fn db_out(
                     .set("slot", event.slot)
                     .set("created_at", withdraw.timestamp);
             }
-            Some(pb::mars::vaults::v1::vault_event::Event::SwapAndDeposit(swap)) => {
-                let vault_id = Hex::encode(&swap.vault_id);
-                let id = format!("{}-swap-deposit", event.signature);
-                
-                tables
-                    .create_row("mars_vault_swaps", &id)
-                    .set("id", &id)
-                    .set("signature", &event.signature)
-                    .set("user_address", &swap.user)
-                    .set("vault_address", &vault_id)
-                    .set("from_token", &swap.from_token)
-                    .set("to_token", &swap.to_token)
-                    .set("amount_in", swap.amount_in)
-                    .set("amount_out", swap.amount_out)
-                    .set("shares_received", swap.shares_received)
-                    .set("protocol_id", swap.protocol_id as i32)
-                    .set("swap_type", "swap_and_deposit")
-                    .set("slippage_bps", 0)
-                    .set("timestamp", swap.timestamp)
-                    .set("slot", event.slot)
-                    .set("created_at", swap.timestamp);
-            }
-            Some(pb::mars::vaults::v1::vault_event::Event::WithdrawWithSwap(swap)) => {
-                let vault_id = Hex::encode(&swap.vault_id);
-                let id = format!("{}-withdraw-swap", event.signature);
-                
-                tables
-                    .create_row("mars_vault_swaps", &id)
-                    .set("id", &id)
-                    .set("signature", &event.signature)
-                    .set("user_address", &swap.user)
-                    .set("vault_address", &vault_id)
-                    .set("from_token", "")
-                    .set("to_token", &swap.target_token)
-                    .set("amount_in", swap.shares_burned)
-                    .set("amount_out", swap.amount_received)
-                    .set("shares_received", 0)
-                    .set("protocol_id", 0)
-                    .set("swap_type", "withdraw_with_swap")
-                    .set("slippage_bps", swap.slippage_bps as i32)
-                    .set("timestamp", swap.timestamp)
-                    .set("slot", event.slot)
-                    .set("created_at", swap.timestamp);
-            }
-            Some(pb::mars::vaults::v1::vault_event::Event::Rebalance(rebalance)) => {
-                let vault_id = Hex::encode(&rebalance.vault_id);
-                let id = format!("{}-rebalance", event.signature);
-                
-                tables
-                    .create_row("mars_vault_rebalances", &id)
-                    .set("id", &id)
-                    .set("signature", &event.signature)
-                    .set("vault_address", &vault_id)
-                    .set("protocol_from", rebalance.protocol_from as i32)
-                    .set("protocol_to", rebalance.protocol_to as i32)
-                    .set("amount_in", rebalance.amount_in)
-                    .set("amount_out", rebalance.amount_out)
-                    .set("executor", &rebalance.executor)
-                    .set("reason", &rebalance.reason)
-                    .set("timestamp", rebalance.timestamp)
-                    .set("slot", event.slot)
-                    .set("created_at", rebalance.timestamp);
-            }
             Some(pb::mars::vaults::v1::vault_event::Event::KaminoDeposit(kamino)) => {
                 let vault_id = Hex::encode(&kamino.vault_id);
                 let id = format!("{}-kamino-deposit", event.signature);
@@ -442,155 +380,8 @@ fn db_out(
 }
 
 // ============================================================
-// Additional Parser Functions
+// Kamino Integration Parser Functions
 // ============================================================
-
-fn parse_swap_and_deposit(
-    data: &[u8],
-    signature: &str,
-    slot: u64,
-    timestamp: i64,
-    account_keys: &[Vec<u8>],
-    accounts: &[u8],
-) -> Option<VaultEvent> {
-    // [disc(8)] + [protocol_id(1)] + [from_token(32)] + [to_token(32)] + [amount(8)] + [min_out(8)] + [swap_data...]
-    if data.len() < 89 {
-        return None;
-    }
-
-    let protocol_id = data[8];
-    let from_token = bs58::encode(&data[9..41]).into_string();
-    let to_token = bs58::encode(&data[41..73]).into_string();
-    let amount_in = u64::from_le_bytes(data[73..81].try_into().ok()?);
-    let minimum_out = u64::from_le_bytes(data[81..89].try_into().ok()?);
-
-    let user = if !accounts.is_empty() && (accounts[0] as usize) < account_keys.len() {
-        bs58::encode(&account_keys[accounts[0] as usize]).into_string()
-    } else {
-        String::from("unknown")
-    };
-
-    let vault_id = if accounts.len() > 2 && (accounts[2] as usize) < account_keys.len() {
-        account_keys[accounts[2] as usize][..32].to_vec()
-    } else {
-        vec![0u8; 32]
-    };
-
-    Some(VaultEvent {
-        signature: signature.to_string(),
-        slot,
-        timestamp,
-        program_id: MARS_PROGRAM_ID.to_string(),
-        event: Some(pb::mars::vaults::v1::vault_event::Event::SwapAndDeposit(
-            pb::mars::vaults::v1::SwapAndDepositEvent {
-                user,
-                vault_id,
-                from_token,
-                to_token,
-                amount_in,
-                amount_out: minimum_out,
-                shares_received: minimum_out,
-                protocol_id: protocol_id as u32,
-                timestamp,
-            },
-        )),
-    })
-}
-
-fn parse_withdraw_with_swap(
-    data: &[u8],
-    signature: &str,
-    slot: u64,
-    timestamp: i64,
-    account_keys: &[Vec<u8>],
-    accounts: &[u8],
-) -> Option<VaultEvent> {
-    if data.len() < 56 {
-        return None;
-    }
-
-    let amount = u64::from_le_bytes(data[8..16].try_into().ok()?);
-    let target_token = bs58::encode(&data[16..48]).into_string();
-    let minimum_out = u64::from_le_bytes(data[48..56].try_into().ok()?);
-
-    let user = if !accounts.is_empty() && (accounts[0] as usize) < account_keys.len() {
-        bs58::encode(&account_keys[accounts[0] as usize]).into_string()
-    } else {
-        String::from("unknown")
-    };
-
-    let vault_id = if accounts.len() > 2 && (accounts[2] as usize) < account_keys.len() {
-        account_keys[accounts[2] as usize][..32].to_vec()
-    } else {
-        vec![0u8; 32]
-    };
-
-    Some(VaultEvent {
-        signature: signature.to_string(),
-        slot,
-        timestamp,
-        program_id: MARS_PROGRAM_ID.to_string(),
-        event: Some(pb::mars::vaults::v1::vault_event::Event::WithdrawWithSwap(
-            pb::mars::vaults::v1::WithdrawWithSwapEvent {
-                user,
-                vault_id,
-                shares_burned: amount,
-                target_token,
-                amount_received: minimum_out,
-                slippage_bps: 100,
-                timestamp,
-            },
-        )),
-    })
-}
-
-fn parse_rebalance_event(
-    data: &[u8],
-    signature: &str,
-    slot: u64,
-    timestamp: i64,
-    account_keys: &[Vec<u8>],
-    accounts: &[u8],
-) -> Option<VaultEvent> {
-    if data.len() < 18 {
-        return None;
-    }
-
-    let protocol_from = data[8];
-    let protocol_to = data[9];
-    let amount_in = u64::from_le_bytes(data[10..18].try_into().ok()?);
-
-    let vault_id = if accounts.len() > 1 && (accounts[1] as usize) < account_keys.len() {
-        account_keys[accounts[1] as usize][..32].to_vec()
-    } else {
-        vec![0u8; 32]
-    };
-
-    let executor = if !accounts.is_empty() && (accounts[0] as usize) < account_keys.len() {
-        bs58::encode(&account_keys[accounts[0] as usize]).into_string()
-    } else {
-        String::from("unknown")
-    };
-
-    Some(VaultEvent {
-        signature: signature.to_string(),
-        slot,
-        timestamp,
-        program_id: MARS_PROGRAM_ID.to_string(),
-        event: Some(pb::mars::vaults::v1::vault_event::Event::Rebalance(
-            pb::mars::vaults::v1::RebalanceEvent {
-                vault_id,
-                protocol_from: protocol_from as u32,
-                protocol_to: protocol_to as u32,
-                amount_in,
-                amount_out: amount_in,
-                executor,
-                timestamp,
-                reason: String::from("protocol_rebalance"),
-            },
-        )),
-    })
-}
 
 fn parse_kamino_deposit(
     data: &[u8],
@@ -900,73 +691,7 @@ pub fn graph_out(
                 .change("protocolId", withdrawal.protocol_id.to_string());
             }
 
-            // 3. Swap and Deposit Event
-            Some(pb::mars::vaults::v1::vault_event::Event::SwapAndDeposit(swap)) => {
-                let swap_id = format!("{}:{}", event.signature, bs58::encode(&swap.vault_id).into_string());
-                entity_changes.push_change(
-                    "SwapAndDeposit",
-                    &swap_id,
-                    0,
-                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
-                )
-                .change("id", &swap_id)
-                .change("signature", &event.signature)
-                .change("slot", event.slot.to_string())
-                .change("timestamp", event.timestamp.to_string())
-                .change("user", &swap.user)
-                .change("vault", bs58::encode(&swap.vault_id).into_string())
-                .change("fromToken", &swap.from_token)
-                .change("toToken", &swap.to_token)
-                .change("amountIn", swap.amount_in.to_string())
-                .change("amountOut", swap.amount_out.to_string())
-                .change("sharesReceived", swap.shares_received.to_string())
-                .change("protocolId", swap.protocol_id.to_string());
-            }
-
-            // 4. Withdraw with Swap Event
-            Some(pb::mars::vaults::v1::vault_event::Event::WithdrawWithSwap(swap)) => {
-                let swap_id = format!("{}:{}", event.signature, bs58::encode(&swap.vault_id).into_string());
-                entity_changes.push_change(
-                    "WithdrawWithSwap",
-                    &swap_id,
-                    0,
-                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
-                )
-                .change("id", &swap_id)
-                .change("signature", &event.signature)
-                .change("slot", event.slot.to_string())
-                .change("timestamp", event.timestamp.to_string())
-                .change("user", &swap.user)
-                .change("vault", bs58::encode(&swap.vault_id).into_string())
-                .change("sharesBurned", swap.shares_burned.to_string())
-                .change("targetToken", &swap.target_token)
-                .change("amountReceived", swap.amount_received.to_string())
-                .change("slippageBps", swap.slippage_bps.to_string());
-            }
-
-            // 5. Rebalance Event
-            Some(pb::mars::vaults::v1::vault_event::Event::Rebalance(rebalance)) => {
-                let rebalance_id = format!("{}:{}", event.signature, bs58::encode(&rebalance.vault_id).into_string());
-                entity_changes.push_change(
-                    "VaultRebalance",
-                    &rebalance_id,
-                    0,
-                    substreams_entity_change::pb::entity::entity_change::Operation::Create,
-                )
-                .change("id", &rebalance_id)
-                .change("signature", &event.signature)
-                .change("slot", event.slot.to_string())
-                .change("timestamp", event.timestamp.to_string())
-                .change("vault", bs58::encode(&rebalance.vault_id).into_string())
-                .change("protocolFrom", rebalance.protocol_from.to_string())
-                .change("protocolTo", rebalance.protocol_to.to_string())
-                .change("amountIn", rebalance.amount_in.to_string())
-                .change("amountOut", rebalance.amount_out.to_string())
-                .change("executor", &rebalance.executor)
-                .change("reason", &rebalance.reason);
-            }
-
-            // 6. Kamino Deposit Event
+            // 3. Kamino Deposit Event
             Some(pb::mars::vaults::v1::vault_event::Event::KaminoDeposit(kamino)) => {
                 let kamino_id = format!("{}:{}", event.signature, bs58::encode(&kamino.vault_id).into_string());
                 entity_changes.push_change(
@@ -1173,6 +898,7 @@ fn parse_farm_rewards_claimed_event(
                 farm_state,
                 reward_mint,
                 reward_amount,
+                platform_fee: 0,  // 将从事件日志中解析，这里先设为0
                 total_rewards_claimed,
                 timestamp,
             },

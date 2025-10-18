@@ -15,7 +15,7 @@ mars = "83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Mainnet"
+cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

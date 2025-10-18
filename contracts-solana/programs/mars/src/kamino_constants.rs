@@ -65,7 +65,7 @@ pub const MAX_REBALANCE_HISTORY: usize = 100;
 /// Seeds for PDA derivation
 pub const VAULT_STATE_SEED: &[u8] = b"vault-state";
 pub const VAULT_TREASURY_SEED: &[u8] = b"vault-treasury";
-pub const GLOBAL_STATE_SEED: &[u8] = b"genius-global-state"; // 保持向后兼容
+pub const GLOBAL_STATE_SEED: &[u8] = b"mars-global-state"; // Mars protocol global state
 
 /// Event discriminators for indexing
 pub const VAULT_DEPOSIT_EVENT: &str = "VaultDepositEvent";

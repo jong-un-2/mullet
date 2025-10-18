@@ -16,21 +16,17 @@ message VaultEvent {
   oneof event {
     VaultDepositEvent vault_deposit = 5;
     VaultWithdrawEvent vault_withdraw = 6;
-    SwapAndDepositEvent swap_and_deposit = 7;
-    WithdrawWithSwapEvent withdraw_with_swap = 8;
-    RebalanceEvent rebalance = 9;
-    SwapCostEstimatedEvent swap_cost_estimated = 10;
-    VaultStateUpdatedEvent vault_state_updated = 11;
-    ProtocolConfigUpdatedEvent protocol_config_updated = 12;
-    FeeConfigUpdatedEvent fee_config_updated = 13;
-    EmergencyEvent emergency = 14;
-    KaminoDepositEvent kamino_deposit = 15;
-    KaminoWithdrawEvent kamino_withdraw = 16;
-    KaminoStakeEvent kamino_stake = 17;
-    KaminoUnstakeEvent kamino_unstake = 18;
-    FarmRewardsClaimedEvent farm_rewards_claimed = 19;
-    PlatformFeeUpdatedEvent platform_fee_updated = 20;
-    PlatformFeeWalletUpdatedEvent platform_fee_wallet_updated = 21;
+    VaultStateUpdatedEvent vault_state_updated = 7;
+    ProtocolConfigUpdatedEvent protocol_config_updated = 8;
+    FeeConfigUpdatedEvent fee_config_updated = 9;
+    EmergencyEvent emergency = 10;
+    KaminoDepositEvent kamino_deposit = 11;
+    KaminoWithdrawEvent kamino_withdraw = 12;
+    KaminoStakeEvent kamino_stake = 13;
+    KaminoUnstakeEvent kamino_unstake = 14;
+    FarmRewardsClaimedEvent farm_rewards_claimed = 15;
+    PlatformFeeUpdatedEvent platform_fee_updated = 16;
+    PlatformFeeWalletUpdatedEvent platform_fee_wallet_updated = 17;
   }
 }
 
@@ -56,53 +52,6 @@ message VaultWithdrawEvent {
   uint64 amount_received = 4;       // Tokens received
   uint32 protocol_id = 5;
   int64 timestamp = 6;
-}
-
-// User swaps and deposits in one tx
-message SwapAndDepositEvent {
-  string user = 1;
-  bytes vault_id = 2;
-  string from_token = 3;            // Source token mint
-  string to_token = 4;              // Target token mint
-  uint64 amount_in = 5;
-  uint64 amount_out = 6;
-  uint64 shares_received = 7;
-  uint32 protocol_id = 8;
-  int64 timestamp = 9;
-}
-
-// User withdraws with swap
-message WithdrawWithSwapEvent {
-  string user = 1;
-  bytes vault_id = 2;
-  uint64 shares_burned = 3;
-  string target_token = 4;          // Target token mint
-  uint64 amount_received = 5;
-  uint32 slippage_bps = 6;          // Slippage tolerance
-  int64 timestamp = 7;
-}
-
-// Protocol rebalance event
-message RebalanceEvent {
-  bytes vault_id = 1;
-  uint32 protocol_from = 2;         // Source protocol ID
-  uint32 protocol_to = 3;           // Target protocol ID
-  uint64 amount_in = 4;
-  uint64 amount_out = 5;
-  string executor = 6;              // Admin/rebalancer pubkey
-  int64 timestamp = 7;
-  string reason = 8;                // Optional reason
-}
-
-// Swap cost estimation (internal use)
-message SwapCostEstimatedEvent {
-  string from_token = 1;
-  string to_token = 2;
-  uint64 input_amount = 3;
-  uint64 estimated_output = 4;
-  uint32 price_impact_bps = 5;
-  uint64 total_fees = 6;
-  repeated string route = 7;        // Swap route
 }
 
 // Vault state update

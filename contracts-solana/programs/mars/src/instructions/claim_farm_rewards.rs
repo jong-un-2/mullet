@@ -227,9 +227,9 @@ impl<'info> ClaimFarmRewards<'info> {
         msg!("  Reward: {} (+{})", reward_after, reward_claimed);
 
         // 使用 vault_state 中配置的平台费率（可通过管理指令更新）
-        // 如果未设置或为 0，则使用默认值 2500 (25%)
+        // 如果未设置或为 0，则使用默认值
         let platform_fee_bps: u64 = if ctx.accounts.vault_state.platform_fee_bps == 0 {
-            2500 // 默认 25%
+            crate::constant::DEFAULT_PLATFORM_FEE_BPS
         } else {
             ctx.accounts.vault_state.platform_fee_bps as u64
         };

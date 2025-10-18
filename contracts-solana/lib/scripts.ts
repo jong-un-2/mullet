@@ -18,8 +18,6 @@ import {
   getAdressLookupTableAccounts,
   getAssociatedTokenAccount,
   getATokenAccountsNeedCreate,
-  getQuote,
-  getSwapIx,
   getUsdcChange,
   instructionDataToTransactionInstruction,
 } from "./util";
@@ -409,6 +407,61 @@ export const removeBridgeLiquidityTx = async (
 
 //   return fillOrderTx;
 // };
+
+/**
+ * Admin can initialize a new vault
+ * @param admin - admin public key
+ * @param vaultId - 32-byte vault ID (hex string 0x... or base58)
+ * @param platformFeeBps - platform fee in basis points (e.g., 2500 = 25%)
+ * @param program - Mars program
+ */
+export const initializeVaultTx = async (
+  admin: PublicKey,
+  vaultId: string,
+  platformFeeBps: number,
+  program: Program<Mars>
+) => {
+  // Convert vaultId string to Uint8Array[32]
+  const vaultIdArray = stringToUint8Array(vaultId);
+
+  // Derive vault state PDA using vault_id seed
+  const [vaultState] = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault-state"), Buffer.from(vaultIdArray)],
+    program.programId
+  );
+
+  // Derive global state PDA
+  const [globalState] = PublicKey.findProgramAddressSync(
+    [Buffer.from("global-state")],
+    program.programId
+  );
+
+  console.log("Initializing vault:");
+  console.log("  Admin:", admin.toBase58());
+  console.log("  Vault ID:", vaultId);
+  console.log("  Vault State PDA:", vaultState.toBase58());
+  console.log("  Platform Fee:", platformFeeBps, "bps (", platformFeeBps / 100, "%)");
+
+  const tx = new Transaction();
+  
+  tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }))
+    .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 100_000 }))
+    .add(
+      await program.methods
+        .initializeVault([...vaultIdArray], platformFeeBps)
+        .accountsPartial({
+          admin: admin,
+          vaultState: vaultState,
+          globalState: globalState,
+          systemProgram: SystemProgram.programId,
+        })
+        .instruction()
+    );
+
+  tx.feePayer = admin;
+
+  return tx;
+};
 
 /**
  * Admin can update vault platform fee rate

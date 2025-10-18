@@ -14,14 +14,10 @@ pub mod state;
 pub mod util;
 use constant::*;
 use error::MarsError;
-use events::*;
 use instructions::*;
 use state::*;
 use util::*;
 
-// V19 deployment - Added FarmRewardsClaimedEvent for Substreams indexing
-// Emits event when users claim farming rewards
-// Enables tracking of all reward claims in PostgreSQL via Neon
 declare_id!("83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N");
 
 #[program]
