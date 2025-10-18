@@ -23,27 +23,8 @@ export function createNeonCommissionRoutes() {
       }
 
       return await withDatabase(c.env as any, async (sql) => {
-        let conditions: string[] = [];
-        let params: any[] = [];
+        const offset = (current - 1) * pageSize;
         
-        if (startDate) {
-          conditions.push('_block_timestamp_ >= $' + (params.length + 1));
-          params.push(startDate);
-        }
-        
-        if (endDate) {
-          conditions.push('_block_timestamp_ <= $' + (params.length + 1));
-          params.push(endDate);
-        }
-        
-        if (user) {
-          conditions.push('"user" ILIKE $' + (params.length + 1));
-          params.push(`%${user}%`);
-        }
-
-        const whereClause = conditions.length > 0 ? 'AND ' + conditions.join(' AND ') : '';
-        params.push(pageSize, (current - 1) * pageSize);
-
         const result = await sql`
           SELECT 
             _block_number_ as "blockNumber",
@@ -56,39 +37,29 @@ export function createNeonCommissionRoutes() {
             total_rewards_claimed::numeric / 1000000.0 as "totalRewardsClaimed",
             CASE 
               WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-              ELSE total_rewards_claimed::numeric / 1000000.0
-            END as "platformFee"
+              ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
+            END as "platformFee",
+            CASE 
+              WHEN platform_fee > 0 THEN 'success'
+              ELSE 'success'
+            END as "status"
           FROM farmrewardsclaimedevent 
-          WHERE 1=1 ${sql.unsafe(whereClause)}
+          WHERE 1=1 
+          ${startDate ? sql`AND _block_timestamp_ >= ${startDate}` : sql``}
+          ${endDate ? sql`AND _block_timestamp_ <= ${endDate}` : sql``}
+          ${user ? sql`AND "user" ILIKE ${`%${user}%`}` : sql``}
           ORDER BY _block_timestamp_ DESC 
-          LIMIT ${pageSize} OFFSET ${(current - 1) * pageSize}
+          LIMIT ${pageSize} OFFSET ${offset}
         `;
         
         // 获取总数
-        let countConditions: string[] = [];
-        let countParams: any[] = [];
-        
-        if (startDate) {
-          countConditions.push('_block_timestamp_ >= $' + (countParams.length + 1));
-          countParams.push(startDate);
-        }
-        
-        if (endDate) {
-          countConditions.push('_block_timestamp_ <= $' + (countParams.length + 1));
-          countParams.push(endDate);
-        }
-        
-        if (user) {
-          countConditions.push('"user" ILIKE $' + (countParams.length + 1));
-          countParams.push(`%${user}%`);
-        }
-
-        const countWhereClause = countConditions.length > 0 ? 'AND ' + countConditions.join(' AND ') : '';
-
         const countResult = await sql`
           SELECT COUNT(*) as total 
           FROM farmrewardsclaimedevent 
-          WHERE 1=1 ${sql.unsafe(countWhereClause)}
+          WHERE 1=1 
+          ${startDate ? sql`AND _block_timestamp_ >= ${startDate}` : sql``}
+          ${endDate ? sql`AND _block_timestamp_ <= ${endDate}` : sql``}
+          ${user ? sql`AND "user" ILIKE ${`%${user}%`}` : sql``}
         `;
 
         return c.json({
@@ -120,31 +91,19 @@ export function createNeonCommissionRoutes() {
       }
 
       return await withDatabase(c.env as any, async (sql) => {
-        let conditions: string[] = [];
-        
-        if (startDate) {
-          conditions.push('_block_timestamp_ >= $1');
-        }
-        
-        if (endDate) {
-          conditions.push('_block_timestamp_ <= $2');
-        }
-
-        const whereClause = conditions.length > 0 ? 'AND ' + conditions.join(' AND ') : '';
-
         const result = await sql`
           SELECT 
             COUNT(*) as "totalTransactions",
             COALESCE(SUM(
               CASE 
                 WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE total_rewards_claimed::numeric / 1000000.0
+                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
               END
             ), 0) as "totalFee",
             COALESCE(AVG(
               CASE 
                 WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE total_rewards_claimed::numeric / 1000000.0
+                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
               END
             ), 0) as "avgFee",
             COUNT(DISTINCT "user") as "activeUsers"
@@ -193,7 +152,7 @@ export function createNeonCommissionRoutes() {
             COALESCE(SUM(
               CASE 
                 WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE total_rewards_claimed::numeric / 1000000.0
+                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
               END
             ), 0) as "totalFee",
             MAX(_block_timestamp_) as "lastTransaction"
@@ -256,13 +215,13 @@ export function createNeonCommissionRoutes() {
             COALESCE(SUM(
               CASE 
                 WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE total_rewards_claimed::numeric / 1000000.0
+                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
               END
             ), 0) as "totalFee",
             COALESCE(AVG(
               CASE 
                 WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE total_rewards_claimed::numeric / 1000000.0
+                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
               END
             ), 0) as "avgFee"
           FROM farmrewardsclaimedevent 
