@@ -65,11 +65,10 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
         // console.log('yyyyy',params)
         const userRoles = params.currentUser.roles || [];
         
-        // 添加佣金菜单到角色权限中
+        // 添加佣金菜单到角色权限中 - 放在用户管理后面
         const commissionMenu = {
           path: '/commission',
           name: '佣金费用',
-          icon: 'DollarCircleOutlined',
           routes: [
             { path: '/commission/overview', name: '费用总览', component: './commission/overview' },
             { path: '/commission/records', name: '费用记录', component: './commission/records' },
@@ -79,11 +78,19 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
         };
         
         // 检查是否已存在佣金菜单
-        const hasCommissionMenu = userRoles.some(role => role.name === '佣金费用' || role.path === '/commission');
+        const hasCommissionMenu = userRoles.some((role: any) => role.name === '佣金费用' || role.path === '/commission');
         
         if (!hasCommissionMenu) {
-          // 如果不存在，添加佣金菜单
-          return [...userRoles, commissionMenu];
+          // 找到用户管理菜单的位置，在其后插入佣金菜单
+          const userManagementIndex = userRoles.findIndex((role: any) => role.name === '用户管理');
+          if (userManagementIndex >= 0) {
+            const newRoles = [...userRoles];
+            newRoles.splice(userManagementIndex + 1, 0, commissionMenu);
+            return newRoles;
+          } else {
+            // 如果找不到用户管理菜单，就添加到最后
+            return [...userRoles, commissionMenu];
+          }
         }
         
         return userRoles;

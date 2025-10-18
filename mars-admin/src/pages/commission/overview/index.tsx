@@ -49,7 +49,7 @@ const CommissionOverview: React.FC = () => {
       align: 'right',
       render: (value: number) => (
         <span style={{ fontFamily: 'monospace' }}>
-          {value.toFixed(6)}
+          {typeof value === 'number' ? value.toFixed(6) : '0.000000'}
         </span>
       ),
     },
@@ -66,7 +66,7 @@ const CommissionOverview: React.FC = () => {
       align: 'right',
       render: (value: number) => (
         <span style={{ color: '#52c41a', fontWeight: 'bold', fontFamily: 'monospace' }}>
-          {value.toFixed(6)}
+          {typeof value === 'number' ? value.toFixed(6) : '0.000000'}
         </span>
       ),
     },
