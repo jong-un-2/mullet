@@ -63,7 +63,30 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
       params: initialState,
       request: async (params) => {
         // console.log('yyyyy',params)
-        return params.currentUser.roles
+        const userRoles = params.currentUser.roles || [];
+        
+        // 添加佣金菜单到角色权限中
+        const commissionMenu = {
+          path: '/commission',
+          name: '佣金费用',
+          icon: 'DollarCircleOutlined',
+          routes: [
+            { path: '/commission/overview', name: '费用总览', component: './commission/overview' },
+            { path: '/commission/records', name: '费用记录', component: './commission/records' },
+            { path: '/commission/settings', name: '费率设置', component: './commission/settings' },
+            { path: '/commission/statistics', name: '费用统计', component: './commission/statistics' },
+          ],
+        };
+        
+        // 检查是否已存在佣金菜单
+        const hasCommissionMenu = userRoles.some(role => role.name === '佣金费用' || role.path === '/commission');
+        
+        if (!hasCommissionMenu) {
+          // 如果不存在，添加佣金菜单
+          return [...userRoles, commissionMenu];
+        }
+        
+        return userRoles;
       }
     },
     // waterMarkProps: {
