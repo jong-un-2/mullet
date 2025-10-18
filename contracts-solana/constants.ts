@@ -1,11 +1,11 @@
 // Mars 项目主网常量配置
-// 最后更新: 2025-10-15 (添加 claim_farm_rewards 功能)
+// 最后更新: 2025-10-18 (New deployment with TransferChecked for Token-2022)
 
 import { PublicKey } from "@solana/web3.js";
 
 // Mars Program ID
-// Mars Program ID (V18 - Fixed Token-2022 support in claim_farm_rewards)
-export const MARS_PROGRAM_ID = "AsL42FUJVwPuJy9Noe4ATnHNQhS47ExB7qo4dnK42VQx";
+// Mars Program ID （TransferChecked for Token-2022 platform fees + init with platform_fee_wallet）
+export const MARS_PROGRAM_ID = "6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD";
 
 // Kamino 集成
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");

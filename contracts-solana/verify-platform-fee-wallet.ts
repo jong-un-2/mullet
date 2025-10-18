@@ -1,7 +1,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
-const MARS_PROGRAM_ID = new PublicKey("9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu");
-const RPC_URL = "https://api.devnet.solana.com";
+const MARS_PROGRAM_ID = new PublicKey("6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD");
+const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
 
 async function main() {
   const connection = new Connection(RPC_URL, "confirmed");

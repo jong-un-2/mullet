@@ -4,8 +4,8 @@ import { Program } from "@coral-xyz/anchor";
 import { readFileSync } from "fs";
 import { Mars } from "./target/types/mars";
 
-const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=e2ed9b0c-946c-4517-b414-360729bd6a77";
-const PROGRAM_ID = "9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu";
+const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
+const PROGRAM_ID = "6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD";
 
 async function main() {
   const connection = new Connection(RPC_URL, "confirmed");
