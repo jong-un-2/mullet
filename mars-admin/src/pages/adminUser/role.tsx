@@ -65,45 +65,57 @@ const routes = [
         ],
     },
     {
+        path: '/commission',
+        name: '佣金费用',
+        pid: null,
+        id: 6,
+        routes: [
+            { path: '/commission/overview', pid: 6, name: '费用总览', component: './commission/overview', id: '6-1' },
+            { path: '/commission/records', pid: 6, name: '费用记录', component: './commission/records', id: '6-2' },
+            { path: '/commission/settings', pid: 6, name: '费率设置', component: './commission/settings', id: '6-3' },
+            { path: '/commission/statistics', pid: 6, name: '费用统计', component: './commission/statistics', id: '6-4' },
+        ],
+    },
+    {
         path: '/wallet',
         name: '钱包管理',
         // icon: 'crown',
-        id: 6,
+        id: 7,
         component: './Wallet/list'
     },
     {
         path: '/inManaged',
         name: '入金管理',
         // icon: 'PayCircleOutlined',
-        id: 7,
+        id: 8,
         component: './payManage/list'
     },
     {
         path: '/outManaged',
         name: '出金管理',
         // icon: 'RedEnvelopeOutlined',
-        id: 8,
+        id: 9,
         component: './outManage/list'
     },
     {
         path: '/orderRecord',
         name: '入金补单记录',
         // icon: 'ProfileOutlined',
-        id: 9,
+        id: 10,
         component: './orderRecord/list'
     },
     {
         path: '/settlement',
         name: '结算出入金管理',
         // icon: 'BorderOuterOutlined',
-        id: 10,
+        id: 11,
         component: './settlement/list'
     },
     {
         path: '/financialStatements',
         name: '资金流水报表',
         // icon: 'FormOutlined',
-        id: 11,
+        id: 12,
         component: './financialStatements/'
     },
     {
@@ -115,25 +127,25 @@ const routes = [
     {
         path: '/releaseFunds',
         name: '资金释放报表',
-        id: 12,
+        id: 13,
         // icon: 'AlignRightOutlined',
         component: './releaseFunds/'
     },
     {
         path: '/active',
         name: '活动管理',
-        id: 13,
+        id: 14,
         pid: null,
         // icon: 'DollarOutlined',
         routes: [
-            { path: '/active/', pid: 13, name: '首充活动', component: './active/' },
-            { path: '/active/tg', pid: 13, name: 'TG赠金发放', component: './active/tg' },
+            { path: '/active/', pid: 14, name: '首充活动', component: './active/' },
+            { path: '/active/tg', pid: 14, name: 'TG赠金发放', component: './active/tg' },
         ],
     },
     {
         path: '/banner',
         name: 'Banner管理',
-        id: 14,
+        id: 15,
         // icon: 'FireOutlined',
         component: './banner/'
     },
@@ -146,7 +158,7 @@ const routes = [
             { path: '/college/', name: '内容管理', component: './college/' },
             { path: '/college/type', name: '类型管理', component: './college/type' },
         ],
-        id: 18
+        id: 16
     },
     {
         path: '/msgManage',
@@ -158,23 +170,23 @@ const routes = [
             { path: '/msgManage/type', name: '短信类型管理', component: './msgManage/type' },
             { path: '/msgManage/msgChannel', name: '短信通道管理', component: './msgManage/msgChannel' },
         ],
-        id: 19
+        id: 17
     },
     {
         path: '/notice',
         name: '公告管理',
-        id: 15,
+        id: 18,
         // icon: 'MessageOutlined',
         component: './notice/'
     },
     {
         path: '/tgGroup',
         name: 'TG群管理',
-        id: 16,
+        id: 19,
         // icon: 'WechatOutlined',
         component: './tgGroup/'
     },
-    { path: '/', redirect: '/welcome', id: 17 },
+    { path: '/', redirect: '/welcome', id: 20 },
     { path: '*', layout: false, component: './404' },
 ];
 const treeData = [
@@ -243,6 +255,28 @@ const treeData = [
             {
                 value: `佣金设置`,
                 title: '佣金设置',
+            },
+        ],
+    },
+    {
+        value: '佣金费用',
+        title: '佣金费用',
+        children: [
+            {
+                value: `费用总览`,
+                title: '费用总览',
+            },
+            {
+                value: `费用记录`,
+                title: '费用记录',
+            },
+            {
+                value: `费率设置`,
+                title: '费率设置',
+            },
+            {
+                value: `费用统计`,
+                title: '费用统计',
             },
         ],
     },
