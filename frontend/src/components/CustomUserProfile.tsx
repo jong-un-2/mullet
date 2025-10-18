@@ -102,6 +102,7 @@ interface WalletInfo {
   solWallet?: any;
   externalEthConnected?: boolean;
   externalSolConnected?: boolean;
+  primaryWalletType?: 'eth' | 'sol' | null;
 }
 
 const CustomUserProfile: React.FC = () => {
@@ -115,6 +116,8 @@ const CustomUserProfile: React.FC = () => {
   const [showCopySnackbar, setShowCopySnackbar] = useState(false);
   // Distinguish between connect and disconnect flows to avoid showing "Connecting..." after a disconnect
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  // Track which wallet was connected first/primary
+  const [primaryWallet, setPrimaryWallet] = useState<'eth' | 'sol' | null>(null);
 
   // External wallet states
   const { address: ethAddress, isConnected: ethConnected } = useAccount();
@@ -175,46 +178,84 @@ const CustomUserProfile: React.FC = () => {
     };
   };
 
-  const getUserDisplayName = (walletInfo: WalletInfo) => {
+  const getUserDisplayName = (walletInfo: WalletInfo, primary: 'eth' | 'sol' | null) => {
     // First check for social logins
     if (user?.email?.address) return user.email.address;
     if (user?.phone?.number) return user.phone.number;
     if (user?.google?.name) return user.google.name;
     if (user?.twitter?.username) return `@${user.twitter.username}`;
     
-    // Then check for wallet addresses (Solana first priority)
-    // Get Solana address from dedicated Solana wallet
+    // Use primary wallet to determine which to show first
+    if (primary === 'sol') {
+      // Solana is primary - show Solana first
+      if (walletInfo.solWallet?.address) {
+        return `${walletInfo.solWallet.address.slice(0, 4)}...${walletInfo.solWallet.address.slice(-4)}`;
+      }
+      if (walletInfo.ethWallet?.address) {
+        return `${walletInfo.ethWallet.address.slice(0, 4)}...${walletInfo.ethWallet.address.slice(-4)}`;
+      }
+    } else if (primary === 'eth') {
+      // ETH is primary - show ETH first
+      if (walletInfo.ethWallet?.address) {
+        return `${walletInfo.ethWallet.address.slice(0, 4)}...${walletInfo.ethWallet.address.slice(-4)}`;
+      }
+      if (walletInfo.solWallet?.address) {
+        return `${walletInfo.solWallet.address.slice(0, 4)}...${walletInfo.solWallet.address.slice(-4)}`;
+      }
+    }
+    
+    // Fallback: Check for external wallet connections first
+    if (walletInfo.externalEthConnected && walletInfo.ethWallet?.address) {
+      return `${walletInfo.ethWallet.address.slice(0, 4)}...${walletInfo.ethWallet.address.slice(-4)}`;
+    }
+    if (walletInfo.externalSolConnected && walletInfo.solWallet?.address) {
+      return `${walletInfo.solWallet.address.slice(0, 4)}...${walletInfo.solWallet.address.slice(-4)}`;
+    }
+    
+    // Then check for embedded wallets
+    if (walletInfo.ethWallet?.address) {
+      return `${walletInfo.ethWallet.address.slice(0, 4)}...${walletInfo.ethWallet.address.slice(-4)}`;
+    }
+    
     const solanaAddress = solanaWallet?.address;
     if (solanaAddress) {
       return `${solanaAddress.slice(0, 4)}...${solanaAddress.slice(-4)}`;
     }
     
-    if (walletInfo.ethWallet?.address) {
-      return `${walletInfo.ethWallet.address.slice(0, 4)}...${walletInfo.ethWallet.address.slice(-4)}`;
-    }
-    if (walletInfo.externalEthConnected && ethAddress) {
-      return `${ethAddress.slice(0, 4)}...${ethAddress.slice(-4)}`;
-    }
-    
     return 'User';
   };
 
-  const getConnectionType = () => {
+  const getConnectionType = (primary: 'eth' | 'sol' | null) => {
     const walletInfo = getWalletInfo();
     
-    // Priority: Solana external > Ethereum external > Privy embedded
-    if (walletInfo.externalSolConnected) {
-      return 'SOL_EXTERNAL';
+    // Use primary wallet to determine connection type
+    if (primary === 'sol') {
+      // Solana is primary
+      if (walletInfo.externalSolConnected) return 'SOL_EXTERNAL';
+      if (walletInfo.solWallet) return 'SOL_NEURAL';
+    } else if (primary === 'eth') {
+      // ETH is primary
+      if (walletInfo.externalEthConnected) return 'ETH_EXTERNAL';
+      if (walletInfo.ethWallet) return 'ETH_NEURAL';
     }
+    
+    // Fallback: Priority: ETH external > Solana external > ETH embedded > Solana embedded
     if (walletInfo.externalEthConnected) {
       return 'ETH_EXTERNAL';
     }
+    if (walletInfo.externalSolConnected) {
+      return 'SOL_EXTERNAL';
+    }
     if (authenticated && wallets.length > 0) {
-      // Check if we have Solana embedded wallet
+      // Check if we have ETH embedded wallet first
+      if (walletInfo.ethWallet) {
+        return 'ETH_NEURAL';
+      }
+      // Then check for Solana embedded wallet
       if (walletInfo.solWallet) {
         return 'SOL_NEURAL';
       }
-      // Otherwise, it's Ethereum or other
+      // Otherwise, it's other types
       return 'MULTI_NEURAL';
     }
     return 'OFFLINE';
@@ -222,10 +263,12 @@ const CustomUserProfile: React.FC = () => {
 
   const getConnectionDisplayText = (type: string) => {
     switch (type) {
-      case 'SOL_EXTERNAL':
-        return 'SOLANA LINKED';
       case 'ETH_EXTERNAL':
         return 'ETHEREUM LINKED';
+      case 'SOL_EXTERNAL':
+        return 'SOLANA LINKED';
+      case 'ETH_NEURAL':
+        return 'ETHEREUM SYNC';
       case 'SOL_NEURAL':
         return 'SOLANA SYNC';
       case 'MULTI_NEURAL':
@@ -237,27 +280,102 @@ const CustomUserProfile: React.FC = () => {
     }
   };
 
+  // Track primary wallet on first connection
+  useEffect(() => {
+    if (!authenticated) {
+      // Reset primary wallet when disconnected
+      setPrimaryWallet(null);
+      return;
+    }
+
+    // Only set primary wallet once on first connection
+    if (primaryWallet === null) {
+      const info = getWalletInfo();
+      console.log('🎯 Detecting primary wallet:', {
+        externalSolConnected: info.externalSolConnected,
+        externalEthConnected: info.externalEthConnected,
+        solWallet: info.solWallet?.address,
+        ethWallet: info.ethWallet?.address,
+        walletsLength: wallets.length,
+        solanaWalletsLength: solanaWallets.length
+      });
+
+      // Determine primary based on which wallet was connected
+      // If only one type exists, that's the primary
+      if (info.externalSolConnected && !info.externalEthConnected) {
+        console.log('✅ Setting primary wallet: SOL (external)');
+        setPrimaryWallet('sol');
+      } else if (info.externalEthConnected && !info.externalSolConnected) {
+        console.log('✅ Setting primary wallet: ETH (external)');
+        setPrimaryWallet('eth');
+      } else if (info.solWallet && !info.ethWallet) {
+        console.log('✅ Setting primary wallet: SOL (embedded)');
+        setPrimaryWallet('sol');
+      } else if (info.ethWallet && !info.solWallet) {
+        console.log('✅ Setting primary wallet: ETH (embedded)');
+        setPrimaryWallet('eth');
+      } else if (wallets.length === 1) {
+        // Only one wallet total, determine by address format
+        const wallet = wallets[0];
+        if (wallet.address.startsWith('0x')) {
+          console.log('✅ Setting primary wallet: ETH (single wallet)');
+          setPrimaryWallet('eth');
+        } else {
+          console.log('✅ Setting primary wallet: SOL (single wallet)');
+          setPrimaryWallet('sol');
+        }
+      }
+      // If both exist, we'll use the order they appear in linkedAccounts or first wallet type
+      else if (user?.linkedAccounts && user.linkedAccounts.length > 0) {
+        const firstAccount = user.linkedAccounts[0];
+        if (firstAccount.type === 'wallet') {
+          const firstAddress = (firstAccount as any).address;
+          if (firstAddress?.startsWith('0x')) {
+            console.log('✅ Setting primary wallet: ETH (first linked account)');
+            setPrimaryWallet('eth');
+          } else {
+            console.log('✅ Setting primary wallet: SOL (first linked account)');
+            setPrimaryWallet('sol');
+          }
+        }
+      }
+    }
+  }, [authenticated, wallets, solanaWallets, primaryWallet, user?.linkedAccounts]);
+
   // Wallet info and display data - always calculate these
   const walletInfo = getWalletInfo();
-  const displayName = getUserDisplayName(walletInfo);
-  const connectionType = getConnectionType();
+  const displayName = getUserDisplayName(walletInfo, primaryWallet);
+  const connectionType = getConnectionType(primaryWallet);
   
-  // Generate pixel avatar based on user data (Solana first priority)
+  // Generate pixel avatar based on user's actual login method
+  // Use primaryWallet to determine which wallet to prioritize
   const avatarSeed = useMemo(() => {
     if (user?.id) return user.id;
-    if (walletInfo.solWallet?.address) return walletInfo.solWallet.address;
+    
+    // Use primary wallet to determine seed
+    if (primaryWallet === 'sol') {
+      if (walletInfo.solWallet?.address) return walletInfo.solWallet.address;
+      if (walletInfo.ethWallet?.address) return walletInfo.ethWallet.address;
+    } else if (primaryWallet === 'eth') {
+      if (walletInfo.ethWallet?.address) return walletInfo.ethWallet.address;
+      if (walletInfo.solWallet?.address) return walletInfo.solWallet.address;
+    }
+    
+    // Fallback logic
+    if (walletInfo.externalEthConnected && ethAddress) return ethAddress;
     if (walletInfo.externalSolConnected && solanaWallet) return solanaWallet.address;
     if (walletInfo.ethWallet?.address) return walletInfo.ethWallet.address;
-    if (walletInfo.externalEthConnected && ethAddress) return ethAddress;
+    if (walletInfo.solWallet?.address) return walletInfo.solWallet.address;
     return displayName;
   }, [
     user?.id, 
-    walletInfo.solWallet?.address, 
-    walletInfo.ethWallet?.address, 
-    walletInfo.externalSolConnected, 
+    primaryWallet,
     walletInfo.externalEthConnected, 
-    solanaWallet?.address, 
+    walletInfo.externalSolConnected, 
     ethAddress, 
+    solanaWallet?.address, 
+    walletInfo.ethWallet?.address, 
+    walletInfo.solWallet?.address, 
     displayName
   ]);
   
@@ -582,164 +700,332 @@ const CustomUserProfile: React.FC = () => {
           <Divider sx={{ borderColor: 'rgba(255, 107, 107, 0.2)', my: 3 }} />
 
           <Stack spacing={2}>
-            {/* Ethereum Network */}
-            {(walletInfo.ethWallet || walletInfo.externalEthConnected) && (
-              <Box
-                sx={{
-                  border: '1px solid rgba(98, 126, 234, 0.3)',
-                  borderRadius: 2,
-                  p: 2,
-                  background: 'rgba(98, 126, 234, 0.05)',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                  <FaEthereum color="#627eea" size={20} />
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontWeight: 600,
-                      color: '#627eea',
-                      fontFamily: 'monospace',
-                      flex: 1
+            {/* Render wallets based on user's primary connection */}
+            {/* Use primaryWallet to determine display order */}
+            {primaryWallet === 'sol' ? (
+              <>
+                {/* Solana Network - Primary */}
+                {(walletInfo.solWallet || walletInfo.externalSolConnected) && (
+                  <Box
+                    sx={{
+                      border: '1px solid rgba(153, 69, 255, 0.3)',
+                      borderRadius: 2,
+                      p: 2,
+                      background: 'rgba(153, 69, 255, 0.05)',
                     }}
                   >
-                    ETHEREUM_MAINNET
-                  </Typography>
-                  <Chip 
-                    label={walletInfo.externalEthConnected ? 'External' : 'Embedded'} 
-                    size="small"
-                    sx={{ 
-                      fontSize: '0.65rem',
-                      height: 20,
-                      fontFamily: 'monospace',
-                      fontWeight: 600,
-                      backgroundColor: 'rgba(98, 126, 234, 0.2)',
-                      color: '#627eea',
-                      border: '1px solid rgba(98, 126, 234, 0.5)'
-                    }}
-                  />
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontFamily: 'monospace', 
-                      fontSize: '0.75rem',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      flex: 1,
-                      letterSpacing: '0.5px'
-                    }}
-                  >
-                    {`${walletInfo.ethWallet?.address.slice(0, 8)}...${walletInfo.ethWallet?.address.slice(-6)}`}
-                  </Typography>
-                  <IconButton 
-                    size="small" 
-                    onClick={() => copyToClipboard(
-                      walletInfo.ethWallet.address, 
-                      'eth'
-                    )}
-                    sx={{ 
-                      color: copied === 'eth' ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
-                      '&:hover': { color: '#4ecdc4' }
-                    }}
-                  >
-                    <FaCopy size={12} />
-                  </IconButton>
-                  <IconButton 
-                    size="small"
-                    onClick={() => openInExplorer(
-                      walletInfo.ethWallet.address,
-                      'ethereum'
-                    )}
-                    sx={{ 
-                      color: 'rgba(255, 255, 255, 0.5)',
-                      '&:hover': { color: '#627eea' }
-                    }}
-                  >
-                    <FaExternalLinkAlt size={12} />
-                  </IconButton>
-                </Box>
-              </Box>
-            )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                      <SiSolana color="#9945ff" size={20} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 600,
+                          color: '#9945ff',
+                          fontFamily: 'monospace',
+                          flex: 1
+                        }}
+                      >
+                        SOLANA_MAINNET
+                      </Typography>
+                      <Chip 
+                        label={walletInfo.externalSolConnected ? 'External' : 'Embedded'} 
+                        size="small"
+                        sx={{ 
+                          fontSize: '0.65rem',
+                          height: 20,
+                          fontFamily: 'monospace',
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(153, 69, 255, 0.2)',
+                          color: '#9945ff',
+                          border: '1px solid rgba(153, 69, 255, 0.5)'
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          fontSize: '0.75rem',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          flex: 1,
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        {`${walletInfo.solWallet?.address.slice(0, 8)}...${walletInfo.solWallet?.address.slice(-6)}`}
+                      </Typography>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => copyToClipboard(
+                          walletInfo.solWallet.address, 
+                          'sol'
+                        )}
+                        sx={{ 
+                          color: copied === 'sol' ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: '#4ecdc4' }
+                        }}
+                      >
+                        <FaCopy size={12} />
+                      </IconButton>
+                      <IconButton 
+                        size="small"
+                        onClick={() => openInExplorer(
+                          walletInfo.solWallet.address,
+                          'solana'
+                        )}
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: '#9945ff' }
+                        }}
+                      >
+                        <FaExternalLinkAlt size={12} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                )}
 
-            {/* Solana Network */}
-            {(walletInfo.solWallet || walletInfo.externalSolConnected) && (
-              <Box
-                sx={{
-                  border: '1px solid rgba(153, 69, 255, 0.3)',
-                  borderRadius: 2,
-                  p: 2,
-                  background: 'rgba(153, 69, 255, 0.05)',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                  <SiSolana color="#9945ff" size={20} />
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontWeight: 600,
-                      color: '#9945ff',
-                      fontFamily: 'monospace',
-                      flex: 1
+                {/* Ethereum Network - Secondary */}
+                {(walletInfo.ethWallet || walletInfo.externalEthConnected) && (
+                  <Box
+                    sx={{
+                      border: '1px solid rgba(98, 126, 234, 0.3)',
+                      borderRadius: 2,
+                      p: 2,
+                      background: 'rgba(98, 126, 234, 0.05)',
                     }}
                   >
-                    SOLANA_MAINNET
-                  </Typography>
-                  <Chip 
-                    label={walletInfo.externalSolConnected ? 'External' : 'Embedded'} 
-                    size="small"
-                    sx={{ 
-                      fontSize: '0.65rem',
-                      height: 20,
-                      fontFamily: 'monospace',
-                      fontWeight: 600,
-                      backgroundColor: 'rgba(153, 69, 255, 0.2)',
-                      color: '#9945ff',
-                      border: '1px solid rgba(153, 69, 255, 0.5)'
-                    }}
-                  />
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontFamily: 'monospace', 
-                      fontSize: '0.75rem',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      flex: 1,
-                      letterSpacing: '0.5px'
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                      <FaEthereum color="#627eea" size={20} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 600,
+                          color: '#627eea',
+                          fontFamily: 'monospace',
+                          flex: 1
+                        }}
+                      >
+                        ETHEREUM_MAINNET
+                      </Typography>
+                      <Chip 
+                        label={walletInfo.externalEthConnected ? 'External' : 'Embedded'} 
+                        size="small"
+                        sx={{ 
+                          fontSize: '0.65rem',
+                          height: 20,
+                          fontFamily: 'monospace',
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(98, 126, 234, 0.2)',
+                          color: '#627eea',
+                          border: '1px solid rgba(98, 126, 234, 0.5)'
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          fontSize: '0.75rem',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          flex: 1,
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        {`${walletInfo.ethWallet?.address.slice(0, 8)}...${walletInfo.ethWallet?.address.slice(-6)}`}
+                      </Typography>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => copyToClipboard(
+                          walletInfo.ethWallet.address, 
+                          'eth'
+                        )}
+                        sx={{ 
+                          color: copied === 'eth' ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: '#4ecdc4' }
+                        }}
+                      >
+                        <FaCopy size={12} />
+                      </IconButton>
+                      <IconButton 
+                        size="small"
+                        onClick={() => openInExplorer(
+                          walletInfo.ethWallet.address,
+                          'ethereum'
+                        )}
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: '#627eea' }
+                        }}
+                      >
+                        <FaExternalLinkAlt size={12} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Ethereum Network - Primary */}
+                {(walletInfo.ethWallet || walletInfo.externalEthConnected) && (
+                  <Box
+                    sx={{
+                      border: '1px solid rgba(98, 126, 234, 0.3)',
+                      borderRadius: 2,
+                      p: 2,
+                      background: 'rgba(98, 126, 234, 0.05)',
                     }}
                   >
-                    {`${walletInfo.solWallet?.address.slice(0, 8)}...${walletInfo.solWallet?.address.slice(-6)}`}
-                  </Typography>
-                  <IconButton 
-                    size="small" 
-                    onClick={() => copyToClipboard(
-                      walletInfo.solWallet.address, 
-                      'sol'
-                    )}
-                    sx={{ 
-                      color: copied === 'sol' ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
-                      '&:hover': { color: '#4ecdc4' }
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                      <FaEthereum color="#627eea" size={20} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 600,
+                          color: '#627eea',
+                          fontFamily: 'monospace',
+                          flex: 1
+                        }}
+                      >
+                        ETHEREUM_MAINNET
+                      </Typography>
+                      <Chip 
+                        label={walletInfo.externalEthConnected ? 'External' : 'Embedded'} 
+                        size="small"
+                        sx={{ 
+                          fontSize: '0.65rem',
+                          height: 20,
+                          fontFamily: 'monospace',
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(98, 126, 234, 0.2)',
+                          color: '#627eea',
+                          border: '1px solid rgba(98, 126, 234, 0.5)'
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          fontSize: '0.75rem',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          flex: 1,
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        {`${walletInfo.ethWallet?.address.slice(0, 8)}...${walletInfo.ethWallet?.address.slice(-6)}`}
+                      </Typography>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => copyToClipboard(
+                          walletInfo.ethWallet.address, 
+                          'eth'
+                        )}
+                        sx={{ 
+                          color: copied === 'eth' ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: '#4ecdc4' }
+                        }}
+                      >
+                        <FaCopy size={12} />
+                      </IconButton>
+                      <IconButton 
+                        size="small"
+                        onClick={() => openInExplorer(
+                          walletInfo.ethWallet.address,
+                          'ethereum'
+                        )}
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: '#627eea' }
+                        }}
+                      >
+                        <FaExternalLinkAlt size={12} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Solana Network - Secondary */}
+                {(walletInfo.solWallet || walletInfo.externalSolConnected) && (
+                  <Box
+                    sx={{
+                      border: '1px solid rgba(153, 69, 255, 0.3)',
+                      borderRadius: 2,
+                      p: 2,
+                      background: 'rgba(153, 69, 255, 0.05)',
                     }}
                   >
-                    <FaCopy size={12} />
-                  </IconButton>
-                  <IconButton 
-                    size="small"
-                    onClick={() => openInExplorer(
-                      walletInfo.solWallet.address,
-                      'solana'
-                    )}
-                    sx={{ 
-                      color: 'rgba(255, 255, 255, 0.5)',
-                      '&:hover': { color: '#9945ff' }
-                    }}
-                  >
-                    <FaExternalLinkAlt size={12} />
-                  </IconButton>
-                </Box>
-              </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                      <SiSolana color="#9945ff" size={20} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 600,
+                          color: '#9945ff',
+                          fontFamily: 'monospace',
+                          flex: 1
+                        }}
+                      >
+                        SOLANA_MAINNET
+                      </Typography>
+                      <Chip 
+                        label={walletInfo.externalSolConnected ? 'External' : 'Embedded'} 
+                        size="small"
+                        sx={{ 
+                          fontSize: '0.65rem',
+                          height: 20,
+                          fontFamily: 'monospace',
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(153, 69, 255, 0.2)',
+                          color: '#9945ff',
+                          border: '1px solid rgba(153, 69, 255, 0.5)'
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          fontSize: '0.75rem',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          flex: 1,
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        {`${walletInfo.solWallet?.address.slice(0, 8)}...${walletInfo.solWallet?.address.slice(-6)}`}
+                      </Typography>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => copyToClipboard(
+                          walletInfo.solWallet.address, 
+                          'sol'
+                        )}
+                        sx={{ 
+                          color: copied === 'sol' ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: '#4ecdc4' }
+                        }}
+                      >
+                        <FaCopy size={12} />
+                      </IconButton>
+                      <IconButton 
+                        size="small"
+                        onClick={() => openInExplorer(
+                          walletInfo.solWallet.address,
+                          'solana'
+                        )}
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: '#9945ff' }
+                        }}
+                      >
+                        <FaExternalLinkAlt size={12} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                )}
+              </>
             )}
           </Stack>
 
