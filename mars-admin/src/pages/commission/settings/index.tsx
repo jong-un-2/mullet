@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PageContainer } from '@ant-design/pro-layout';
+import { PageContainer } from '@ant-design/pro-components';
 import { Card, Form, InputNumber, Button, Space, message, Divider, Switch, Alert, Input } from 'antd';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 

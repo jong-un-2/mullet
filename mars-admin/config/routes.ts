@@ -37,6 +37,17 @@ export default [
     ],
   },
   {
+    path: '/commission',
+    name: '佣金费用',
+    icon: 'DollarCircleOutlined',
+    routes: [
+      { path: '/commission/overview', name: '费用总览', component: './commission/overview' },
+      { path: '/commission/records', name: '费用记录', component: './commission/records' },
+      { path: '/commission/settings', name: '费率设置', component: './commission/settings' },
+      { path: '/commission/statistics', name: '统计报表', component: './commission/statistics' },
+    ],
+  },
+  {
     path: '/adminUser',
     name: '后台管理',
     // icon: 'UsergroupAddOutlined',
@@ -53,17 +64,6 @@ export default [
       { path: '/agent/list', name: '客户结算（按代理）', component: './agent/list' },
       { path: '/agent/customerSettlement', name: '客户结算（按每笔）', component: './agent/customerSettlement' },
       { path: '/agent/setting', name: '佣金设置', component: './agent/setting' },
-    ],
-  },
-  {
-    path: '/commission',
-    name: '佣金费用',
-    // icon: 'DollarCircleOutlined',
-    routes: [
-      { path: '/commission/overview', name: '费用总览', component: './commission/overview' },
-      { path: '/commission/records', name: '费用记录', component: './commission/records' },
-      { path: '/commission/settings', name: '费率设置', component: './commission/settings' },
-      { path: '/commission/statistics', name: '统计报表', component: './commission/statistics' },
     ],
   },
   {

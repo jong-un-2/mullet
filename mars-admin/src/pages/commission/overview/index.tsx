@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PageContainer } from '@ant-design/pro-layout';
+import { PageContainer } from '@ant-design/pro-components';
 import { Card, Row, Col, Statistic, Table, DatePicker, Space, message } from 'antd';
 import { DollarCircleOutlined, TrophyOutlined, UserOutlined, TransactionOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';

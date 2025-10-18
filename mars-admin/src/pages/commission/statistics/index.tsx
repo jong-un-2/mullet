@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PageContainer } from '@ant-design/pro-layout';
+import { PageContainer } from '@ant-design/pro-components';
 import { Card, Row, Col, DatePicker, Select, Table, Button, Space, message } from 'antd';
 import { Column, Pie, Line } from '@ant-design/charts';
 import { DownloadOutlined } from '@ant-design/icons';
