@@ -343,7 +343,7 @@ export async function createClaimRewardsTransaction(
     
     // 3. 获取 Mars PDAs
     const [globalStatePda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('global-state')],
+      [Buffer.from('mars-global-state-seed')],
       MARS_PROGRAM_ID
     );
     
