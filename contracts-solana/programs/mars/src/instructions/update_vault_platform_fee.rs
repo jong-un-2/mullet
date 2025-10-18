@@ -14,8 +14,8 @@ pub struct UpdateVaultPlatformFee<'info> {
     /// Vault state 账户
     #[account(
         mut,
-        seeds = [b"vault-state", vault_state.base_token_mint.as_ref()],
-        bump,
+        seeds = [b"vault-state", vault_state.vault_id.as_ref()],
+        bump = vault_state.bump,
     )]
     pub vault_state: Box<Account<'info, VaultState>>,
 }
@@ -43,13 +43,12 @@ impl UpdateVaultPlatformFee<'_> {
         msg!("  New fee: {} bps ({}%)", new_platform_fee_bps, new_platform_fee_bps as f64 / 100.0);
         msg!("  Updated by: {}", ctx.accounts.admin.key());
 
-        // 发出配置更新事件
-        emit!(crate::events::FeeConfigUpdated {
+        // 发出平台费更新事件
+        emit!(crate::events::PlatformFeeUpdatedEvent {
             vault_id: vault_state.vault_id,
-            deposit_fee_bps: vault_state.fee_config.deposit_fee_bps,
-            withdraw_fee_bps: vault_state.fee_config.withdraw_fee_bps,
-            management_fee_bps: vault_state.fee_config.management_fee_bps,
-            performance_fee_bps: vault_state.fee_config.performance_fee_bps,
+            old_platform_fee_bps: old_fee,
+            new_platform_fee_bps: new_platform_fee_bps,
+            updated_by: ctx.accounts.admin.key(),
             timestamp: Clock::get()?.unix_timestamp,
         });
 

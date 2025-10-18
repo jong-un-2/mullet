@@ -48,6 +48,15 @@ pub mod mars {
 
     // === 新增 Vault 核心功能 ===
     
+    /// 初始化新的金库
+    pub fn initialize_vault(
+        ctx: Context<InitializeVault>,
+        vault_id: [u8; 32],
+        platform_fee_bps: u16,
+    ) -> Result<()> {
+        InitializeVault::process_instruction(ctx, vault_id, platform_fee_bps)
+    }
+    
     /// 用户存款到金库
     pub fn vault_deposit(ctx: Context<VaultDeposit>, amount: u64) -> Result<()> {
         VaultDeposit::process_instruction(ctx, amount)
@@ -56,71 +65,6 @@ pub mod mars {
     /// 用户从金库提款
     pub fn vault_withdraw(ctx: Context<VaultWithdraw>, shares_amount: u64) -> Result<()> {
         VaultWithdraw::process_instruction(ctx, shares_amount)
-    }
-    
-    /// 兑换并存入：处理兑换后再投入
-    pub fn swap_and_deposit(
-        ctx: Context<SwapAndDeposit>,
-        protocol_id: u8,
-        from_token: Pubkey,
-        to_token: Pubkey,
-        amount: u64,
-        minimum_out_amount: u64,
-        swap_data: Vec<u8>,
-    ) -> Result<()> {
-        SwapAndDeposit::process_instruction(
-            ctx,
-            protocol_id,
-            from_token,
-            to_token,
-            amount,
-            minimum_out_amount,
-            swap_data,
-        )
-    }
-    
-    /// 预估兑换成本（仅平台内部使用，不对用户展示）
-    pub fn estimate_swap_cost(
-        ctx: Context<EstimateSwapCost>,
-        from_token: Pubkey,
-        to_token: Pubkey,
-        amount: u64,
-    ) -> Result<()> {
-        let estimate = EstimateSwapCost::process_instruction(ctx, from_token, to_token, amount)?;
-        
-        // 发出事件供前端使用
-        emit!(SwapCostEstimated {
-            from_token,
-            to_token,
-            input_amount: amount,
-            estimated_output: estimate.output_amount,
-            price_impact_bps: estimate.price_impact_bps,
-            total_fees: estimate.fees.total_fee,
-        });
-        
-        Ok(())
-    }
-    
-    /// 从一个协议赎回并转换再投另一协议
-    pub fn rebalance_with_swap(
-        ctx: Context<RebalanceWithSwap>,
-        protocol_from: u8,
-        protocol_to: u8,
-        amount: u64,
-        swap_data: Vec<u8>,
-    ) -> Result<()> {
-        RebalanceWithSwap::process_instruction(ctx, protocol_from, protocol_to, amount, swap_data)
-    }
-    
-    /// 赎回用户份额并完成兑换返回给用户
-    pub fn withdraw_with_swap(
-        ctx: Context<WithdrawWithSwap>,
-        amount: u64,
-        target_token: Pubkey,
-        minimum_out_amount: u64,
-        swap_data: Vec<u8>,
-    ) -> Result<()> {
-        WithdrawWithSwap::process_instruction(ctx, amount, target_token, minimum_out_amount, swap_data)
     }
 
     //  Admin can add new freeze authority

@@ -55,6 +55,13 @@ impl VaultWithdraw<'_> {
         ctx: Context<Self>,
         shares_amount: u64,
     ) -> Result<()> {
+        // 验证输入
+        require!(shares_amount > 0, CustomError::ZeroAmount);
+        require!(
+            ctx.accounts.vault_state.status == VaultStatus::Active,
+            CustomError::VaultPaused
+        );
+        
         // 1. 验证用户有足够的份额
         let user_deposit = ctx.accounts.vault_state.find_user_deposit(&ctx.accounts.user.key())
             .ok_or(CustomError::NoDepositsFound)?.clone();

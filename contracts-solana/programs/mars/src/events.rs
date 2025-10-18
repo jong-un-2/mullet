@@ -1,16 +1,5 @@
 use anchor_lang::prelude::*;
 
-/// 兑换成本估算事件
-#[event]
-pub struct SwapCostEstimated {
-    pub from_token: Pubkey,
-    pub to_token: Pubkey,
-    pub input_amount: u64,
-    pub estimated_output: u64,
-    pub price_impact_bps: u16,
-    pub total_fees: u64,
-}
-
 /// 用户存款事件
 #[event]
 pub struct VaultDepositEvent {
@@ -117,5 +106,24 @@ pub struct FarmRewardsClaimedEvent {
     pub reward_amount: u64,        // 用户实际收到的奖励（扣除平台费后）
     pub platform_fee: u64,         // 平台收取的费用
     pub total_rewards_claimed: u64, // vault lifetime total
+    pub timestamp: i64,
+}
+
+/// 平台费率更新事件
+#[event]
+pub struct PlatformFeeUpdatedEvent {
+    pub vault_id: [u8; 32],
+    pub old_platform_fee_bps: u16,
+    pub new_platform_fee_bps: u16,
+    pub updated_by: Pubkey,
+    pub timestamp: i64,
+}
+
+/// 平台费钱包地址更新事件
+#[event]
+pub struct PlatformFeeWalletUpdatedEvent {
+    pub old_wallet: Pubkey,
+    pub new_wallet: Pubkey,
+    pub updated_by: Pubkey,
     pub timestamp: i64,
 }

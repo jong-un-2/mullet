@@ -25,8 +25,10 @@ impl<'info> UpdatePlatformFeeWallet<'info> {
         ctx: Context<UpdatePlatformFeeWallet>,
         new_platform_fee_wallet: Pubkey,
     ) -> Result<()> {
+        let old_wallet = ctx.accounts.global_state.platform_fee_wallet;
+        
         msg!("🔧 Updating platform fee wallet");
-        msg!("  Old wallet: {}", ctx.accounts.global_state.platform_fee_wallet);
+        msg!("  Old wallet: {}", old_wallet);
         msg!("  New wallet: {}", new_platform_fee_wallet);
 
         // 验证新地址不是默认值
@@ -39,6 +41,14 @@ impl<'info> UpdatePlatformFeeWallet<'info> {
         ctx.accounts.global_state.platform_fee_wallet = new_platform_fee_wallet;
 
         msg!("✅ Platform fee wallet updated successfully");
+
+        // 发出平台费钱包更新事件
+        emit!(crate::events::PlatformFeeWalletUpdatedEvent {
+            old_wallet,
+            new_wallet: new_platform_fee_wallet,
+            updated_by: ctx.accounts.admin.key(),
+            timestamp: Clock::get()?.unix_timestamp,
+        });
 
         Ok(())
     }

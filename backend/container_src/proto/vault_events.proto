@@ -29,6 +29,8 @@ message VaultEvent {
     KaminoStakeEvent kamino_stake = 17;
     KaminoUnstakeEvent kamino_unstake = 18;
     FarmRewardsClaimedEvent farm_rewards_claimed = 19;
+    PlatformFeeUpdatedEvent platform_fee_updated = 20;
+    PlatformFeeWalletUpdatedEvent platform_fee_wallet_updated = 21;
   }
 }
 
@@ -135,6 +137,23 @@ message FeeConfigUpdatedEvent {
   int64 timestamp = 7;
 }
 
+// Platform fee configuration update
+message PlatformFeeUpdatedEvent {
+  bytes vault_id = 1;
+  uint32 old_platform_fee_bps = 2;
+  uint32 new_platform_fee_bps = 3;
+  string updated_by = 4;            // Admin who updated
+  int64 timestamp = 5;
+}
+
+// Platform fee wallet update
+message PlatformFeeWalletUpdatedEvent {
+  string old_wallet = 1;
+  string new_wallet = 2;
+  string updated_by = 3;            // Admin who updated
+  int64 timestamp = 4;
+}
+
 message EmergencyEvent {
   bytes vault_id = 1;
   EmergencyEventType event_type = 2;
@@ -164,8 +183,11 @@ message VaultSnapshot {
   repeated ProtocolAllocation protocols = 9;
   repeated UserPosition users = 10;
   FeeConfig fee_config = 11;
-  int64 created_at = 12;
-  int64 last_updated = 13;
+  uint32 platform_fee_bps = 12;          // Platform fee rate for farm rewards
+  uint64 total_rewards_claimed = 13;     // Lifetime total rewards claimed
+  uint64 total_platform_fee_collected = 14; // Lifetime platform fees collected
+  int64 created_at = 15;
+  int64 last_updated = 16;
 }
 
 message ProtocolAllocation {
@@ -191,6 +213,7 @@ message FeeConfig {
   uint32 management_fee_bps = 3;
   uint32 performance_fee_bps = 4;
   string fee_recipient = 5;
+  uint32 platform_fee_bps = 6;          // Platform fee for farm rewards (0-10000 bps)
 }
 
 enum VaultStatus {
@@ -245,15 +268,16 @@ message KaminoUnstakeEvent {
   int64 timestamp = 7;
 }
 
-// Kamino farm rewards claim event (V18 with Token-2022 support)
+// Kamino farm rewards claim event
 message FarmRewardsClaimedEvent {
-  string user = 1;
+  string user = 1;                  // User who claimed rewards
   string vault_mint = 2;            // Vault base token mint (e.g., PYUSD)
   string farm_state = 3;            // Kamino farm state address
   string reward_mint = 4;           // Reward token mint (can be Token-2022)
-  uint64 reward_amount = 5;         // Amount of rewards claimed
-  uint64 total_rewards_claimed = 6; // Lifetime total rewards claimed by vault
-  int64 timestamp = 7;
+  uint64 reward_amount = 5;         // Amount user received (after platform fee deduction)
+  uint64 platform_fee = 6;          // Platform fee collected (in reward tokens)
+  uint64 total_rewards_claimed = 7; // Lifetime total rewards claimed by vault
+  int64 timestamp = 8;
 }
 
 // Analytics aggregations

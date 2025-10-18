@@ -20,18 +20,12 @@ pub mod set_target_chain_min_fee;
 pub use set_target_chain_min_fee::*;
 
 // === 新增 Vault 指令模块 ===
+pub mod initialize_vault;
+pub use initialize_vault::*;
 pub mod vault_deposit;
 pub use vault_deposit::*;
 pub mod vault_withdraw;
 pub use vault_withdraw::*;
-pub mod swap_and_deposit;
-pub use swap_and_deposit::*;
-pub mod estimate_swap_cost;
-pub use estimate_swap_cost::*;
-pub mod rebalance_with_swap;
-pub use rebalance_with_swap::*;
-pub mod withdraw_with_swap;
-pub use withdraw_with_swap::*;
 pub mod set_fee_tiers;
 pub use set_fee_tiers::*;
 pub mod set_protocol_fee_fraction;

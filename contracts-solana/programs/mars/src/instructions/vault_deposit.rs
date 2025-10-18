@@ -65,6 +65,13 @@ impl VaultDeposit<'_> {
         ctx: Context<Self>,
         amount: u64,
     ) -> Result<()> {
+        // 验证输入
+        require!(amount > 0, CustomError::ZeroAmount);
+        require!(
+            ctx.accounts.vault_state.status == VaultStatus::Active,
+            CustomError::VaultPaused
+        );
+        
         // 1. 计算存款费用
         let vault_state = &ctx.accounts.vault_state;
         let deposit_fee_bps = vault_state.fee_config.deposit_fee_bps;

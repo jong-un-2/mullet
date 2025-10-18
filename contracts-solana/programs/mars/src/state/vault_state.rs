@@ -87,7 +87,8 @@ pub struct VaultState {
 impl VaultState {
     pub const SEED_PREFIX: &'static [u8] = b"vault-state";
     
-    /// 计算需要的空间大小
+    /// 计算初始空间大小（不包含动态数组内容）
+    /// 注意：这是初始化时需要的空间，Vec 初始为空
     pub fn space() -> usize {
         8 + // discriminator
         32 + // vault_id
@@ -101,9 +102,9 @@ impl VaultState {
         8 + // created_at
         8 + // last_updated
         1 + // status
-        4 + 10 * ProtocolConfig::space() + // supported_protocols (max 10)
-        4 + 1000 * (32 + UserDeposit::space()) + // user_deposits (max 1000 users)
-        4 + 100 * RebalanceRecord::space() + // rebalance_history (max 100 records)
+        4 + // supported_protocols Vec length prefix (initially empty)
+        4 + // user_deposits Vec length prefix (initially empty)
+        4 + // rebalance_history Vec length prefix (initially empty)
         FeeConfig::space() + // fee_config
         2 + // platform_fee_bps
         2 + // max_slippage_bps
@@ -119,6 +120,16 @@ impl VaultState {
         8 + // total_rewards_claimed
         8 + // total_platform_fee_collected
         48 // reserved
+    }
+    
+    /// 计算最大空间（包含所有动态内容）
+    /// 仅用于参考，不用于实际分配
+    /// 注意：由于Solana账户大小限制（10KB），实际使用时需要分离大型数据到独立账户
+    pub fn max_space_estimate() -> usize {
+        Self::space() +
+        10 * ProtocolConfig::space() + // 最多10个协议
+        100 * UserDepositEntry::space() + // 最多100个用户（降低以适应Solana限制）
+        100 * RebalanceRecord::space() // 最多100条记录
     }
     
     /// 更新再平衡记录
@@ -140,12 +151,15 @@ impl VaultState {
             executed_by: Clock::get()?.slot, // 使用 slot 作为执行标识
         };
         
-        self.rebalance_history.push(record);
-        
-        // 保留最近100条记录
-        if self.rebalance_history.len() > 100 {
-            self.rebalance_history.remove(0);
+        // 保留最近100条记录，超出时移除最旧的
+        if self.rebalance_history.len() >= 100 {
+            // 安全地移除第一个元素（最旧的记录）
+            if !self.rebalance_history.is_empty() {
+                self.rebalance_history.remove(0);
+            }
         }
+        
+        self.rebalance_history.push(record);
         
         self.last_updated = Clock::get()?.unix_timestamp;
         Ok(())
@@ -166,7 +180,11 @@ impl VaultState {
                 if self.total_shares == 0 {
                     0
                 } else {
-                    entry.deposit.shares * self.total_deposits / self.total_shares
+                    // 使用 checked_mul 和 checked_div 避免溢出
+                    entry.deposit.shares
+                        .checked_mul(self.total_deposits)
+                        .and_then(|val| val.checked_div(self.total_shares))
+                        .unwrap_or(0)
                 }
             })
     }
@@ -334,35 +352,5 @@ pub enum VaultStatus {
     Emergency,
 }
 
-/// 全局配置状态（保持兼容现有代码）
-#[account]
-pub struct GlobalState {
-    pub admin: Pubkey,
-    pub pending_admin: Option<Pubkey>,
-    pub freeze_authorities: Vec<Pubkey>,
-    pub thaw_authorities: Vec<Pubkey>,
-    pub frozen: bool,
-    pub fee_tiers: Vec<FeeTier>,
-    pub insurance_fee_tiers: Vec<InsuranceFeeTier>,
-    pub target_chain_min_fee: Vec<ChainFeeEntry>,
-    pub protocol_fee_fraction: u64,
-    pub bump: u8,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct FeeTier {
-    pub threshold_amount: u64,
-    pub bps_fee: u16,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct InsuranceFeeTier {
-    pub threshold_amount: u64,
-    pub insurance_fee: u16,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct ChainFeeEntry {
-    pub chain_id: u16,
-    pub min_fee: u64,
-}
+// Note: GlobalState, FeeTier, InsuranceFeeTier, ChainFeeEntry are now defined in state.rs
+// to avoid duplicate definitions. Import them from parent module.

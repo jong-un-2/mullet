@@ -26,27 +26,27 @@ pub struct ClaimFarmRewards<'info> {
     pub user: Signer<'info>,
 
     /// Global state - 用于记录和收取手续费
+    /// Must be initialized via initialize instruction
     #[account(
-        init_if_needed,
-        payer = user,
-        space = 8 + std::mem::size_of::<GlobalState>(),
+        mut,
         seeds = [b"global-state"],
         bump,
+        constraint = global_state.admin != Pubkey::default() @ MarsError::OnlyAdmin,
     )]
     pub global_state: Box<Account<'info, GlobalState>>,
 
     /// Vault state - PYUSD vault
+    /// Must be initialized separately before claiming rewards
     #[account(
-        init_if_needed,
-        payer = user,
-        space = 8 + std::mem::size_of::<VaultState>(),
-        seeds = [b"vault-state", vault_mint.key().as_ref()],
-        bump,
+        mut,
+        seeds = [b"vault-state", vault_state.vault_id.as_ref()],
+        bump = vault_state.bump,
+        constraint = vault_state.admin != Pubkey::default() @ MarsError::InvalidAdmin,
     )]
     pub vault_state: Box<Account<'info, VaultState>>,
 
-    /// Vault mint (PYUSD)
-    /// CHECK: Verified through seeds
+    /// Vault mint (PYUSD) - the base token for this vault
+    /// CHECK: Should match vault_state.base_token_mint
     pub vault_mint: AccountInfo<'info>,
 
     /// Farm state 账户
@@ -113,18 +113,15 @@ impl<'info> ClaimFarmRewards<'info> {
     pub fn process_instruction(ctx: Context<ClaimFarmRewards>, reward_index: u64) -> Result<()> {
         msg!("🎁 Starting claim farm rewards (reward index: {})", reward_index);
 
-        // 如果 global_state 是新创建的，初始化默认值
-        if ctx.accounts.global_state.admin == Pubkey::default() {
-            msg!("🆕 Initializing global_state for the first time");
-            ctx.accounts.global_state.admin = ctx.accounts.user.key();
-            ctx.accounts.global_state.frozen = false;
-            ctx.accounts.global_state.base_mint = ctx.accounts.vault_mint.key();
-            ctx.accounts.global_state.cross_chain_fee_bps = 30; // 0.3%
-            ctx.accounts.global_state.rebalance_threshold = 0;
-            ctx.accounts.global_state.max_order_amount = 100_000_000_000; // 100k
-            // 默认设置平台费用钱包为 admin
-            ctx.accounts.global_state.platform_fee_wallet = ctx.accounts.user.key();
-        }
+        // Validate global_state and vault_state are properly initialized
+        require!(
+            ctx.accounts.global_state.admin != Pubkey::default(),
+            MarsError::OnlyAdmin
+        );
+        require!(
+            ctx.accounts.vault_state.admin != Pubkey::default(),
+            MarsError::InvalidAdmin
+        );
 
         // 验证 platform_fee_ata 的所有权
         // 读取 platform_fee_ata 的 owner 字段（偏移量 32，即 mint 之后）
@@ -147,18 +144,6 @@ impl<'info> ClaimFarmRewards<'info> {
         
         msg!("✅ Platform fee account verified: owner = {}", platform_fee_owner);
         drop(platform_fee_data); // 释放 borrow
-
-        // 如果 vault_state 是新创建的，初始化默认值
-        if ctx.accounts.vault_state.base_token_mint == Pubkey::default() {
-            msg!("🆕 Initializing vault_state for the first time");
-            ctx.accounts.vault_state.admin = ctx.accounts.user.key();
-            ctx.accounts.vault_state.base_token_mint = ctx.accounts.vault_mint.key();
-            ctx.accounts.vault_state.status = VaultStatus::Active;
-            ctx.accounts.vault_state.total_rewards_claimed = 0;
-            ctx.accounts.vault_state.total_platform_fee_collected = 0;
-            ctx.accounts.vault_state.created_at = Clock::get()?.unix_timestamp;
-            ctx.accounts.vault_state.last_updated = Clock::get()?.unix_timestamp;
-        }
 
         // 检查 vault 是否冻结
         require!(

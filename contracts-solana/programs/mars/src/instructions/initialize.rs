@@ -70,6 +70,7 @@ impl Initialize<'_> {
         global_state.base_mint = ctx.accounts.usdc_mint.key();
         global_state.frozen = false;
         global_state.max_order_amount = 100_000_000_000; // 100k USDC
+        global_state.platform_fee_wallet = ctx.accounts.admin.key(); // Default to admin
 
         let rent = Rent::get()?;
         let space = TokenAccount::LEN;
