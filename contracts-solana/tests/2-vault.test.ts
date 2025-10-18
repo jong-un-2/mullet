@@ -381,7 +381,7 @@ describe("🏦 Mars Vault Core Tests", () => {
         // 验证错误码为InvalidParameter (6025)
         assert.include(
           err.message,
-          "invalidparameter",
+          "InvalidParameter",
           "Should fail with InvalidParameter error"
         );
       }
@@ -446,12 +446,12 @@ describe("🏦 Mars Vault Core Tests", () => {
         console.log(`   ✅ Correctly rejected: ${err.message}`);
         assert.include(
           err.message.toLowerCase(),
-          "onlyadmin",
-          "Should fail with OnlyAdmin error"
+          "invalidadmin",
+          "Should fail with InvalidAdmin error"
         );
       }
 
-      assert.isTrue(failed, "Should fail with OnlyAdmin error");
+      assert.isTrue(failed, "Should fail with InvalidAdmin error");
       console.log("   ✅ Access control working correctly!");
     });
   });
