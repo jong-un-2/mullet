@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, Connection } from '@solana/web3.js';
 import {
   getMedianSlotDurationInMsFromLastEpochs,
   KaminoManager,
@@ -22,6 +22,36 @@ import {
 import { Farms } from "@kamino-finance/farms-sdk";
 import { Decimal } from "decimal.js";
 import { getCachedData, setCachedData, clearCache } from './useVaultDataCache';
+
+// 创建一个兼容 Kamino SDK 的 Connection 适配器
+function createKaminoCompatibleConnection(connection: Connection): any {
+  return {
+    ...connection,
+    // 包装 getAccountInfo 方法，使其返回带 send() 方法的对象
+    getAccountInfo: (publicKey: PublicKey, commitment?: any) => {
+      return {
+        send: async () => {
+          return await connection.getAccountInfo(publicKey, commitment);
+        }
+      };
+    },
+    // 包装其他可能需要的方法
+    getMultipleAccountsInfo: (publicKeys: PublicKey[], commitment?: any) => {
+      return {
+        send: async () => {
+          return await connection.getMultipleAccountsInfo(publicKeys, commitment);
+        }
+      };
+    },
+    getProgramAccounts: (programId: PublicKey, configOrCommitment?: any) => {
+      return {
+        send: async () => {
+          return await connection.getProgramAccounts(programId, configOrCommitment);
+        }
+      };
+    }
+  };
+}
 
 // Kamino Vault 配置
 const VAULT_ADDRESS = "A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK";
@@ -93,13 +123,15 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
       try {
         console.log('🔍 [useUserVaultPosition] Starting fetch, userAddress:', userAddress);
         
-        // 1. 使用旧版 Connection API（兼容 Kamino SDK）
+        // 1. 创建兼容 Kamino SDK 的 Connection 适配器
+        const kaminoConnection = createKaminoCompatibleConnection(connection);
+        
         const slotDuration = await getMedianSlotDurationInMsFromLastEpochs();
-        const kaminoManager = new KaminoManager(connection as any, slotDuration);
+        const kaminoManager = new KaminoManager(kaminoConnection, slotDuration);
         
         // 2. 获取 Vault 状态
         const vault = new KaminoVault(VAULT_ADDRESS as any);
-        const vaultState = await vault.getState(connection as any);
+        const vaultState = await vault.getState(kaminoConnection);
         console.log('📦 [useUserVaultPosition] Vault state loaded');
 
         // 3. 获取当前 slot
@@ -161,7 +193,7 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
         console.log('📊 [useUserVaultPosition] Lending APY:', lendingAPY, 'Total Supplied:', totalSupplied.toString());
 
         // 7. 获取 Farm Rewards（并行优化）- 所有用户都需要这个数据
-        const farmsClient = new Farms(connection as any);
+        const farmsClient = new Farms(kaminoConnection);
         
         const [vaultFarmRewards, ...reserveIncentivesArray] = await Promise.all([
           // Vault Farm Rewards
@@ -223,7 +255,7 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
             const { UserState, Reserve, DEFAULT_PUBLIC_KEY, lamportsToDecimal } = 
               await import('@kamino-finance/klend-sdk');
             
-            const farmsClient = new Farms(connection as any);
+            const farmsClient = new Farms(kaminoConnection);
             const currentTimestamp = new Decimal(Date.now() / 1000);
             const userPubkey = new PublicKey(userAddress);
             
@@ -235,9 +267,9 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
                   vaultState.vaultFarm,
                   userPubkey.toBase58() as any
                 );
-                const farmUserState = await UserState.fetch(connection as any, userFarmStateAddress, farmsClient.getProgramID());
+                const farmUserState = await UserState.fetch(kaminoConnection, userFarmStateAddress, farmsClient.getProgramID());
                 if (farmUserState) {
-                  const farmState = await FarmState.fetch(connection as any, farmUserState.farmState);
+                  const farmState = await FarmState.fetch(kaminoConnection, farmUserState.farmState);
                   if (farmState) {
                     for (let i = 0; i < farmState.rewardInfos.length; i++) {
                       const pendingReward = calculatePendingRewards(farmState, farmUserState, i, currentTimestamp, null);
@@ -260,7 +292,7 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
             const reserves = kaminoManager.getVaultAllocations(vaultState);
             for (const [reserveAddress] of reserves) {
               try {
-                const reserveState = await Reserve.fetch(connection as any, reserveAddress);
+                const reserveState = await Reserve.fetch(kaminoConnection, reserveAddress);
                 if (!reserveState || reserveState.farmCollateral === DEFAULT_PUBLIC_KEY) continue;
                 
                 const delegateePDA = await kaminoManager.computeUserFarmStateForUserInVault(
@@ -276,9 +308,9 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
                   delegateePDA[0]
                 );
                 
-                const farmUserState = await UserState.fetch(connection as any, userFarmStateAddress, farmsClient.getProgramID());
+                const farmUserState = await UserState.fetch(kaminoConnection, userFarmStateAddress, farmsClient.getProgramID());
                 if (farmUserState) {
-                  const farmState = await FarmState.fetch(connection as any, farmUserState.farmState);
+                  const farmState = await FarmState.fetch(kaminoConnection, farmUserState.farmState);
                   if (farmState) {
                     for (let i = 0; i < farmState.rewardInfos.length; i++) {
                       const pendingReward = calculatePendingRewards(farmState, farmUserState, i, currentTimestamp, null);
