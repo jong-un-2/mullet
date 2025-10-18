@@ -73,9 +73,10 @@ export const setClusterConfig = async (
  * Initialize program
  * Called by admin right after the program deployment
  * to initialize global state and vault accounts
+ * @param platformFeeWallet - Optional platform fee wallet address, defaults to admin if not provided
  */
-export const initProject = async () => {
-  const tx = await createInitializeTx(payer.publicKey, program);
+export const initProject = async (platformFeeWallet?: PublicKey) => {
+  const tx = await createInitializeTx(payer.publicKey, program, platformFeeWallet);
 
   tx.recentBlockhash = (await solConnection.getLatestBlockhash()).blockhash;
 

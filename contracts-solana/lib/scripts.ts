@@ -73,7 +73,8 @@ const stringToUint8Array = (hexString: string) => {
 
 export const createInitializeTx = async (
   admin: PublicKey,
-  program: Program<Mars>
+  program: Program<Mars>,
+  platformFeeWallet?: PublicKey
 ) => {
   const [globalState, bump] = PublicKey.findProgramAddressSync(
     [Buffer.from(GLOBAL_STATE_SEED)],
@@ -96,7 +97,7 @@ export const createInitializeTx = async (
     .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 95_000 }))
     .add(
       await program.methods
-        .initialize()
+        .initialize(platformFeeWallet || null)
         .accounts({
           admin,
           usdcMint: USDC_ADDRESS,

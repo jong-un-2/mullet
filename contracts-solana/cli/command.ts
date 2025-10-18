@@ -19,15 +19,25 @@ import { join } from "path"; // Import path to manage file paths
 
 program.version("0.0.1");
 
-programCommand("init").action(async (options) => {
-  const { env, keypair, rpc } = options;
+programCommand("init")
+  .option("-p, --platform-fee-wallet <string>", "platform fee wallet address (optional, defaults to admin)")
+  .action(async (options) => {
+  const { env, keypair, rpc, platformFeeWallet } = options;
 
   console.log("Solana Cluster:", env);
   console.log("Keypair Path:", keypair);
   console.log("RPC URL:", rpc);
+  if (platformFeeWallet) {
+    console.log("Platform Fee Wallet:", platformFeeWallet);
+  }
 
   await setClusterConfig(env, keypair, rpc);
-  await initProject();
+  
+  const platformFeeWalletPubkey = platformFeeWallet 
+    ? new PublicKey(platformFeeWallet) 
+    : undefined;
+  
+  await initProject(platformFeeWalletPubkey);
 });
 
 programCommand("change-admin")

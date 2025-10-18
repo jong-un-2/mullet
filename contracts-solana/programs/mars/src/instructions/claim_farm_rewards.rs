@@ -250,15 +250,23 @@ impl<'info> ClaimFarmRewards<'info> {
 
         // 如果平台费大于 0，则转账到平台费用账户
         if platform_fee > 0 {
-            // 构建 Token transfer 指令数据
-            // Transfer instruction layout: [1, amount_bytes]
-            // 1 = Transfer instruction discriminator
-            let mut transfer_data = vec![3u8]; // 3 = Transfer instruction for SPL Token
+            // 读取 reward mint 的 decimals (offset 44, 1 byte)
+            let reward_mint_data = ctx.accounts.reward_mint.try_borrow_data()?;
+            require!(reward_mint_data.len() >= 45, MarsError::InvalidTokenAccount);
+            let decimals = reward_mint_data[44];
+            
+            // 使用 TransferChecked 指令（支持 Token-2022 和 SPL Token）
+            // TransferChecked instruction layout: [12, amount_bytes(8), decimals(1)]
+            // 12 = TransferChecked instruction discriminator
+            let mut transfer_data = vec![12u8]; // 12 = TransferChecked instruction
             transfer_data.extend_from_slice(&platform_fee.to_le_bytes());
+            transfer_data.push(decimals);
 
             // 构建转账指令账户
+            // TransferChecked accounts: source, mint, destination, authority
             let transfer_accounts = vec![
                 AccountMeta::new(ctx.accounts.user_reward_ata.key(), false),      // source
+                AccountMeta::new_readonly(ctx.accounts.reward_mint.key(), false), // mint
                 AccountMeta::new(ctx.accounts.platform_fee_ata.key(), false),     // destination
                 AccountMeta::new_readonly(ctx.accounts.user.key(), true),         // authority
             ];
@@ -274,13 +282,14 @@ impl<'info> ClaimFarmRewards<'info> {
                 &transfer_ix,
                 &[
                     ctx.accounts.user_reward_ata.to_account_info(),
+                    ctx.accounts.reward_mint.to_account_info(),
                     ctx.accounts.platform_fee_ata.to_account_info(),
                     ctx.accounts.user.to_account_info(),
                     ctx.accounts.reward_token_program.to_account_info(),
                 ],
             )?;
 
-            msg!("✅ Platform fee transferred: {}", platform_fee);
+            msg!("✅ Platform fee transferred: {} (using TransferChecked)", platform_fee);
         }
 
         // 更新 vault_state 中的统计信息

@@ -59,7 +59,7 @@ pub struct Initialize<'info> {
 }
 
 impl Initialize<'_> {
-    pub fn process_instruction(ctx: Context<Self>) -> Result<()> {
+    pub fn process_instruction(ctx: Context<Self>, platform_fee_wallet: Option<Pubkey>) -> Result<()> {
         msg!("Initializing global state, admin: {:?}", ctx.accounts.admin.key());
         let global_state = &mut ctx.accounts.global_state;
 
@@ -70,7 +70,10 @@ impl Initialize<'_> {
         global_state.base_mint = ctx.accounts.usdc_mint.key();
         global_state.frozen = false;
         global_state.max_order_amount = 100_000_000_000; // 100k USDC
-        global_state.platform_fee_wallet = ctx.accounts.admin.key(); // Default to admin
+        
+        // Set platform_fee_wallet: use provided value or default to admin
+        global_state.platform_fee_wallet = platform_fee_wallet.unwrap_or(ctx.accounts.admin.key());
+        msg!("Platform fee wallet set to: {:?}", global_state.platform_fee_wallet);
 
         let rent = Rent::get()?;
         let space = TokenAccount::LEN;

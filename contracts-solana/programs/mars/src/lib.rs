@@ -18,7 +18,7 @@ use instructions::*;
 use state::*;
 use util::*;
 
-declare_id!("9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu");
+declare_id!("6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD");
 
 #[program]
 pub mod mars {
@@ -28,8 +28,8 @@ pub mod mars {
     
     //  called by contract deployer only 1 time to initialize global values
     //  send SOL to global_account, vault, ata_vault to initialize accounts
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        Initialize::process_instruction(ctx)
+    pub fn initialize(ctx: Context<Initialize>, platform_fee_wallet: Option<Pubkey>) -> Result<()> {
+        Initialize::process_instruction(ctx, platform_fee_wallet)
     }
 
     //  Admin can hand over admin role

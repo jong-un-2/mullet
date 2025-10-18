@@ -12,7 +12,7 @@ package:
     - Jupiter Aggregator swaps
     - Claim farm rewards (V19 - Added FarmRewardsClaimedEvent)
     
-    Program ID: 9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu
+    Program ID: FDNg6xL8hLhD2ya513ufVeBru7DkMJqRqxFV7yHug3Hc
     Target: Neon PostgreSQL via Cloudflare Hyperdrive
 
 protobuf:

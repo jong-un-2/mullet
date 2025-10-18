@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token};
+use anchor_spl::token::Token;
 use crate::state::*;
 use crate::error::MarsError;
 use crate::constant::GLOBAL_SEED;
@@ -32,11 +32,14 @@ pub struct InitializeVault<'info> {
     pub vault_state: Box<Account<'info, VaultState>>,
 
     /// 基础代币 Mint (例如 USDC, PYUSD)
-    pub base_token_mint: Account<'info, Mint>,
+    /// 支持 SPL Token 和 Token-2022
+    /// CHECK: Manually validated as mint account
+    pub base_token_mint: AccountInfo<'info>,
 
     /// 份额代币 Mint (代表用户在 vault 中的权益)
     /// 注意：需要预先创建好
-    pub shares_mint: Account<'info, Mint>,
+    /// CHECK: Manually validated as mint account
+    pub shares_mint: AccountInfo<'info>,
 
     /// Vault Treasury (PDA)
     /// CHECK: PDA 验证
