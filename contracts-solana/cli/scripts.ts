@@ -593,9 +593,32 @@ export const initializeVault = async (
       program.programId
     );
 
-    const vaultState = await program.account.vaultState.fetch(vaultStatePDA);
-    console.log("\n📊 New Vault State:");
-    console.log("  Vault State PDA:", vaultStatePDA.toBase58());
+    console.log("\n📊 Vault State PDA:", vaultStatePDA.toBase58());
+    
+    // Add delay and retry logic for account propagation
+    let vaultState;
+    let attempts = 0;
+    const maxAttempts = 5;
+    const delayMs = 2000;
+
+    while (attempts < maxAttempts) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        vaultState = await program.account.vaultState.fetch(vaultStatePDA);
+        break;
+      } catch (error) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          console.log("\n⚠️  Could not fetch vault state immediately.");
+          console.log("The vault was initialized successfully, but account data is still propagating.");
+          console.log("You can verify it later with: solana account", vaultStatePDA.toBase58());
+          return;
+        }
+        console.log(`Waiting for account data to propagate... (attempt ${attempts}/${maxAttempts})`);
+      }
+    }
+
+    console.log("\n📊 Vault State Details:");
     console.log("  Platform Fee:", vaultState.platformFeeBps, "bps (", vaultState.platformFeeBps / 100, "%)");
     console.log("  Admin:", vaultState.admin.toBase58());
   } catch (error) {

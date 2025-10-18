@@ -24,14 +24,14 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 [programs.mainnet]
 mars = "9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu"
 
-[[test.genesis]]
+[[test.mars]]
 address = "4sN8PnN2ki2W4TFXAfzR645FWs8nimmsYeNtxM8RBK6A"
 program = "./artifacts/spl_token_faucet.so"
 
-[[test.genesis]]
+[[test.mars]]
 address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 program = "./artifacts/metadata_program.so"
 
-[[test.genesis]]
+[[test.mars]]
 address = "556qRmYYuXwFVXYVztx3HvMzePDBchuXMDLBWVzzaG4M"
 program = "./target/deploy/mars.so"
