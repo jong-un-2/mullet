@@ -28,25 +28,31 @@ function createKaminoCompatibleConnection(connection: Connection): any {
   return {
     ...connection,
     // 包装 getAccountInfo 方法，使其返回带 send() 方法的对象
-    getAccountInfo: (publicKey: PublicKey, commitment?: any) => {
+    getAccountInfo: (publicKey: PublicKey | string, commitment?: any) => {
       return {
         send: async () => {
-          return await connection.getAccountInfo(publicKey, commitment);
+          // 确保 publicKey 是 PublicKey 对象
+          const key = typeof publicKey === 'string' ? new PublicKey(publicKey) : publicKey;
+          return await connection.getAccountInfo(key, commitment);
         }
       };
     },
     // 包装其他可能需要的方法
-    getMultipleAccountsInfo: (publicKeys: PublicKey[], commitment?: any) => {
+    getMultipleAccountsInfo: (publicKeys: (PublicKey | string)[], commitment?: any) => {
       return {
         send: async () => {
-          return await connection.getMultipleAccountsInfo(publicKeys, commitment);
+          // 确保所有 publicKeys 都是 PublicKey 对象
+          const keys = publicKeys.map(pk => typeof pk === 'string' ? new PublicKey(pk) : pk);
+          return await connection.getMultipleAccountsInfo(keys, commitment);
         }
       };
     },
-    getProgramAccounts: (programId: PublicKey, configOrCommitment?: any) => {
+    getProgramAccounts: (programId: PublicKey | string, configOrCommitment?: any) => {
       return {
         send: async () => {
-          return await connection.getProgramAccounts(programId, configOrCommitment);
+          // 确保 programId 是 PublicKey 对象
+          const key = typeof programId === 'string' ? new PublicKey(programId) : programId;
+          return await connection.getProgramAccounts(key, configOrCommitment);
         }
       };
     }
