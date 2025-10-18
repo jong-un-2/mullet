@@ -73,7 +73,7 @@ const CommissionStatistics: React.FC = () => {
       align: 'right',
       render: (value: number) => (
         <span style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
-          {value.toFixed(6)}
+          {typeof value === 'number' ? value.toFixed(6) : '0.000000'}
         </span>
       ),
       sorter: (a, b) => a.totalFee - b.totalFee,
@@ -242,7 +242,7 @@ const CommissionStatistics: React.FC = () => {
           <Col xs={12} sm={6}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff' }}>
-                {statistics.totalFee.toFixed(6)}
+                {typeof statistics.totalFee === 'number' ? statistics.totalFee.toFixed(6) : '0.000000'}
               </div>
               <div style={{ color: '#666' }}>总平台费用 (PYUSD)</div>
             </div>

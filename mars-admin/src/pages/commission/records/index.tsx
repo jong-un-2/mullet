@@ -62,7 +62,7 @@ const CommissionRecords: React.FC = () => {
       align: 'right',
       render: (value: number) => (
         <span style={{ fontFamily: 'monospace' }}>
-          {value.toFixed(6)}
+          {typeof value === 'number' ? value.toFixed(6) : '0.000000'}
         </span>
       ),
       sorter: (a, b) => a.rewardAmount - b.rewardAmount,
@@ -75,7 +75,7 @@ const CommissionRecords: React.FC = () => {
       align: 'right',
       render: (value: number) => (
         <span style={{ color: '#52c41a', fontWeight: 'bold', fontFamily: 'monospace' }}>
-          {value.toFixed(6)}
+          {typeof value === 'number' ? value.toFixed(6) : '0.000000'}
         </span>
       ),
       sorter: (a, b) => a.platformFee - b.platformFee,
@@ -284,17 +284,17 @@ const CommissionRecords: React.FC = () => {
             </Descriptions.Item>
             <Descriptions.Item label="奖励金额">
               <span style={{ fontFamily: 'monospace' }}>
-                {selectedRecord.rewardAmount.toFixed(6)} PYUSD
+                {typeof selectedRecord.rewardAmount === 'number' ? selectedRecord.rewardAmount.toFixed(6) : '0.000000'} PYUSD
               </span>
             </Descriptions.Item>
             <Descriptions.Item label="总已领取奖励">
               <span style={{ fontFamily: 'monospace' }}>
-                {selectedRecord.totalRewardsClaimed.toFixed(6)} PYUSD
+                {typeof selectedRecord.totalRewardsClaimed === 'number' ? selectedRecord.totalRewardsClaimed.toFixed(6) : '0.000000'} PYUSD
               </span>
             </Descriptions.Item>
             <Descriptions.Item label="平台费用">
               <span style={{ color: '#52c41a', fontWeight: 'bold', fontFamily: 'monospace' }}>
-                {selectedRecord.platformFee.toFixed(6)} PYUSD
+                {typeof selectedRecord.platformFee === 'number' ? selectedRecord.platformFee.toFixed(6) : '0.000000'} PYUSD
               </span>
             </Descriptions.Item>
             <Descriptions.Item label="交易状态">
