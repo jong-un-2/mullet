@@ -25,6 +25,7 @@ import "./index.css";
 import TransactionStatusWidget from "./components/TransactionStatusWidget";
 import MarsWalletTracker from "./components/MarsWalletTracker";
 import WalletErrorBoundary from "./components/WalletErrorBoundary";
+import { WalletProvider } from "./contexts/WalletContext";
 
 import PoolPage from "./pages/Pool";
 import PortfolioPage from "./pages/Portfolio";
@@ -107,21 +108,23 @@ createRoot(document.getElementById("root")!).render(
         clientId={import.meta.env.VITE_PRIVY_CLIENT_ID || 'client-WY6QkdiKEsy279udGtAua3iZpfeTyfWwcUdsZMGpuGFS9'}
         config={privyConfig.config}
       >
-        <SolanaWalletProvider>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <WagmiProvider config={config}>
-              <QueryClientProvider client={queryClient}>
-                <RainbowKitProvider locale="en">
-                  <Toaster richColors position="top-center" />
-                  <RouterProvider router={router} />
-                  <TransactionStatusWidget />
-                  <MarsWalletTracker />
-                </RainbowKitProvider>
-              </QueryClientProvider>
-            </WagmiProvider>
-          </ThemeProvider>
-        </SolanaWalletProvider>
+        <WalletProvider>
+          <SolanaWalletProvider>
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <WagmiProvider config={config}>
+                <QueryClientProvider client={queryClient}>
+                  <RainbowKitProvider locale="en">
+                    <Toaster richColors position="top-center" />
+                    <RouterProvider router={router} />
+                    <TransactionStatusWidget />
+                    <MarsWalletTracker />
+                  </RainbowKitProvider>
+                </QueryClientProvider>
+              </WagmiProvider>
+            </ThemeProvider>
+          </SolanaWalletProvider>
+        </WalletProvider>
       </PrivyProvider>
     </WalletErrorBoundary>
   </StrictMode>

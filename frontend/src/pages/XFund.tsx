@@ -46,6 +46,7 @@ import { createWalletClient, custom } from 'viem';
 import { mainnet } from 'viem/chains';
 import { useWallets as useEvmWallets } from '@privy-io/react-auth';
 import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { useWalletContext } from '../contexts/WalletContext';
 
 // Register Chart.js components
 ChartJS.register(
@@ -62,6 +63,7 @@ ChartJS.register(
 // Build transaction based on protocol parameters using Jupiter Lend API
 
 const XFundPage = () => {
+  const { primaryWallet } = useWalletContext(); // Get primary wallet type
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('PYUSD-Solana'); // Format: TOKEN-Chain
@@ -964,6 +966,24 @@ const XFundPage = () => {
     return tokenConfigs[selectedToken] || tokenConfigs['PYUSD-Solana'];
   };
 
+  // 根据主要钱包类型过滤代币列表
+  const getFilteredTokens = () => {
+    if (!primaryWallet) {
+      // 如果没有检测到主要钱包，显示所有代币
+      return Object.entries(tokenConfigs);
+    }
+
+    // 根据主要钱包类型过滤
+    return Object.entries(tokenConfigs).filter(([, token]) => {
+      if (primaryWallet === 'sol') {
+        return token.chain === 'solana';
+      } else if (primaryWallet === 'eth') {
+        return token.chain === 'ethereum';
+      }
+      return true;
+    });
+  };
+
   // Chart data - using real historical data from Neon PostgreSQL
   const getChartData = () => {
     // Use real historical data if available
@@ -1713,7 +1733,7 @@ const XFundPage = () => {
                         },
                       }}
                     >
-                      {Object.entries(tokenConfigs).map(([key, token]) => {
+                      {getFilteredTokens().map(([key, token]) => {
                         return (
                           <MenuItem 
                             key={key} 
@@ -2052,7 +2072,7 @@ const XFundPage = () => {
                       },
                     }}
                   >
-                    {Object.entries(tokenConfigs).map(([key, token]) => {
+                    {getFilteredTokens().map(([key, token]) => {
                       return (
                         <MenuItem key={key} value={key} sx={{ color: 'white' }}>
                           {token.symbol}

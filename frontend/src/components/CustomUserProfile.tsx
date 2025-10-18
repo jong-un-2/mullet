@@ -19,6 +19,7 @@ import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import { FaSignOutAlt, FaEthereum, FaCopy, FaExternalLinkAlt } from 'react-icons/fa';
 import { SiSolana } from 'react-icons/si';
+import { useWalletContext } from '../contexts/WalletContext';
 
 import { useAccount, useDisconnect } from 'wagmi';
 import { useWallet as useSolanaAdapterWallet } from '@solana/wallet-adapter-react';
@@ -109,6 +110,7 @@ const CustomUserProfile: React.FC = () => {
   const { login, logout, authenticated, user } = usePrivy();
   const { wallets } = useWallets(); // General wallets (ETH, etc.)
   const { wallets: solanaWallets } = useSolanaWallets(); // Dedicated Solana wallets
+  const { primaryWallet } = useWalletContext(); // Get primary wallet from context
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState<string>('');
@@ -116,8 +118,6 @@ const CustomUserProfile: React.FC = () => {
   const [showCopySnackbar, setShowCopySnackbar] = useState(false);
   // Distinguish between connect and disconnect flows to avoid showing "Connecting..." after a disconnect
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  // Track which wallet was connected first/primary
-  const [primaryWallet, setPrimaryWallet] = useState<'eth' | 'sol' | null>(null);
 
   // External wallet states
   const { address: ethAddress, isConnected: ethConnected } = useAccount();
@@ -279,68 +279,6 @@ const CustomUserProfile: React.FC = () => {
         return 'CONNECTED';
     }
   };
-
-  // Track primary wallet on first connection
-  useEffect(() => {
-    if (!authenticated) {
-      // Reset primary wallet when disconnected
-      setPrimaryWallet(null);
-      return;
-    }
-
-    // Only set primary wallet once on first connection
-    if (primaryWallet === null) {
-      const info = getWalletInfo();
-      console.log('🎯 Detecting primary wallet:', {
-        externalSolConnected: info.externalSolConnected,
-        externalEthConnected: info.externalEthConnected,
-        solWallet: info.solWallet?.address,
-        ethWallet: info.ethWallet?.address,
-        walletsLength: wallets.length,
-        solanaWalletsLength: solanaWallets.length
-      });
-
-      // Determine primary based on which wallet was connected
-      // If only one type exists, that's the primary
-      if (info.externalSolConnected && !info.externalEthConnected) {
-        console.log('✅ Setting primary wallet: SOL (external)');
-        setPrimaryWallet('sol');
-      } else if (info.externalEthConnected && !info.externalSolConnected) {
-        console.log('✅ Setting primary wallet: ETH (external)');
-        setPrimaryWallet('eth');
-      } else if (info.solWallet && !info.ethWallet) {
-        console.log('✅ Setting primary wallet: SOL (embedded)');
-        setPrimaryWallet('sol');
-      } else if (info.ethWallet && !info.solWallet) {
-        console.log('✅ Setting primary wallet: ETH (embedded)');
-        setPrimaryWallet('eth');
-      } else if (wallets.length === 1) {
-        // Only one wallet total, determine by address format
-        const wallet = wallets[0];
-        if (wallet.address.startsWith('0x')) {
-          console.log('✅ Setting primary wallet: ETH (single wallet)');
-          setPrimaryWallet('eth');
-        } else {
-          console.log('✅ Setting primary wallet: SOL (single wallet)');
-          setPrimaryWallet('sol');
-        }
-      }
-      // If both exist, we'll use the order they appear in linkedAccounts or first wallet type
-      else if (user?.linkedAccounts && user.linkedAccounts.length > 0) {
-        const firstAccount = user.linkedAccounts[0];
-        if (firstAccount.type === 'wallet') {
-          const firstAddress = (firstAccount as any).address;
-          if (firstAddress?.startsWith('0x')) {
-            console.log('✅ Setting primary wallet: ETH (first linked account)');
-            setPrimaryWallet('eth');
-          } else {
-            console.log('✅ Setting primary wallet: SOL (first linked account)');
-            setPrimaryWallet('sol');
-          }
-        }
-      }
-    }
-  }, [authenticated, wallets, solanaWallets, primaryWallet, user?.linkedAccounts]);
 
   // Wallet info and display data - always calculate these
   const walletInfo = getWalletInfo();

@@ -31,6 +31,7 @@ import { createConfig, executeRoute, EVM, Solana } from '@lifi/sdk';
 import type { Route, ExecutionOptions } from '@lifi/sdk';
 import { createWalletClient, custom } from 'viem';
 import { mainnet } from 'viem/chains';
+import { useWalletContext } from '../contexts/WalletContext';
 
 // 支持的代币化股票 (Solana 地址)
 const TOKENIZED_STOCKS = [
@@ -317,6 +318,7 @@ const XStockPage = () => {
   const { authenticated } = usePrivy();
   const { wallets } = useWallets(); // EVM 钱包 (用于 fromAddress)
   const { wallets: solanaWallets } = useSolanaWallets(); // Solana 钱包 (用于 toAddress)
+  const { primaryWallet } = useWalletContext(); // Get primary wallet type
   
   const [selectedStock, setSelectedStock] = useState(TOKENIZED_STOCKS[0]);
   const [paymentToken, setPaymentToken] = useState(PAYMENT_TOKENS[0]);
@@ -337,6 +339,24 @@ const XStockPage = () => {
   const [txSignature, setTxSignature] = useState<string>();
   const [currentTxStep, setCurrentTxStep] = useState(0);
   const [totalTxSteps, setTotalTxSteps] = useState(0);
+
+  // 根据主要钱包类型过滤支付代币列表
+  const getFilteredPaymentTokens = () => {
+    if (!primaryWallet) {
+      // 如果没有检测到主要钱包，显示所有代币
+      return PAYMENT_TOKENS;
+    }
+
+    // 根据主要钱包类型过滤
+    return PAYMENT_TOKENS.filter(token => {
+      if (primaryWallet === 'sol') {
+        return token.chain === 'solana';
+      } else if (primaryWallet === 'eth') {
+        return token.chain === 'ethereum';
+      }
+      return true;
+    });
+  };
 
   useEffect(() => {
     console.log('🔍 XStock wallet check:', {
@@ -1086,7 +1106,7 @@ const XStockPage = () => {
                       },
                     }}
                   >
-                    {PAYMENT_TOKENS.map((token) => (
+                    {getFilteredPaymentTokens().map((token) => (
                       <MenuItem 
                         key={`${token.symbol}-${token.chainName}`} 
                         value={`${token.symbol}-${token.chainName}`}
