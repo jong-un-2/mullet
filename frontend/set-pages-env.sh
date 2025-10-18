@@ -9,7 +9,7 @@ echo "�� 设置 Cloudflare Pages 环境变量..."
 echo "项目名称: $PROJECT_NAME"
 
 # API Configuration
-wrangler pages secret put VITE_API_ENDPOINT --project-name="$PROJECT_NAME" --env="production" <<< "https://mars.jongun2038.win"
+wrangler pages secret put VITE_API_ENDPOINT --project-name="$PROJECT_NAME" --env="production" <<< "https://api.marsliquidity.com"
 wrangler pages secret put VITE_API_KEY --project-name="$PROJECT_NAME" --env="production" <<< "test-key"
 
 # Privy Configuration

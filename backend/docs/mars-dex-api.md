@@ -7,7 +7,7 @@
 | **API 名称** | Mars Liquid Dex API |
 | **版本** | 1.0.0 |
 | **OpenAPI 版本** | 3.0.2 |
-| **基础 URL** | <https://api.dex.jongun2038.win> |
+| **基础 URL** | <https://api.marsliquidity.com> |
 | **许可证** | Apache 2.0 |
 
 ## 🔑 认证方式
@@ -189,7 +189,7 @@ GET /v1/api/dex/analytics/{chain}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/analytics/bsc?startTime=1672531200" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/analytics/bsc?startTime=1672531200" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -252,7 +252,7 @@ GET /v1/api/pools/{chain}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/pools/bsc?pageSize=10&orderBy=volume&filterBy=1d" \
+curl -X GET "https://api.marsliquidity.com/v1/api/pools/bsc?pageSize=10&orderBy=volume&filterBy=1d" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -338,7 +338,7 @@ GET /v1/api/pools/{chain}/{address}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/pools/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?filterBy=1d" \
+curl -X GET "https://api.marsliquidity.com/v1/api/pools/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?filterBy=1d" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -424,7 +424,7 @@ GET /v1/api/rewards/{chain}/{user_address}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/rewards/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?market=lb&epoch=15&token=0x6e84a6216eA6dACC71eE8E6b0a5B7322EEbC0fDd" \
+curl -X GET "https://api.marsliquidity.com/v1/api/rewards/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?market=lb&epoch=15&token=0x6e84a6216eA6dACC71eE8E6b0a5B7322EEbC0fDd" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -488,7 +488,7 @@ POST /v1/api/rewards/batch-proof/{chain}/{user_address}
 **示例请求**:
 
 ```bash
-curl -X POST "https://api.dex.jongun2038.win/v1/api/rewards/batch-proof/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
+curl -X POST "https://api.marsliquidity.com/v1/api/rewards/batch-proof/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
   -H "x-api-key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -553,7 +553,7 @@ GET /v1/api/rewards/claimable/{chain}/{user_address}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/rewards/claimable/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?market=lb" \
+curl -X GET "https://api.marsliquidity.com/v1/api/rewards/claimable/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?market=lb" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -612,7 +612,7 @@ GET /v1/api/rewards/history/{chain}/{user_address}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/rewards/history/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?market=lb" \
+curl -X GET "https://api.marsliquidity.com/v1/api/rewards/history/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?market=lb" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -688,7 +688,7 @@ GET /v1/api/user/bin-ids/{user_address}/{chain}/{pool_address}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user/bin-ids/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user/bin-ids/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -722,7 +722,7 @@ GET /v1/api/user/pool-ids/{user_address}/{chain}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user/pool-ids/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/bsc?pageSize=20&pageNum=1" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user/pool-ids/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/bsc?pageSize=20&pageNum=1" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -783,7 +783,7 @@ GET /v1/api/user/pool-user-balances
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user/pool-user-balances?chainId=43114&lpAddress=0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c&poolAddress=0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user/pool-user-balances?chainId=43114&lpAddress=0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c&poolAddress=0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
   -H "x-api-key: your-partner-api-key"
 ```
 
@@ -822,7 +822,7 @@ GET /v1/api/user/{chain}/{user_address}/farms
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/farms" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/farms" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -866,7 +866,7 @@ GET /v1/api/user/{chain}/{user_address}/farms/{vault_id}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/farms/farm_001" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/farms/farm_001" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -933,7 +933,7 @@ GET /v1/api/user/{chain}/history/{user_address}/{pool_address}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user/bsc/history/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?pageSize=20&pageNum=1&startTime=1672531200&endTime=1704067200" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user/bsc/history/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c?pageSize=20&pageNum=1&startTime=1672531200&endTime=1704067200" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -1009,14 +1009,14 @@ GET /v1/api/user/fees-earned/{chain}/{user_address}/{pool_address}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user/fees-earned/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user/fees-earned/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
   -H "x-api-key: your-api-key"
 ```
 
 **示例请求 (查询所有链)**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user/fees-earned/all/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user/fees-earned/all/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -1083,7 +1083,7 @@ GET /v1/api/user-lifetime-stats/{chain}/users/{user_address}/swap-stats
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/user-lifetime-stats/bsc/users/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/swap-stats?from_date=2024-01-01&to_date=2024-12-31" \
+curl -X GET "https://api.marsliquidity.com/v1/api/user-lifetime-stats/bsc/users/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/swap-stats?from_date=2024-01-01&to_date=2024-12-31" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -1177,7 +1177,7 @@ GET /v1/api/vaults
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/vaults?pageSize=20&pageNum=1" \
+curl -X GET "https://api.marsliquidity.com/v1/api/vaults?pageSize=20&pageNum=1" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -1290,14 +1290,14 @@ GET /v1/api/vaults/{chain}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/vaults/bsc?pageSize=20&pageNum=1" \
+curl -X GET "https://api.marsliquidity.com/v1/api/vaults/bsc?pageSize=20&pageNum=1" \
   -H "x-api-key: your-api-key"
 ```
 
 **示例请求（查询所有链）**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/vaults/all?pageSize=50&pageNum=1" \
+curl -X GET "https://api.marsliquidity.com/v1/api/vaults/all?pageSize=50&pageNum=1" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -1410,7 +1410,7 @@ GET /v1/api/vaults/{chain}/{vault_address}/share-price
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/vaults/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/share-price?fromTimestamp=1672531200&toTimestamp=1704067200" \
+curl -X GET "https://api.marsliquidity.com/v1/api/vaults/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c/share-price?fromTimestamp=1672531200&toTimestamp=1704067200" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -1467,7 +1467,7 @@ GET /v1/api/vaults/{chain}/{vault_address}
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/vaults/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
+curl -X GET "https://api.marsliquidity.com/v1/api/vaults/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -1584,14 +1584,14 @@ GET /v1/api/vaults/{chain}/{vault_address}/tvl-history
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/vaults/bsc/0xe755e0899e7acd50a55f6b517f1f9c46574c9d7c/tvl-history?startTime=1672531200&endTime=1704067200" \
+curl -X GET "https://api.marsliquidity.com/v1/api/vaults/bsc/0xe755e0899e7acd50a55f6b517f1f9c46574c9d7c/tvl-history?startTime=1672531200&endTime=1704067200" \
   -H "x-api-key: your-api-key"
 ```
 
 **示例请求 (仅开始时间)**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/vaults/bsc/0xe755e0899e7acd50a55f6b517f1f9c46574c9d7c/tvl-history?startTime=1672531200" \
+curl -X GET "https://api.marsliquidity.com/v1/api/vaults/bsc/0xe755e0899e7acd50a55f6b517f1f9c46574c9d7c/tvl-history?startTime=1672531200" \
   -H "x-api-key: your-api-key"
 ```
 
@@ -1663,7 +1663,7 @@ GET /v1/api/vaults/{chain}/{vault_address}/recent-activity
 **示例请求**:
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/vaults/bsc/0xe755e0899e7acd50a55f6b517f1f9c46574c9d7c/recent-activity?pageSize=20&pageNum=1" \
+curl -X GET "https://api.marsliquidity.com/v1/api/vaults/bsc/0xe755e0899e7acd50a55f6b517f1f9c46574c9d7c/recent-activity?pageSize=20&pageNum=1" \
   -H "x-api-key: your-api-key"
 ```
 

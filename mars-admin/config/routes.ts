@@ -56,6 +56,17 @@ export default [
     ],
   },
   {
+    path: '/commission',
+    name: '佣金费用',
+    // icon: 'DollarCircleOutlined',
+    routes: [
+      { path: '/commission/overview', name: '费用总览', component: './commission/overview' },
+      { path: '/commission/records', name: '费用记录', component: './commission/records' },
+      { path: '/commission/settings', name: '费率设置', component: './commission/settings' },
+      { path: '/commission/statistics', name: '统计报表', component: './commission/statistics' },
+    ],
+  },
+  {
     path: '/wallet',
     name: '钱包管理',
     // icon: 'crown',

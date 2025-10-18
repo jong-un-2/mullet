@@ -25,7 +25,7 @@ Mars Platform 提供三大核心 API 服务：
 
 Mars Liquid 是一个 Solana DeFi 聚合收益平台，通过整合 Jupiter Lend 和 Kamino Earn，为用户提供最优的资产分配策略。
 
-**基础 URL:** `https://mars.jongun2038.win`
+**基础 URL:** `https://api.marsliquidity.com`
 
 ## 📋 API 端点
 
@@ -36,7 +36,7 @@ Mars Liquid 是一个 Solana DeFi 聚合收益平台，通过整合 Jupiter Lend
 检查系统健康状态和各服务连接情况。
 
 ```bash
-curl "https://mars.jongun2038.win/v1/api/mars/health"
+curl "https://api.marsliquidity.com/v1/api/mars/health"
 ```
 
 **响应示例:**
@@ -66,7 +66,7 @@ curl "https://mars.jongun2038.win/v1/api/mars/health"
 获取所有可用的 DeFi 投资机会（Jupiter Lend + Kamino）。
 
 ```bash
-curl "https://mars.jongun2038.win/v1/api/mars/opportunities"
+curl "https://api.marsliquidity.com/v1/api/mars/opportunities"
 ```
 
 **响应示例:**
@@ -102,7 +102,7 @@ curl "https://mars.jongun2038.win/v1/api/mars/opportunities"
 获取指定用户的所有 DeFi 仓位。
 
 ```bash
-curl "https://mars.jongun2038.win/v1/api/mars/positions/A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6"
+curl "https://api.marsliquidity.com/v1/api/mars/positions/A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6"
 ```
 
 **响应示例:**
@@ -149,7 +149,7 @@ curl "https://mars.jongun2038.win/v1/api/mars/positions/A7iVLhNhLNaH4q8SZAZVceLU
 创建存款交易，返回优化的资产分配策略和交易预览。
 
 ```bash
-curl -X POST "https://mars.jongun2038.win/v1/api/mars/transactions/deposit" \
+curl -X POST "https://api.marsliquidity.com/v1/api/mars/transactions/deposit" \
   -H "Content-Type: application/json" \
   -d '{
     "userAddress": "A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6",
@@ -166,7 +166,7 @@ curl -X POST "https://mars.jongun2038.win/v1/api/mars/transactions/deposit" \
 创建取款交易，返回取款预览和费用估算。
 
 ```bash
-curl -X POST "https://mars.jongun2038.win/v1/api/mars/transactions/withdraw" \
+curl -X POST "https://api.marsliquidity.com/v1/api/mars/transactions/withdraw" \
   -H "Content-Type: application/json" \
   -d '{
     "userAddress": "A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6",
@@ -208,7 +208,7 @@ curl -X POST "https://mars.jongun2038.win/v1/api/mars/transactions/withdraw" \
 
 提供多链 DEX 数据分析、流动性池管理、用户仓位查询等功能。
 
-**基础 URL:** `https://api.dex.jongun2038.win`
+**基础 URL:** `https://api.marsliquidity.com`
 
 **认证方式:** 所有请求需要在 header 中添加 `x-api-key: test-key`
 
@@ -233,7 +233,7 @@ curl -X POST "https://mars.jongun2038.win/v1/api/mars/transactions/withdraw" \
 - `version`: DEX 版本（可选，默认 `all`）
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/analytics/bsc?startTime=1672531200&endTime=1704067200&version=all" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/analytics/bsc?startTime=1672531200&endTime=1704067200&version=all" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -249,7 +249,7 @@ curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/analytics/bsc?startTime=1
 - `orderBy`: 排序字段（如 `volume`, `tvl`, `apy`）
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc?pageSize=10&pageNum=1&orderBy=volume" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/pools/bsc?pageSize=10&pageNum=1&orderBy=volume" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -260,7 +260,7 @@ curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc?pageSize=10&pag
 获取特定流动性池的详细信息。
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/pools/bsc/0xe785e0899e7acd50a55f6b517f1f9c46574c9d7c" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -278,15 +278,15 @@ curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/0xe785e0899e7ac
 
 ```bash
 # 搜索包含 WBNB 的所有池子
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/search?token1=WBNB&page=1&limit=20" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/pools/bsc/search?token1=WBNB&page=1&limit=20" \
   -H "x-api-key: test-key" | jq
 
 # 搜索 WBNB-USDT 交易对
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/search?token1=WBNB&token2=USDT&page=1&limit=10" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/pools/bsc/search?token1=WBNB&token2=USDT&page=1&limit=10" \
   -H "x-api-key: test-key" | jq
 
 # 使用代币地址搜索
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/search?token1=0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c&page=1&limit=20" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/pools/bsc/search?token1=0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c&page=1&limit=20" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -303,15 +303,15 @@ curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/search?token1=0
 
 ```bash
 # 获取池子的所有 bins（前100个）
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/0x904ede072667c4bc3d7e6919b4a0a442559295c8/bins" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/pools/bsc/0x904ede072667c4bc3d7e6919b4a0a442559295c8/bins" \
   -H "x-api-key: test-key" | jq
 
 # 获取指定 active ID 周围的 bins（range=20）
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/0x904ede072667c4bc3d7e6919b4a0a442559295c8/bins?activeId=8391210&range=20&limit=50" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/pools/bsc/0x904ede072667c4bc3d7e6919b4a0a442559295c8/bins?activeId=8391210&range=20&limit=50" \
   -H "x-api-key: test-key" | jq
 
 # 只获取当前 active bin
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/0x904ede072667c4bc3d7e6919b4a0a442559295c8/bins?range=0&limit=1" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/pools/bsc/0x904ede072667c4bc3d7e6919b4a0a442559295c8/bins?range=0&limit=1" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -332,7 +332,7 @@ curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/pools/bsc/0x904ede072667c
 获取用户在特定池子中的 bin 仓位。
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/user/bin-ids/0xE0A051f87bb78f38172F633449121475a193fC1A/bsc/0xa871c952b96ad832ef4b12f1b96b5244a4106090" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/user/bin-ids/0xE0A051f87bb78f38172F633449121475a193fC1A/bsc/0xa871c952b96ad832ef4b12f1b96b5244a4106090" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -343,7 +343,7 @@ curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/user/bin-ids/0xE0A051f87b
 获取用户参与的所有流动性池。
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/user/pool-ids/0xE0A051f87bb78f38172F633449121475a193fC1A/bsc?pageSize=20&pageNum=1" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/user/pool-ids/0xE0A051f87bb78f38172F633449121475a193fC1A/bsc?pageSize=20&pageNum=1" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -359,7 +359,7 @@ curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/user/pool-ids/0xE0A051f87
 - `poolAddress`: 池子地址
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/user/pool-user-balances?chainId=97&lpAddress=0xE0A051f87bb78f38172F633449121475a193fC1A&poolAddress=0x406ca3b0acd27b8060c84902d2b0cab6f5ad898d" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/user/pool-user-balances?chainId=97&lpAddress=0xE0A051f87bb78f38172F633449121475a193fC1A&poolAddress=0x406ca3b0acd27b8060c84902d2b0cab6f5ad898d" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -370,7 +370,7 @@ curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/user/pool-user-balances?c
 查询用户从流动性池中赚取的费用。
 
 ```bash
-curl -X GET "https://api.dex.jongun2038.win/v1/api/dex/user/fees-earned/bsc/0xE0A051f87bb78f38172F633449121475a193fC1A/0x406ca3b0acd27b8060c84902d2b0cab6f5ad898d" \
+curl -X GET "https://api.marsliquidity.com/v1/api/dex/user/fees-earned/bsc/0xE0A051f87bb78f38172F633449121475a193fC1A/0x406ca3b0acd27b8060c84902d2b0cab6f5ad898d" \
   -H "x-api-key: test-key" | jq
 ```
 
@@ -585,7 +585,7 @@ Offset | Size | Field
 ### JavaScript/TypeScript - Mars Liquid
 
 ```typescript
-const MARS_API_BASE = 'https://mars.jongun2038.win';
+const MARS_API_BASE = 'https://api.marsliquidity.com';
 
 // 获取投资机会
 async function getOpportunities() {
@@ -612,7 +612,7 @@ async function createDeposit(userAddress: string, asset: string, amount: number)
 ### JavaScript/TypeScript - DEX Analytics
 
 ```typescript
-const DEX_API_BASE = 'https://api.dex.jongun2038.win';
+const DEX_API_BASE = 'https://api.marsliquidity.com';
 const API_KEY = 'test-key';
 
 // 获取池列表
@@ -703,8 +703,8 @@ async function handleClaimRewards() {
 
 ## 📚 相关文档
 
-- [Mars Liquid 使用指南](https://mars.jongun2038.win)
-- [DEX Analytics Dashboard](https://api.dex.jongun2038.win)
+- [Mars Liquid 使用指南](https://api.marsliquidity.com)
+- [DEX Analytics Dashboard](https://api.marsliquidity.com)
 - [Platform Fee Wallet Guide](./PLATFORM_FEE_WALLET_GUIDE.md)
 - [Solana 合约文档](../contracts-solana/README.md)
 
@@ -713,4 +713,4 @@ async function handleClaimRewards() {
 **最后更新:** 2025年10月17日  
 **API 版本:** v1.0.0  
 **维护团队:** Mars Development Team  
-**技术支持:** support@mars.jongun2038.win
+**技术支持:** support@marsliquidity.com

@@ -15,7 +15,7 @@ export const getApiBaseUrl = () => {
     return 'http://127.0.0.1:8787';  // 开发环境使用本地服务器
   }
   
-  return 'https://mars.jongun2038.win';  // 生产环境
+  return 'https://api.marsliquidity.com';  // 生产环境
 };
 
 // API配置常量

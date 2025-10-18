@@ -11,6 +11,7 @@ import { runCacheWarming } from './cache/warmer';
 
 import { createIndexerRoutes } from './containers';
 import { createMarsRoutes } from './mars/routes';
+import { createNeonCommissionRoutes } from './neon/commission-routes';
 import { runIncrementalSync, getIndexerHealth } from './services/substreamsIndexer';
 import { collectVaultHistoricalData } from './services/vaultHistoricalCollector';
 
@@ -83,6 +84,7 @@ app.route('/mcp', createDBRoutes());
 app.route('/cache', createCacheRoutes());
 app.route('/mars', createMarsRoutes());
 app.route('/v1/api/mars', createMarsRoutes()); // V1 API compatibility
+app.route('/api/neon', createNeonCommissionRoutes());
 
 // Mount indexer routes (Durable Object container control)
 app.route('/indexer', createIndexerRoutes());

@@ -49,4 +49,11 @@ export default {
   'menu.editor.flow': '流程编辑器',
   'menu.editor.mind': '脑图编辑器',
   'menu.editor.koni': '拓扑编辑器',
+  
+  // 佣金费用相关菜单
+  'menu.commission': '佣金费用',
+  'menu.commission.overview': '费用总览',
+  'menu.commission.records': '费用记录',
+  'menu.commission.settings': '费率设置',
+  'menu.commission.statistics': '统计报表',
 };

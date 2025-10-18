@@ -9,7 +9,7 @@ export function useApiDexUserBinIds(address: string, chain: string, poolAddress:
     if (!address || !chain || !poolAddress) return;
     setLoading(true);
     axios.get(
-      `https://mars.jongun2038.win/v1/api/dex/user/bin-ids/${address}/${chain}/${poolAddress}`,
+      `https://api.marsliquidity.com/v1/api/dex/user/bin-ids/${address}/${chain}/${poolAddress}`,
       { headers: { 'x-api-key': 'test-key' } }
     ).then(res => setData(res.data))
      .finally(() => setLoading(false));

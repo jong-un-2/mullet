@@ -352,7 +352,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 
 // 初始化连接
 const connection = new Connection('https://api.mainnet-beta.solana.com');
-const MARS_API_URL = 'https://mars.jongun2038.win';
+const MARS_API_URL = 'https://api.marsliquidity.com';
 
 // 获取所有 Vaults
 async function getVaults() {
@@ -418,8 +418,8 @@ async function getLiFiQuote(params: {
 
 | 服务 | 端点 | 功能 |
 |------|------|------|
-| **Mars Protocol API** | `https://mars.jongun2038.win` | Vault 管理、持仓追踪、历史数据 |
-| **DEX API** | `https://api.dex.jongun2038.win` | 代币交换、价格数据、流动性管理 |
+| **Mars Protocol API** | `https://api.marsliquidity.com` | Vault 管理、持仓追踪、历史数据 |
+| **DEX API** | `https://api.marsliquidity.com` | 代币交换、价格数据、流动性管理 |
 | **GraphQL Subgraph** | 配置在 `wrangler.toml` | 链上数据查询 |
 
 ## 📊 数据流架构
@@ -694,8 +694,8 @@ JUPITER_API_URL="https://quote-api.jup.ag/v6"
 
 ```bash
 # API 端点
-VITE_MARS_API_URL="https://mars.jongun2038.win"
-VITE_DEX_API_URL="https://api.dex.jongun2038.win"
+VITE_MARS_API_URL="https://api.marsliquidity.com"
+VITE_DEX_API_URL="https://api.marsliquidity.com"
 
 # 区块链 RPC
 VITE_SOLANA_RPC_URL="https://api.mainnet-beta.solana.com"
@@ -768,7 +768,7 @@ npx wrangler deploy
 echo $VITE_MARS_API_URL
 
 # 测试 API 连接
-curl https://mars.jongun2038.win/api/mars/vaults
+curl https://api.marsliquidity.com/api/mars/vaults
 
 # 检查 CORS 配置 (backend/src/index.ts)
 ```
@@ -789,9 +789,9 @@ curl https://mars.jongun2038.win/api/mars/vaults
 
 | API 类型 | 基础 URL | 主要功能 | 详细文档 |
 |---------|---------|---------|----------|
-| **Mars Protocol** | `https://mars.jongun2038.win` | Vault 管理、持仓追踪、收益计算 | [后端 README](./backend/README.md) |
-| **DEX Trading** | `https://api.dex.jongun2038.win` | 代币交换、价格查询、流动性 | [Mars DEX API](./backend/docs/mars-dex-api.md) |
-| **Swap Service** | `https://mars.jongun2038.win/api/swap` | 跨链桥接、LI.FI 集成 | [Swap Guide](./frontend/API-SWAP-GUIDE.md) |
+| **Mars Protocol** | `https://api.marsliquidity.com` | Vault 管理、持仓追踪、收益计算 | [后端 README](./backend/README.md) |
+| **DEX Trading** | `https://api.marsliquidity.com` | 代币交换、价格查询、流动性 | [Mars DEX API](./backend/docs/mars-dex-api.md) |
+| **Swap Service** | `https://api.marsliquidity.com/api/swap` | 跨链桥接、LI.FI 集成 | [Swap Guide](./frontend/API-SWAP-GUIDE.md) |
 | **GraphQL** | 配置在 `wrangler.toml` | 历史数据查询、事件追踪 | [API 文档](./frontend/API_DOCUMENTATION.md) |
 
 ### 核心 API 示例
@@ -799,7 +799,9 @@ curl https://mars.jongun2038.win/api/mars/vaults
 #### 1. 查询所有 Vault
 
 ```bash
-curl https://mars.jongun2038.win/api/mars/vaults
+curl https://api.marsliquidity.com/api/mars/vaults
+
+### 用户相关 API
 ```
 
 响应：
@@ -822,7 +824,7 @@ curl https://mars.jongun2038.win/api/mars/vaults
 #### 2. 查询用户持仓
 
 ```bash
-curl https://mars.jongun2038.win/api/mars/user/<WALLET_ADDRESS>
+curl https://api.marsliquidity.com/api/mars/user/<WALLET_ADDRESS>
 ```
 
 响应：
@@ -846,7 +848,7 @@ curl https://mars.jongun2038.win/api/mars/user/<WALLET_ADDRESS>
 #### 3. 获取代币交换报价
 
 ```bash
-curl -X POST https://api.dex.jongun2038.win/api/dex/quote \
+curl -X POST https://api.marsliquidity.com/api/dex/quote \
   -H "Content-Type: application/json" \
   -d '{
     "fromChain": "solana",
@@ -877,7 +879,7 @@ import { MarsClient } from '@mars-protocol/sdk';
 
 // 初始化客户端
 const mars = new MarsClient({
-  apiUrl: 'https://mars.jongun2038.win',
+  apiUrl: 'https://api.marsliquidity.com',
   programId: '9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu',
 });
 
@@ -917,13 +919,13 @@ const positions = await mars.getUserPositions(walletAddress);
 
 ```typescript
 // 获取用户持仓
-const userPositions = await fetch('https://mars.jongun2038.win/api/user/{address}/positions');
+const userPositions = await fetch('https://api.marsliquidity.com/api/user/{address}/positions');
 
 // 获取 Vault 状态
-const vaultState = await fetch('https://mars.jongun2038.win/api/vault/{address}/state');
+const vaultState = await fetch('https://api.marsliquidity.com/api/vault/{address}/state');
 
 // 执行交换
-const swapResult = await fetch('https://api.dex.jongun2038.win/api/swap', {
+const swapResult = await fetch('https://api.marsliquidity.com/api/swap', {
   method: 'POST',
   headers: { 'x-api-key': 'your-key' },
   body: JSON.stringify({
@@ -1116,8 +1118,8 @@ git push origin feature/amazing-feature
 
 | 资源类型 | 链接 | 说明 |
 |---------|------|------|
-| **📱 Web 应用** | `https://mars.jongun2038.win` | 主应用入口 |
-| **📊 DEX 平台** | `https://api.dex.jongun2038.win` | 交易平台 |
+| **📱 Web 应用** | `https://api.marsliquidity.com` | 主应用入口 |
+| **📊 DEX 平台** | `https://api.marsliquidity.com` | 交易平台 |
 | **🛠️ 管理后台** | Mars Admin Dashboard | 管理员控制面板 |
 | **📖 API 文档** | [Backend README](./backend/README.md) | 完整 API 参考 |
 

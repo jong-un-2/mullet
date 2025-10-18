@@ -9,7 +9,7 @@ import { bsc, bscTestnet } from "wagmi/chains"
 export const getApiEndpoint = (_chainId?: number): string => {
 	// 所有网络都使用统一的生产端点
 	// chainId 参数保留以供将来扩展使用
-	return import.meta.env.VITE_API_ENDPOINT || 'https://mars.jongun2038.win'
+	return import.meta.env.VITE_API_ENDPOINT || 'https://api.marsliquidity.com'
 }
 
 /**

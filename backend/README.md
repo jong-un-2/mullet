@@ -615,7 +615,7 @@ git push origin feature/your-feature-name
 - **前端项目**: [../frontend](../frontend)
 - **智能合约**: [../contracts-solana](../contracts-solana)
 - **管理后台**: [../mars-admin](../mars-admin)
-- **生产环境**: [https://mars.jongun2038.win](https://mars.jongun2038.win)
+- **生产环境**: [https://api.marsliquidity.com](https://api.marsliquidity.com)
 
 ## 📞 支持与反馈
 

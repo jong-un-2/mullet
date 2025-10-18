@@ -60,7 +60,7 @@ Mars Liquid 是一个现代化的跨链 DeFi 应用，集成了收益聚合、DE
 
 ### DeFi 协议集成
 - **Mars Protocol**: 
-  - Mars API (`https://mars.jongun2038.win`)
+  - Mars API (`https://api.marsliquidity.com`)
   - Vault 管理和持仓追踪
   - 跨链桥接（LI.FI）
   
@@ -145,7 +145,7 @@ Mars Liquid 是一个现代化的跨链 DeFi 应用，集成了收益聚合、DE
 - **Solana**: 原生 SPL 代币、Mars 协议、Jupiter 聚合器、Kamino Earn
 - **跨链桥接**: LI.FI 协议支持所有主流链间资产转移
 - **实时预言机**: Pyth (Solana) 和 Chainlink (EVM) 价格数据
-- **Mars API**: 所有网络统一的后端 API (`https://mars.jongun2038.win`)
+- **Mars API**: 所有网络统一的后端 API (`https://api.marsliquidity.com`)
 
 ## 🛠️ 开发环境设置
 
@@ -171,7 +171,7 @@ npm install
 npm run dev
 
 # 应用将在 http://localhost:5173 打开
-# Mars API 后端: https://mars.jongun2038.win
+# Mars API 后端: https://api.marsliquidity.com
 ```
 
 ### 环境配置
@@ -180,7 +180,7 @@ npm run dev
 
 ```env
 # Mars API 配置
-VITE_MARS_API_URL=https://mars.jongun2038.win
+VITE_MARS_API_URL=https://api.marsliquidity.com
 
 # Solana 配置
 VITE_SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=your-api-key
@@ -536,7 +536,7 @@ git push origin feature/your-feature
 
 - **官方网站**: [mars-liquid.finance](https://mars-liquid.finance)
 - **应用程序**: [app.mars-liquid.finance](https://app.mars-liquid.finance)
-- **Mars API**: [mars.jongun2038.win](https://mars.jongun2038.win)
+- **Mars API**: [api.marsliquidity.com](https://api.marsliquidity.com)
 - **GitHub**: [github.com/jong-un-1/mars-liquid](https://github.com/jong-un-1/mars-liquid)
 - **主项目 README**: [../README.md](../README.md)
 - **后端项目**: [../backend](../backend)
@@ -616,7 +616,7 @@ git push origin feature/your-feature
   },
   "backend": {
     "api": "Cloudflare Workers + D1 Database",
-    "deployment": "https://mars.jongun2038.win",
+    "deployment": "https://api.marsliquidity.com",
     "caching": "Redis + KV Storage"
   }
 }
@@ -699,7 +699,7 @@ For detailed documentation and API references, visit our [Documentation](docs/) 
 
 ### ✅ Completed Features
 - Multi-wallet integration (Phantom, Solflare, MetaMask, WalletConnect, etc.)
-- Mars API backend with 7 endpoints deployed at https://mars.jongun2038.win
+- Mars API backend with 7 endpoints deployed at https://api.marsliquidity.com
 - DeFi lending protocol with LTV management and yield optimization
 - Portfolio dashboard with Mars positions tracking
 - Multi-network support (Solana, BSC Testnet, BSC Mainnet, Ethereum)

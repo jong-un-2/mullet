@@ -9,7 +9,7 @@ export function useApiDexUserPoolUserBalances(chainId: string, lpAddress: string
     if (!chainId || !lpAddress || !poolAddress) return;
     setLoading(true);
     axios.get(
-      `https://mars.jongun2038.win/v1/api/dex/user/pool-user-balances?chainId=${chainId}&lpAddress=${lpAddress}&poolAddress=${poolAddress}`,
+      `https://api.marsliquidity.com/v1/api/dex/user/pool-user-balances?chainId=${chainId}&lpAddress=${lpAddress}&poolAddress=${poolAddress}`,
       { headers: { 'x-api-key': 'test-key' } }
     ).then(res => setData(res.data))
      .finally(() => setLoading(false));

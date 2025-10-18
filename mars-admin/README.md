@@ -315,11 +315,22 @@ const Settings: ProLayoutProps & {
 
 ```typescript
 export default {
-  dev: {
-    '/api/': {
-      target: 'https://mars.jongun2038.win',
-      changeOrigin: true,
-      pathRewrite: { '^': '' },
+  server: {
+    middlewares: [
+      (req, res, next) => {
+        // Mock API proxy
+        if (req.url.startsWith('/api/')) {
+          req.url = req.url.replace('/api/', '/');
+        }
+        next();
+      },
+    ],
+    proxy: {
+      '/api': {
+        target: 'https://api.marsliquidity.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
     },
   },
 };

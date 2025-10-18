@@ -9,7 +9,7 @@ export function useApiDexUserFeesEarned(chain: string, address: string, poolAddr
     if (!chain || !address || !poolAddress) return;
     setLoading(true);
     axios.get(
-      `https://mars.jongun2038.win/v1/api/dex/user/fees-earned/${chain}/${address}/${poolAddress}`,
+      `https://api.marsliquidity.com/v1/api/dex/user/fees-earned/${chain}/${address}/${poolAddress}`,
       { headers: { 'x-api-key': 'test-key' } }
     ).then(res => setData(res.data))
      .finally(() => setLoading(false));

@@ -37,12 +37,12 @@ else
     # 手动设置每个环境变量
     case $ENV in
         "production")
-            echo "VITE_API_ENDPOINT" | wrangler pages secret put VITE_API_ENDPOINT --project-name="$PROJECT_NAME" --env="$ENV" <<< "https://mars.jongun2038.win"
+            echo "VITE_API_ENDPOINT" | wrangler pages secret put VITE_API_ENDPOINT --project-name="$PROJECT_NAME" --env="$ENV" <<< "https://api.marsliquidity.com"
             echo "VITE_API_KEY" | wrangler pages secret put VITE_API_KEY --project-name="$PROJECT_NAME" --env="$ENV" <<< "test-key"
             # ... 其他变量
             ;;
         "preview")
-            echo "VITE_API_ENDPOINT" | wrangler pages secret put VITE_API_ENDPOINT --project-name="$PROJECT_NAME" --env="$ENV" <<< "https://mars.jongun2038.win"
+            echo "VITE_API_ENDPOINT" | wrangler pages secret put VITE_API_ENDPOINT --project-name="$PROJECT_NAME" --env="$ENV" <<< "https://api.marsliquidity.com"
             # ... 其他变量
             ;;
     esac

@@ -175,7 +175,7 @@ npm run db:init             # Initialize D1 database
 After deployment, test the connection:
 
 ```bash
-curl https://mars-backend-serverless.jongun2038.workers.dev/v1/api/postgres/test-db
+curl https://api.marsliquidity.com/v1/api/postgres/test-db
 ```
 
 Expected response:

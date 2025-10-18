@@ -3,9 +3,9 @@
  */
 
 async function testLiFiQuote() {
-  const API_BASE_URL = 'https://mars-backend-serverless.jongun2038.workers.dev';
+  const API_BASE_URL = 'https://api.marsliquidity.com';
   
-  const requestBody = {
+  const testRequest = {
     fromChain: 1, // Ethereum
     fromToken: '0xA0b86a33E6441a695a7e9B72b67B0a82f0913A50', // USDC on Ethereum
     fromAmount: '100000000', // 100 USDC (6 decimals)
