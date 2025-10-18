@@ -18,7 +18,7 @@ use instructions::*;
 use state::*;
 use util::*;
 
-declare_id!("83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N");
+declare_id!("9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu");
 
 #[program]
 pub mod mars {

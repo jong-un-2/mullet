@@ -241,23 +241,25 @@ programCommand("update-platform-fee-wallet")
 
 programCommand("initialize-vault")
   .option("-v, --vault_id <string>", "vault ID (32 byte hex string or base58)")
+  .option("-b, --base_token_mint <string>", "base token mint address (e.g., USDC)")
+  .option("-s, --shares_mint <string>", "shares token mint address")
   .option("-f, --fee_bps <number>", "platform fee in basis points (default 2500 = 25%)", "2500")
   .action(async (directory, cmd) => {
-    const { env, keypair, rpc, vault_id, fee_bps } = cmd.opts();
+    const { env, keypair, rpc, vault_id, base_token_mint, shares_mint, fee_bps } = cmd.opts();
 
     console.log("Solana Cluster:", env);
     console.log("Keypair Path:", keypair);
     console.log("RPC URL:", rpc);
     await setClusterConfig(env, keypair, rpc);
 
-    if (!vault_id) {
-      console.log("Error: vault_id is required");
-      console.log("Example: yarn script initialize-vault -v 0x1234567890abcdef... -f 2500");
+    if (!vault_id || !base_token_mint || !shares_mint) {
+      console.log("Error: vault_id, base_token_mint, and shares_mint are required");
+      console.log("Example: yarn script initialize-vault -v A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK -b EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v -s <SHARES_MINT> -f 2500");
       return;
     }
 
     const { initializeVault } = await import("./scripts");
-    await initializeVault(vault_id, parseInt(fee_bps));
+    await initializeVault(vault_id, base_token_mint, shares_mint, parseInt(fee_bps));
   });
 
 function programCommand(name: string) {

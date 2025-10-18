@@ -23,7 +23,7 @@ import {
 } from "./util";
 import { GLOBAL_STATE_SEED, USDC_ADDRESS, VAULT_SEED } from "./constant";
 import { Mars } from "../target/types/mars";
-import { NATIVE_MINT } from "@solana/spl-token";
+import { NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 const hexStringToUint8Array = (hexString) => {
   // Pad the hex string to 64 characters (32 bytes) if it's shorter
@@ -412,12 +412,16 @@ export const removeBridgeLiquidityTx = async (
  * Admin can initialize a new vault
  * @param admin - admin public key
  * @param vaultId - 32-byte vault ID (hex string 0x... or base58)
+ * @param baseTokenMint - base token mint address (e.g., USDC)
+ * @param sharesMint - shares token mint address
  * @param platformFeeBps - platform fee in basis points (e.g., 2500 = 25%)
  * @param program - Mars program
  */
 export const initializeVaultTx = async (
   admin: PublicKey,
   vaultId: string,
+  baseTokenMint: string,
+  sharesMint: string,
   platformFeeBps: number,
   program: Program<Mars>
 ) => {
@@ -430,9 +434,15 @@ export const initializeVaultTx = async (
     program.programId
   );
 
+  // Derive vault treasury PDA
+  const [vaultTreasury] = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault-treasury"), Buffer.from(vaultIdArray)],
+    program.programId
+  );
+
   // Derive global state PDA
   const [globalState] = PublicKey.findProgramAddressSync(
-    [Buffer.from("global-state")],
+    [Buffer.from(GLOBAL_STATE_SEED)],
     program.programId
   );
 
@@ -440,19 +450,26 @@ export const initializeVaultTx = async (
   console.log("  Admin:", admin.toBase58());
   console.log("  Vault ID:", vaultId);
   console.log("  Vault State PDA:", vaultState.toBase58());
+  console.log("  Vault Treasury PDA:", vaultTreasury.toBase58());
+  console.log("  Base Token Mint:", baseTokenMint);
+  console.log("  Shares Mint:", sharesMint);
   console.log("  Platform Fee:", platformFeeBps, "bps (", platformFeeBps / 100, "%)");
 
   const tx = new Transaction();
   
   tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }))
-    .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 100_000 }))
+    .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }))
     .add(
       await program.methods
         .initializeVault([...vaultIdArray], platformFeeBps)
         .accountsPartial({
           admin: admin,
-          vaultState: vaultState,
           globalState: globalState,
+          vaultState: vaultState,
+          baseTokenMint: new PublicKey(baseTokenMint),
+          sharesMint: new PublicKey(sharesMint),
+          vaultTreasury: vaultTreasury,
+          tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
         .instruction()

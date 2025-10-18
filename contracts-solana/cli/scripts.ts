@@ -546,6 +546,8 @@ export const updatePlatformFeeWallet = async (
  */
 export const initializeVault = async (
   vaultId: string,
+  baseTokenMint: string,
+  sharesMint: string,
   platformFeeBps: number = 2500
 ) => {
   try {
@@ -555,6 +557,8 @@ export const initializeVault = async (
     console.log("\n⚙️  Initializing Vault:");
     console.log("  Vault ID:", vaultId);
     console.log("  Admin:", payer.publicKey.toBase58());
+    console.log("  Base Token Mint:", baseTokenMint);
+    console.log("  Shares Mint:", sharesMint);
     console.log("  Platform Fee:", platformFeeBps, "bps (", platformFeeBps / 100, "%)");
 
     // Validate fee range
@@ -565,6 +569,8 @@ export const initializeVault = async (
     const tx = await initializeVaultTx(
       payer.publicKey,
       vaultId,
+      baseTokenMint,
+      sharesMint,
       platformFeeBps,
       program
     );

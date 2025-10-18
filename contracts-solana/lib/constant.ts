@@ -12,14 +12,14 @@ export const JUPITER_PROGRAM_ID = new PublicKey(
 // USDC address of devnet
 // export const USDC_ADDRESS = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
-// USDC address of mainnet
-// export const USDC_ADDRESS = new PublicKey(
-//   "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-// );
-
-// USDC address for localnet testing
+// USDC address of mainnet (SPL Token)
 export const USDC_ADDRESS = new PublicKey(
-  "8ABauQYj9xkzk9b4NGxseDFvcXcXFb7ExdkxSstD2fus"
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 );
+
+// PYUSD address for mainnet (Token-2022 - 需要合约支持)
+// export const USDC_ADDRESS = new PublicKey(
+//   "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo"
+// );
 
 export const JUP_ENDPOINT = "https://quote-api.jup.ag/v6";

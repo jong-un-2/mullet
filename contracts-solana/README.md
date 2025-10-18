@@ -289,9 +289,9 @@ npm run test:claim-rewards
 
 | 网络 | 程序 ID | 状态 |
 |------|---------|------|
-| **Mainnet** | `83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N` | ✅ 已部署 |
-| **Devnet** | `83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N` | ✅ 已部署 |
-| **Localnet** | `83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N` | 🔄 开发中 |
+| **Mainnet** | `9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu` | ✅ 已部署 |
+| **Devnet** | `9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu` | ✅ 已部署 |
+| **Localnet** | `9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu` | 🔄 开发中 |
 
 ## 📊 智能合约架构
 

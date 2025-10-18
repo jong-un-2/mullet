@@ -238,13 +238,13 @@ mars-projects/
 
 #### Mars Vault 智能合约
 
-**程序地址**: `83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N`
+**程序地址**: `9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu`
 
 ```rust
 // Mars Vault 主合约 - 支持多协议收益聚合
 use anchor_lang::prelude::*;
 
-declare_id!("83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N");
+declare_id!("9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu");
 
 #[program]
 pub mod mars {
@@ -406,8 +406,8 @@ async function getLiFiQuote(params: {
 
 | 网络 | Chain ID | 程序 ID / 合约地址 | 状态 | 功能特性 |
 |------|----------|------------------|------|----------|
-| **Solana Mainnet** | - | `83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N` | ✅ **生产环境** | Mars 协议、Kamino、Jupiter |
-| **Solana Devnet** | - | `83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N` | ✅ **测试环境** | 完整功能、测试代币 |
+| **Solana Mainnet** | - | `9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu` | ✅ **生产环境** | Mars 协议、Kamino、Jupiter |
+| **Solana Devnet** | - | `9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu` | ✅ **测试环境** | 完整功能、测试代币 |
 | **BSC Mainnet** | 56 | - | ✅ **生产环境** | DEX 交易、跨链桥接 |
 | **BSC Testnet** | 97 | - | ✅ **测试环境** | 完整 DEX 功能 |
 | **Ethereum Mainnet** | 1 | - | 🔄 **准备中** | L1 流动性、高级 DeFi |
@@ -683,7 +683,7 @@ SUBSTREAMS_API_KEY="你的 Substreams API 密钥"
 
 # Solana 配置
 SOLANA_RPC_URL="https://api.mainnet-beta.solana.com"
-PROGRAM_ID="83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N"
+PROGRAM_ID="9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu"
 
 # 第三方服务
 LIFI_API_KEY="你的 LI.FI API 密钥"
@@ -703,7 +703,7 @@ VITE_BSC_RPC_URL="https://bsc-dataseed1.binance.org"
 VITE_ETH_RPC_URL="https://eth.llamarpc.com"
 
 # 程序 ID
-VITE_PROGRAM_ID="83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N"
+VITE_PROGRAM_ID="9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu"
 
 # 功能开关
 VITE_ENABLE_TESTNET="false"
@@ -718,10 +718,10 @@ seeds = false
 skip-lint = false
 
 [programs.mainnet]
-mars = "83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N"
+mars = "9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu"
 
 [programs.devnet]
-mars = "83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N"
+mars = "9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu"
 
 [provider]
 cluster = "mainnet-beta"  # 或 "devnet"
@@ -878,7 +878,7 @@ import { MarsClient } from '@mars-protocol/sdk';
 // 初始化客户端
 const mars = new MarsClient({
   apiUrl: 'https://mars.jongun2038.win',
-  programId: '83Veoxix4ee4F9VETcAkmKJTXrCcwBRozd2dZXYjhD6N',
+  programId: '9zQDLH3JHe1tEzdkPrJJENrWV5pfcK3UCPs7MZCjifyu',
 });
 
 // 查询 Vault
