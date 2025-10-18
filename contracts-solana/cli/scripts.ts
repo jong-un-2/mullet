@@ -503,7 +503,7 @@ export const updatePlatformFeeWallet = async (
 
     // Derive global state PDA
     const [globalStatePDA] = PublicKey.findProgramAddressSync(
-      [Buffer.from("global-state")],
+      [Buffer.from("mars-global-state-seed")],
       program.programId
     );
 

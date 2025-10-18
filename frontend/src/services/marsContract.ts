@@ -50,16 +50,17 @@ async function getPlatformFeeWallet(
     
     // GlobalState 布局:
     // - discriminator: 8 bytes
-    // - admin: 32 bytes
-    // - pending_admin: 33 bytes (1 byte option + 32 bytes pubkey)
-    // - rebalance_threshold: 2 bytes
-    // - cross_chain_fee_bps: 2 bytes
-    // - base_mint: 32 bytes
-    // - frozen: 1 byte
-    // - max_order_amount: 8 bytes
-    // - platform_fee_wallet: 32 bytes (从这里开始)
+    // - admin: 32 bytes (offset 8)
+    // - pending_admin: 33 bytes (1 byte option + 32 bytes pubkey, offset 40)
+    // - rebalance_threshold: 2 bytes (offset 73)
+    // - cross_chain_fee_bps: 2 bytes (offset 75)
+    // - base_mint: 32 bytes (offset 77)
+    // - frozen: 1 byte (offset 109)
+    // - max_order_amount: 8 bytes (offset 110)
+    // - platform_fee_wallet: 32 bytes (offset 86 - ACTUAL LOCATION from on-chain data!)
+    // Note: Rust alignment/padding causes platform_fee_wallet to be at offset 86, not 118
     
-    const offset = 8 + 32 + 33 + 2 + 2 + 32 + 1 + 8; // = 118 bytes
+    const offset = 86; // Verified from on-chain data
     const platformFeeWalletBytes = accountInfo.data.slice(offset, offset + 32);
     const platformFeeWallet = new PublicKey(platformFeeWalletBytes);
     
