@@ -136,7 +136,8 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
         const kaminoManager = new KaminoManager(kaminoConnection, slotDuration);
         
         // 2. 获取 Vault 状态
-        const vault = new KaminoVault(VAULT_ADDRESS as any);
+        const vaultPubkey = new PublicKey(VAULT_ADDRESS);
+        const vault = new KaminoVault(vaultPubkey as any);
         const vaultState = await vault.getState(kaminoConnection);
         console.log('📦 [useUserVaultPosition] Vault state loaded');
 
@@ -147,6 +148,7 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
         
         // 4. 初始化共用变量
         const tokenPrice = new Decimal(1.0); // PYUSD 价格约为 $1
+        const userPubkey = userAddress ? new PublicKey(userAddress) : null;
         
         // 5. 计算用户持仓数据（如果有用户地址）
         let userSharesNum = 0;
@@ -157,7 +159,7 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
         if (userAddress) {
           // 获取用户在特定 Vault 的份额
           const userSharesForVault = await kaminoManager.getUserSharesBalanceSingleVault(
-            userAddress as any,
+            userPubkey as any,
             vault
           );
 
@@ -253,7 +255,7 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
 
         // 10. 获取 Pending Rewards 余额（如果有用户地址）
         let pendingRewardsMap = new Map<string, number>();
-        if (userAddress) {
+        if (userAddress && userPubkey) {
           try {
             console.log('💰 [useUserVaultPosition] Fetching pending rewards...');
             const { Farms, FarmState, calculatePendingRewards, getUserStatePDA } = 
@@ -263,7 +265,6 @@ export const useUserVaultPosition = (userAddress: string | null, refreshTrigger?
             
             const farmsClient = new Farms(kaminoConnection);
             const currentTimestamp = new Decimal(Date.now() / 1000);
-            const userPubkey = new PublicKey(userAddress);
             
             // 检查 Vault Farm
             if (vaultState.vaultFarm && vaultState.vaultFarm.toString() !== '11111111111111111111111111111111') {
