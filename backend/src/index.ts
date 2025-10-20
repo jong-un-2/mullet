@@ -178,8 +178,8 @@ export default {
 						console.error("❌ Incremental sync failed:", error);
 					}
 					
-					console.log("🔥 Running cache warming...");
-					await runCacheWarming(env);
+// 					console.log("🔥 Running cache warming...");
+// 					await runCacheWarming(env);
 					
 					// User positions sync (update positions for active users)
 					console.log("📊 Syncing user positions...");
