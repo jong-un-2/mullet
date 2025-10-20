@@ -10,12 +10,16 @@ pub struct VaultWithdraw<'info> {
     pub user: Signer<'info>,
 
     /// 用户的代币账户（接收提取的代币）
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = user_token_account.owner == user.key() @ CustomError::InvalidOwner
+    )]
     pub user_token_account: Account<'info, TokenAccount>,
 
     /// 用户的份额代币账户
     #[account(
         mut,
+        constraint = user_shares_account.owner == user.key() @ CustomError::InvalidOwner,
         constraint = user_shares_account.amount >= shares_amount @ CustomError::InsufficientShares
     )]
     pub user_shares_account: Account<'info, TokenAccount>,
