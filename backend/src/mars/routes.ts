@@ -208,7 +208,10 @@ export function createMarsRoutes() {
 
   /**
    * GET /positions/:userAddress - 获取用户仓位
+   * DEPRECATED: This route does live blockchain queries (slow!)
+   * Use /positions routes from positions/routes.ts instead (reads from cache)
    */
+  /*
   app.get('/positions/:userAddress', async (c) => {
     try {
       const userAddress = c.req.param('userAddress');
@@ -320,6 +323,7 @@ export function createMarsRoutes() {
       return c.json(response, 500);
     }
   });
+  */
 
   // ==================== 交易端点 ====================
 

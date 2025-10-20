@@ -63,14 +63,14 @@ app.get('/:userAddress', async (c) => {
       baseTokenMint: row.base_token_mint,
       
       totalShares: row.total_shares,
-      totalSupplied: row.total_deposited, // TODO: Update schema to use totalSupplied
+      totalSupplied: row.total_deposited,
       totalSuppliedUSD: row.current_value,
       
       interestEarned: row.unrealized_pnl,
       dailyInterestUSD: '0', // Calculate from APY
       
       lendingAPY: parseFloat(row.apr || '0'),
-      incentivesAPY: 0, // Parse from metadata
+      incentivesAPY: 0,
       totalAPY: parseFloat(row.apy || row.apr || '0'),
       
       tvl: row.tvl,
@@ -89,15 +89,76 @@ app.get('/:userAddress', async (c) => {
       lastFetchTime: row.last_fetch_time,
     }));
 
-    const firstPosition = transformedPositions[0];
+    // Group positions by protocol (jupiter, kamino, etc.)
+    const jupiterPositions = transformedPositions.filter(p => p.protocol === 'jupiter');
+    const kaminoPositions = transformedPositions.filter(p => p.protocol === 'kamino-vault');
+    
+    // Format for frontend compatibility (matches mars/routes.ts format)
+    const positionsData = {
+      jupiter: {
+        protocol: 'jupiter',
+        totalPositions: jupiterPositions.length,
+        totalValue: jupiterPositions.reduce((sum, p) => sum + parseFloat(p.totalSuppliedUSD || '0'), 0),
+        avgAPY: jupiterPositions.length > 0
+          ? jupiterPositions.reduce((sum, p) => sum + p.totalAPY, 0) / jupiterPositions.length
+          : 0,
+        positions: jupiterPositions.map(p => ({
+          id: p.id,
+          userAddress: p.userAddress,
+          protocol: p.protocol,
+          asset: p.baseToken,
+          amount: parseFloat(p.totalSupplied || '0'),
+          shares: parseFloat(p.totalShares || '0'),
+          entryAPY: p.totalAPY,
+          currentValue: parseFloat(p.totalSuppliedUSD || '0'),
+          unrealizedGain: parseFloat(p.interestEarned || '0'),
+          depositTime: p.firstDepositTime,
+          lastUpdate: p.lastFetchTime
+        }))
+      },
+      kamino: {
+        protocol: 'kamino',
+        totalPositions: kaminoPositions.length,
+        totalValue: kaminoPositions.reduce((sum, p) => sum + parseFloat(p.totalSuppliedUSD || '0'), 0),
+        avgAPY: kaminoPositions.length > 0
+          ? kaminoPositions.reduce((sum, p) => sum + p.totalAPY, 0) / kaminoPositions.length
+          : 0,
+        positions: kaminoPositions.map(p => ({
+          id: p.id,
+          userAddress: p.userAddress,
+          protocol: p.protocol,
+          asset: p.baseToken,
+          amount: parseFloat(p.totalSupplied || '0'),
+          shares: parseFloat(p.totalShares || '0'),
+          entryAPY: p.totalAPY,
+          lendingAPY: p.lendingAPY,
+          incentivesAPY: p.incentivesAPY,
+          currentValue: parseFloat(p.totalSuppliedUSD || '0'),
+          unrealizedGain: parseFloat(p.interestEarned || '0'),
+          interestEarned: parseFloat(p.interestEarned || '0'),
+          dailyInterestUSD: parseFloat(p.dailyInterestUSD || '0'),
+          rewards: p.rewards,
+          pendingRewards: p.pendingRewards,
+          depositTime: p.firstDepositTime,
+          lastUpdate: p.lastFetchTime
+        }))
+      },
+      summary: {
+        totalProtocols: [jupiterPositions.length > 0, kaminoPositions.length > 0].filter(Boolean).length,
+        totalPositions: jupiterPositions.length + kaminoPositions.length,
+        totalValue: jupiterPositions.reduce((sum, p) => sum + parseFloat(p.totalSuppliedUSD || '0'), 0) +
+                   kaminoPositions.reduce((sum, p) => sum + parseFloat(p.totalSuppliedUSD || '0'), 0),
+        avgAPY: transformedPositions.length > 0
+          ? transformedPositions.reduce((sum, p) => sum + p.totalAPY, 0) / transformedPositions.length
+          : 0
+      }
+    };
     
     return c.json({
       success: true,
-      data: {
-        positions: transformedPositions,
-        lastUpdate: firstPosition ? firstPosition.lastFetchTime : new Date(),
-        cached: true
-      }
+      data: positionsData,
+      timestamp: new Date().toISOString(),
+      cached: true
     });
 
   } catch (error) {
