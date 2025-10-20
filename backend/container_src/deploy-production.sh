@@ -14,7 +14,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # 配置
-START_BLOCK=${START_BLOCK:-372182088}
+START_BLOCK=${START_BLOCK:-374121131}
 DEPLOYMENT_TYPE=${1:-"postgres"}  # postgres, docker
 
 # 检查环境
@@ -187,15 +187,23 @@ deploy_postgres() {
     echo "使用 Relational Mappings 自动创建表结构并开始同步..."
     
     # 设置环境变量并启动 sink（后台运行）
-    export SUBSTREAMS_API_TOKEN="$SUBSTREAMS_API_KEY"
+    # 使用正确的 API Token
+    if [ -z "$SUBSTREAMS_API_TOKEN" ]; then
+        export SUBSTREAMS_API_TOKEN="$SUBSTREAMS_API_KEY"
+    fi
+    
+    # 修正数据库 URL scheme (postgresql -> postgres)
+    DSN="${SUBSTREAMS_SINK_POSTGRES_DSN/postgresql/postgres}"
     
     # 启动 sink（后台运行）- 使用 from-proto 方法
     substreams-sink-sql from-proto \
-        "$SUBSTREAMS_SINK_POSTGRES_DSN" \
+        "$DSN" \
         "$CONFIG_FILE" \
         "$OUTPUT_MODULE" \
         --start-block "$START_BLOCK" \
         --final-blocks-only \
+        -e "$SUBSTREAMS_ENDPOINT" \
+        -H "authorization: Bearer ${SUBSTREAMS_API_TOKEN}" \
         2>&1 | tee "$LOG_FILE" &
     
     SINK_PID=$!
