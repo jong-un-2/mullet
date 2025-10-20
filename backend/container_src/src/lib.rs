@@ -372,6 +372,23 @@ fn db_out(
                     .set("slot", event.slot)
                     .set("created_at", kamino.timestamp);
             }
+            Some(pb::mars::vaults::v1::vault_event::Event::FarmRewardsClaimed(farm_reward)) => {
+                let id = format!("{}-farm-reward", event.signature);
+                
+                tables
+                    .create_row("farmrewardsclaimedevent", &id)
+                    .set("id", &id)
+                    .set("signature", &event.signature)
+                    .set("user", &farm_reward.user)
+                    .set("vault_mint", &farm_reward.vault_mint)
+                    .set("farm_state", &farm_reward.farm_state)
+                    .set("reward_mint", &farm_reward.reward_mint)
+                    .set("reward_amount", farm_reward.reward_amount)
+                    .set("platform_fee", farm_reward.platform_fee)
+                    .set("total_rewards_claimed", farm_reward.total_rewards_claimed)
+                    .set("timestamp", farm_reward.timestamp)
+                    .set("slot", event.slot);
+            }
             _ => {}
         }
     }
