@@ -5,6 +5,7 @@ import { DollarCircleOutlined, TrophyOutlined, UserOutlined, TransactionOutlined
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { getCommissionRecords, getCommissionStatistics, type CommissionRecord as ApiCommissionRecord, type CommissionStatistics } from '@/services/commission/api';
+import { getCurrentFeeRate } from '@/config/fee';
 
 const { RangePicker } = DatePicker;
 
@@ -20,7 +21,7 @@ const CommissionOverview: React.FC = () => {
     totalTransactions: 0,
     avgFee: 0,
     activeUsers: 0,
-    currentFeeRate: 25,
+    currentFeeRate: getCurrentFeeRate(),
   });
 
   const columns: ColumnsType<ApiCommissionRecord> = [

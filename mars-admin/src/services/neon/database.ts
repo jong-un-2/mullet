@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { getCurrentFeeRate } from '@/config/fee';
 
 // Neon数据库配置
 const NEON_CONFIG = {
@@ -57,10 +58,7 @@ export async function getCommissionRecordsFromNeon(params?: {
       reward_mint as "rewardMint",
       reward_amount::numeric / 1000000.0 as "rewardAmount",
       total_rewards_claimed::numeric / 1000000.0 as "totalRewardsClaimed",
-      CASE 
-        WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-        ELSE total_rewards_claimed::numeric / 1000000.0
-      END as "platformFee"
+      platform_fee::numeric / 1000000.0 as "platformFee"
     FROM farmrewardsclaimedevent 
     WHERE 1=1
   `;
@@ -107,18 +105,8 @@ export async function getCommissionStatisticsFromNeon(params?: {
   let sql = `
     SELECT 
       COUNT(*) as "totalTransactions",
-      COALESCE(SUM(
-        CASE 
-          WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-          ELSE total_rewards_claimed::numeric / 1000000.0
-        END
-      ), 0) as "totalFee",
-      COALESCE(AVG(
-        CASE 
-          WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-          ELSE total_rewards_claimed::numeric / 1000000.0
-        END
-      ), 0) as "avgFee",
+      COALESCE(SUM(platform_fee::numeric / 1000000.0), 0) as "totalFee",
+      COALESCE(AVG(platform_fee::numeric / 1000000.0), 0) as "avgFee",
       COUNT(DISTINCT "user") as "activeUsers"
     FROM farmrewardsclaimedevent 
     WHERE 1=1
@@ -145,7 +133,7 @@ export async function getCommissionStatisticsFromNeon(params?: {
       totalTransactions: parseInt(data.totalTransactions) || 0,
       avgFee: parseFloat(data.avgFee) || 0,
       activeUsers: parseInt(data.activeUsers) || 0,
-      currentFeeRate: 25, // 从配置中获取
+      currentFeeRate: getCurrentFeeRate(), // 从配置读取
     };
   }
   
@@ -154,7 +142,7 @@ export async function getCommissionStatisticsFromNeon(params?: {
     totalTransactions: 0,
     avgFee: 0,
     activeUsers: 0,
-    currentFeeRate: 25,
+    currentFeeRate: getCurrentFeeRate(),
   };
 }
 
@@ -170,12 +158,7 @@ export async function getUserStatisticsFromNeon(params?: {
     SELECT 
       "user",
       COUNT(*) as "transactionCount",
-      COALESCE(SUM(
-        CASE 
-          WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-          ELSE total_rewards_claimed::numeric / 1000000.0
-        END
-      ), 0) as "totalFee",
+      COALESCE(SUM(platform_fee::numeric / 1000000.0), 0) as "totalFee",
       MAX(_block_timestamp_) as "lastTransaction"
     FROM farmrewardsclaimedevent 
     WHERE 1=1
@@ -231,18 +214,8 @@ export async function getTrendDataFromNeon(params?: {
     SELECT 
       TO_CHAR(_block_timestamp_, '${dateFormat}') as date,
       COUNT(*) as "transactionCount",
-      COALESCE(SUM(
-        CASE 
-          WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-          ELSE total_rewards_claimed::numeric / 1000000.0
-        END
-      ), 0) as "totalFee",
-      COALESCE(AVG(
-        CASE 
-          WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-          ELSE total_rewards_claimed::numeric / 1000000.0
-        END
-      ), 0) as "avgFee"
+      COALESCE(SUM(platform_fee::numeric / 1000000.0), 0) as "totalFee",
+      COALESCE(AVG(platform_fee::numeric / 1000000.0), 0) as "avgFee"
     FROM farmrewardsclaimedevent 
     WHERE 1=1
   `;

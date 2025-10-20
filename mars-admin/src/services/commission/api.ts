@@ -1,7 +1,8 @@
 import { request } from '@umijs/max';
+import { getCurrentFeeRate } from '@/config/fee';
 
-// 后端 API 基础地址
-const MARS_BACKEND_API = 'https://api.marsliquidity.com';
+// Mars 后端 API 地址
+const MARS_BACKEND_API = process.env.MARS_BACKEND_API || 'https://api.marsliquidity.com';
 
 // 佣金记录接口
 export interface CommissionRecord {
@@ -94,7 +95,7 @@ export async function getCommissionStatistics(params?: {
       totalTransactions: 0,
       avgFee: 0,
       activeUsers: 0,
-      currentFeeRate: 25,
+      currentFeeRate: getCurrentFeeRate(),
     };
   } catch (error) {
     console.error('获取统计数据失败:', error);
@@ -103,7 +104,7 @@ export async function getCommissionStatistics(params?: {
       totalTransactions: 0,
       avgFee: 0,
       activeUsers: 0,
-      currentFeeRate: 25,
+      currentFeeRate: getCurrentFeeRate(),
     };
   }
 }

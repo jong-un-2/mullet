@@ -13,6 +13,7 @@ import {
   type UserStatistics,
   type TrendData 
 } from '@/services/commission/api';
+import { getCurrentFeeRate } from '@/config/fee';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -31,7 +32,7 @@ const CommissionStatistics: React.FC = () => {
     totalTransactions: 0,
     avgFee: 0,
     activeUsers: 0,
-    currentFeeRate: 25,
+    currentFeeRate: getCurrentFeeRate(),
   });
 
   // 动态计算饼图数据
