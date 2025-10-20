@@ -187,11 +187,12 @@ export default {
 						const sql = neon(env.NEON_DATABASE_URL!);
 						
 						// Get list of active users from multiple sources:
-						// 1. Users with existing positions in last 7 days
-						// 2. Hardcoded known users with vault positions
+						// 1. Users with existing positions (updated in last 7 days)
+						// 2. Users with recent deposits (last 30 days)
+						// 3. Users with recent withdrawals (last 30 days)
 						const activeUsers = await sql`
 							SELECT DISTINCT user_address FROM (
-								-- Users with existing positions
+								-- Users with existing active positions
 								SELECT DISTINCT user_address
 								FROM mars_user_positions
 								WHERE last_activity_time > NOW() - INTERVAL '7 days'
@@ -199,13 +200,23 @@ export default {
 								
 								UNION
 								
-								-- Known users with Kamino Vault positions
-								SELECT '4AiFD35M6ZmddV9BbG6mKxvABMq8aeqz4usJSsT7c17w' as user_address
+								-- Users with recent deposits
+								SELECT DISTINCT "user" as user_address
+								FROM kaminodepositevent
+								WHERE _block_timestamp_ > EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days')
+								AND "user" IS NOT NULL
+								AND "user" != ''
+								AND "user" != 'neondb_owner'
 								
 								UNION
 								
-								-- Test user
-								SELECT '7rQ1QFNosMkUCuh7Z7fPbTHvh73b68sQYdirycEzJVuw' as user_address
+								-- Users with recent withdrawals
+								SELECT DISTINCT "user" as user_address
+								FROM kaminowithdrawevent
+								WHERE _block_timestamp_ > EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days')
+								AND "user" IS NOT NULL
+								AND "user" != ''
+								AND "user" != 'neondb_owner'
 							) AS combined_users
 							LIMIT 50
 						`;
@@ -225,8 +236,8 @@ export default {
 											id, user_address, vault_address, protocol, strategy_address, strategy_name,
 											base_token, base_token_mint,
 											total_shares, total_deposited, total_withdrawn, realized_pnl,
-											current_value, unrealized_pnl,
-											apr, apy,
+											current_value, unrealized_pnl, interest_earned, daily_interest_usd,
+											apr, apy, lending_apy, incentives_apy, total_apy,
 											tvl, liquidity_depth,
 											reward_tokens, pending_rewards, total_rewards_claimed, last_reward_claim,
 											risk_level, status,
@@ -236,8 +247,8 @@ export default {
 											${position.protocol}, ${position.strategyAddress}, ${position.strategyName},
 											${position.baseToken}, ${position.baseTokenMint},
 											${position.totalShares}, ${position.totalSupplied}, '0', '0',
-											${position.currentValue}, ${position.unrealizedPnl},
-											${position.totalAPY}, ${position.totalAPY},
+											${position.currentValue}, ${position.unrealizedPnl}, ${position.interestEarned}, ${position.dailyInterestUSD},
+											${position.totalAPY}, ${position.totalAPY}, ${position.lendingAPY}, ${position.incentivesAPY}, ${position.totalAPY},
 											${position.tvl}, ${position.liquidityDepth},
 											${JSON.stringify(position.rewards)},
 											${JSON.stringify(position.pendingRewards)},
@@ -249,12 +260,23 @@ export default {
 										)
 										ON CONFLICT (id) DO UPDATE SET
 											total_shares = EXCLUDED.total_shares,
+											total_deposited = EXCLUDED.total_deposited,
 											current_value = EXCLUDED.current_value,
 											unrealized_pnl = EXCLUDED.unrealized_pnl,
+											interest_earned = EXCLUDED.interest_earned,
+											daily_interest_usd = EXCLUDED.daily_interest_usd,
 											apr = EXCLUDED.apr,
 											apy = EXCLUDED.apy,
+											lending_apy = EXCLUDED.lending_apy,
+											incentives_apy = EXCLUDED.incentives_apy,
+											total_apy = EXCLUDED.total_apy,
 											tvl = EXCLUDED.tvl,
+											reward_tokens = EXCLUDED.reward_tokens,
 											pending_rewards = EXCLUDED.pending_rewards,
+											base_token = EXCLUDED.base_token,
+											base_token_mint = EXCLUDED.base_token_mint,
+											strategy_name = EXCLUDED.strategy_name,
+											last_activity_time = EXCLUDED.last_activity_time,
 											last_fetch_time = EXCLUDED.last_fetch_time,
 											updated_at = NOW()
 									`;

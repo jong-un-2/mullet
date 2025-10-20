@@ -136,10 +136,10 @@ export const marsUserPositions = pgTable('mars_user_positions', {
   vaultAddress: text('vault_address').notNull(),
   
   // Core position data
-  totalShares: decimal('total_shares', { precision: 20, scale: 0 }).notNull(),
-  totalDeposited: decimal('total_deposited', { precision: 20, scale: 0 }).notNull(),
-  totalWithdrawn: decimal('total_withdrawn', { precision: 20, scale: 0 }).notNull(),
-  realizedPnl: decimal('realized_pnl', { precision: 20, scale: 0 }).notNull(),
+  totalShares: decimal('total_shares', { precision: 30, scale: 18 }).notNull(), // Support token decimals
+  totalDeposited: decimal('total_deposited', { precision: 30, scale: 18 }).notNull(),
+  totalWithdrawn: decimal('total_withdrawn', { precision: 30, scale: 18 }).notNull(),
+  realizedPnl: decimal('realized_pnl', { precision: 30, scale: 18 }).notNull(),
   
   // Protocol specific fields
   protocol: text('protocol').notNull(), // 'kamino' | 'jupiter' | 'mars'
@@ -152,14 +152,21 @@ export const marsUserPositions = pgTable('mars_user_positions', {
   rewardTokens: text('reward_tokens'), // JSON array of reward token mints
   
   // Performance metrics
-  currentValue: decimal('current_value', { precision: 20, scale: 0 }), // Current position value in base token
-  unrealizedPnl: decimal('unrealized_pnl', { precision: 20, scale: 0 }), // Current unrealized profit/loss
-  apr: decimal('apr', { precision: 10, scale: 4 }), // Annual Percentage Rate
-  apy: decimal('apy', { precision: 10, scale: 4 }), // Annual Percentage Yield (with compounding)
+  currentValue: decimal('current_value', { precision: 30, scale: 18 }), // Current position value in base token
+  unrealizedPnl: decimal('unrealized_pnl', { precision: 30, scale: 18 }), // Current unrealized profit/loss
+  interestEarned: decimal('interest_earned', { precision: 30, scale: 18 }), // Total interest earned
+  dailyInterestUSD: decimal('daily_interest_usd', { precision: 30, scale: 18 }), // Expected daily interest in USD
+  
+  // APY breakdown
+  apr: decimal('apr', { precision: 10, scale: 8 }), // Annual Percentage Rate (support higher precision)
+  apy: decimal('apy', { precision: 10, scale: 8 }), // Annual Percentage Yield (with compounding)
+  lendingAPY: decimal('lending_apy', { precision: 10, scale: 8 }), // Lending yield component
+  incentivesAPY: decimal('incentives_apy', { precision: 10, scale: 8 }), // Incentives/rewards component
+  totalAPY: decimal('total_apy', { precision: 10, scale: 8 }), // Total APY (lending + incentives)
   
   // TVL and liquidity
-  tvl: decimal('tvl', { precision: 20, scale: 0 }), // Total Value Locked in strategy
-  liquidityDepth: decimal('liquidity_depth', { precision: 20, scale: 0 }), // Available liquidity for withdrawal
+  tvl: decimal('tvl', { precision: 30, scale: 18 }), // Total Value Locked in strategy
+  liquidityDepth: decimal('liquidity_depth', { precision: 30, scale: 18 }), // Available liquidity for withdrawal
   
   // Rewards tracking
   pendingRewards: text('pending_rewards'), // JSON object: { tokenMint: amount }
