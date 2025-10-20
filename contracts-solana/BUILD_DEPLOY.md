@@ -502,6 +502,172 @@ anchor idl upgrade \
   AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
 ```
 
+### 步骤 5: Mainnet 初始化和配置
+
+部署程序到主网后，需要初始化全局状态、配置 vault、设置费率等。
+
+#### a. 初始化全局状态
+
+```bash
+npm run script init -- \
+  --env mainnet \
+  --keypair ./phantom-wallet.json \
+  --rpc "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
+```
+
+**输出示例：**
+```
+Global State PDA: 8MLg352JHqDZPffN4aWTND6qXrGWGh9Jm1EcHJgShDGh
+Transaction: 3uoVeBisGg3nBKQ3B22pagJ4iP2VyYBqkx9qWqQTkBLt...
+```
+
+**说明：**
+- 初始化全局状态账户
+- 设置管理员为当前钱包
+- 创建 vault 相关的 ATA 账户
+
+#### b. 初始化 Vault
+
+```bash
+npm run script initialize-vault -- \
+  --env mainnet \
+  --keypair ./phantom-wallet.json \
+  --rpc "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3" \
+  -v A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK \
+  -b 2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo \
+  -s HrDJX7DZL86K6DYvDNHPXrkkGEEoZ91tNT6o1cPLXs78 \
+  -f 2500
+```
+
+**参数说明：**
+- `-v`: Vault ID (唯一标识符)
+- `-b`: Base Token Mint (基础代币，如 PYUSD)
+- `-s`: Shares Mint (份额代币)
+- `-f`: Platform Fee (平台费率，2500 bps = 25%)
+
+**输出示例：**
+```
+Vault State PDA: 9VLG4w2QXMmRpxpogXQueQhHVCSjdQNU1gxa4v3LipJm
+Vault Treasury PDA: 6fnfS8pTME9HPoj3WycWst4DFVCN1EK5ZdbithJdK5sH
+Transaction: 4oJRxu87BjL571DxEXAQEzXAVv9Fzc5wNN1mweuaGdfj...
+```
+
+#### c. 设置费率层级
+
+```bash
+npm run script set-fee-tiers -- \
+  --env mainnet \
+  --keypair ./phantom-wallet.json \
+  --rpc "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
+```
+
+**默认费率配置：**
+- 0-100: 3 bps (0.03%)
+- 100-1000: 2 bps (0.02%)
+- 1000+: 1 bps (0.01%)
+
+**输出示例：**
+```
+Transaction: 5D5Hanc1oh5xtCdT6EvW6knRTLb4vuUQsiwCSbbeZkZB...
+```
+
+#### d. 设置协议费率
+
+```bash
+npm run script set-protocol-fee-fraction -- \
+  --env mainnet \
+  --keypair ./phantom-wallet.json \
+  --rpc "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3" \
+  -n 1 \
+  -d 100
+```
+
+**参数说明：**
+- `-n`: 分子 (numerator)
+- `-d`: 分母 (denominator)
+- 费率 = n/d = 1/100 = 1%
+
+**输出示例：**
+```
+Transaction: 4uvDWuyGEYbhsqpu7eK3KLBougkqMQ6d5jLnYL9jS8Na...
+```
+
+#### e. 更新平台费用钱包
+
+```bash
+npm run script update-platform-fee-wallet -- \
+  --env mainnet \
+  --keypair ./phantom-wallet.json \
+  --rpc "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3" \
+  -w A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6
+```
+
+**参数说明：**
+- `-w`: 新的平台费用钱包地址
+
+**输出示例：**
+```
+Transaction: 4mQPr3ZDaPTHAsCKTmvRMUoHRijXBqX8p9qB3h6DooWU...
+Platform Fee Wallet: A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6
+```
+
+#### 完整初始化脚本
+
+创建一个 bash 脚本 `initialize-mainnet.sh` 来自动化所有步骤：
+
+```bash
+#!/bin/bash
+
+RPC_URL="https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
+KEYPAIR="./phantom-wallet.json"
+
+echo "🚀 开始 Mainnet 初始化..."
+
+# 1. 初始化全局状态
+echo "📝 步骤 1: 初始化全局状态"
+npm run script init -- --env mainnet --keypair $KEYPAIR --rpc "$RPC_URL"
+
+# 2. 初始化 Vault
+echo "📝 步骤 2: 初始化 Vault"
+npm run script initialize-vault -- \
+  --env mainnet \
+  --keypair $KEYPAIR \
+  --rpc "$RPC_URL" \
+  -v A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK \
+  -b 2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo \
+  -s HrDJX7DZL86K6DYvDNHPXrkkGEEoZ91tNT6o1cPLXs78 \
+  -f 2500
+
+# 3. 设置费率层级
+echo "📝 步骤 3: 设置费率层级"
+npm run script set-fee-tiers -- --env mainnet --keypair $KEYPAIR --rpc "$RPC_URL"
+
+# 4. 设置协议费率
+echo "📝 步骤 4: 设置协议费率"
+npm run script set-protocol-fee-fraction -- \
+  --env mainnet \
+  --keypair $KEYPAIR \
+  --rpc "$RPC_URL" \
+  -n 1 \
+  -d 100
+
+# 5. 更新平台费用钱包
+echo "📝 步骤 5: 更新平台费用钱包"
+npm run script update-platform-fee-wallet -- \
+  --env mainnet \
+  --keypair $KEYPAIR \
+  --rpc "$RPC_URL" \
+  -w A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6
+
+echo "✅ Mainnet 初始化完成！"
+```
+
+**使用方法：**
+```bash
+chmod +x initialize-mainnet.sh
+./initialize-mainnet.sh
+```
+
 ---
 
 ## 验证部署
