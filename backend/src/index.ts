@@ -198,25 +198,25 @@ export default {
 								WHERE last_activity_time > NOW() - INTERVAL '7 days'
 								AND status = 'active'
 								
-								UNION
-								
-								-- Users with recent deposits
-								SELECT DISTINCT "user" as user_address
-								FROM kaminodepositevent
-								WHERE _block_timestamp_ > CAST(EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days') AS NUMERIC)
-								AND "user" IS NOT NULL
-								AND "user" != ''
-								AND "user" != 'neondb_owner'
-								
-								UNION
-								
-								-- Users with recent withdrawals
-								SELECT DISTINCT "user" as user_address
-								FROM kaminowithdrawevent
-								WHERE _block_timestamp_ > CAST(EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days') AS NUMERIC)
-								AND "user" IS NOT NULL
-								AND "user" != ''
-								AND "user" != 'neondb_owner'
+							UNION
+							
+							-- Users with recent deposits
+							SELECT DISTINCT "user" as user_address
+							FROM kaminodepositevent
+							WHERE _block_timestamp_ > NOW() - INTERVAL '30 days'
+							AND "user" IS NOT NULL
+							AND "user" != ''
+							AND "user" != 'neondb_owner'
+							
+							UNION
+							
+							-- Users with recent withdrawals
+							SELECT DISTINCT "user" as user_address
+							FROM kaminowithdrawevent
+							WHERE _block_timestamp_ > NOW() - INTERVAL '30 days'
+							AND "user" IS NOT NULL
+							AND "user" != ''
+							AND "user" != 'neondb_owner'
 							) AS combined_users
 							LIMIT 50
 						`;
