@@ -222,7 +222,7 @@ const XFundPage = () => {
   // Get real Solana wallet balances
   const { getBalance: getSolanaBalance } = useSolanaBalance(userWalletAddress);
   
-  // Get user's vault position (Total Supplied)
+  // Get user's vault position from backend (cached data, auto-refresh every 60s)
   const userVaultPosition = useUserVaultPosition(userWalletAddress || null, refreshTrigger);
   
   // Calculate current vault stats from historical data

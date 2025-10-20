@@ -134,21 +134,6 @@ const CustomUserProfile: React.FC = () => {
 
   // Helper functions (defined before hooks)
   const getWalletInfo = (): WalletInfo => {
-    // 详细调试：查看所有钱包数据
-    console.log('🔍 All Wallets Debug:', {
-      allWallets: wallets.map(w => ({
-        address: w.address,
-        walletClientType: w.walletClientType,
-        connectorType: w.connectorType,
-        chainType: (w as any).chainType
-      })),
-      allSolanaWallets: solanaWallets.map(w => ({
-        address: w.address,
-        walletClientType: (w as any).walletClientType,
-        connectorType: (w as any).connectorType
-      }))
-    });
-    
     // Find external wallets (not embedded) from EVM wallets
     // 优先选择特定钱包类型，避免多钱包冲突
     let ethWallet = wallets.find(w => w.address.startsWith('0x') && w.walletClientType === 'phantom');

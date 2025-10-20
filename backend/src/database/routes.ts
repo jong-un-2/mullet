@@ -154,7 +154,7 @@ export function createDBRoutes() {
       return c.json({ success: true, data: newUser }, 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.errors }, 400);
+        return c.json({ error: 'Invalid request data', details: error.issues }, 400);
       }
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }
@@ -206,7 +206,7 @@ export function createDBRoutes() {
       return c.json({ success: true, data: updatedUser[0] });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.errors }, 400);
+        return c.json({ error: 'Invalid request data', details: error.issues }, 400);
       }
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }
@@ -324,7 +324,7 @@ export function createDBRoutes() {
       }, 201);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.errors }, 400);
+        return c.json({ error: 'Invalid request data', details: error.issues }, 400);
       }
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }
@@ -377,7 +377,7 @@ export function createDBRoutes() {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid request data', details: error.errors }, 400);
+        return c.json({ error: 'Invalid request data', details: error.issues }, 400);
       }
       return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }

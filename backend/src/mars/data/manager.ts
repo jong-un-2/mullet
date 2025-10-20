@@ -154,6 +154,16 @@ export class MarsProtocolDataManager {
 
     // 计算总收益（取最新的累计收益）
     const latestEarning = earningsData[0];
+    if (!latestEarning) {
+      return {
+        totalEarningsUsd: 0,
+        dailyEarnings: 0,
+        monthlyEarnings: 0,
+        activeDays: 0,
+        byAsset: {}
+      };
+    }
+    
     const totalEarningsUsd = latestEarning.cumulativeEarningsUsd;
     const dailyEarnings = latestEarning.dailyEarningsUsd;
 
@@ -173,12 +183,15 @@ export class MarsProtocolDataManager {
         };
       }
       
-      if (row.cumulativeEarningsUsd > byAsset[row.asset].totalEarnings) {
-        byAsset[row.asset].totalEarnings = row.cumulativeEarningsUsd;
+      const assetData = byAsset[row.asset];
+      if (assetData && row.cumulativeEarningsUsd > assetData.totalEarnings) {
+        assetData.totalEarnings = row.cumulativeEarningsUsd;
       }
       
-      byAsset[row.asset].dailyEarnings += row.dailyEarningsUsd;
-      byAsset[row.asset].apy = row.apy; // 使用最新的APY
+      if (assetData) {
+        assetData.dailyEarnings += row.dailyEarningsUsd;
+        assetData.apy = row.apy; // 使用最新的APY
+      }
     });
 
     return {
@@ -243,6 +256,9 @@ export class MarsProtocolDataManager {
     days: number = 30
   ): Promise<Array<{ date: string; apy: number; tvl: number }>> {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    if (!startDate) {
+      return [];
+    }
     
     // 获取APY数据
     const apyConditions = [gte(marsApyData.timestamp, new Date(startDate))];
@@ -274,10 +290,12 @@ export class MarsProtocolDataManager {
         ? row.timestamp.toISOString().split('T')[0]
         : new Date(row.timestamp).toISOString().split('T')[0];
       
-      if (!chartData[date]) {
-        chartData[date] = { date, apy: 0, tvl: 0 };
+      if (date) {
+        if (!chartData[date]) {
+          chartData[date] = { date, apy: 0, tvl: 0 };
+        }
+        chartData[date].apy = row.netApy;
       }
-      chartData[date].apy = row.netApy;
     });
 
     tvlData.forEach(row => {
@@ -285,10 +303,12 @@ export class MarsProtocolDataManager {
         ? row.timestamp.toISOString().split('T')[0]
         : new Date(row.timestamp).toISOString().split('T')[0];
       
-      if (!chartData[date]) {
-        chartData[date] = { date, apy: 0, tvl: 0 };
+      if (date) {
+        if (!chartData[date]) {
+          chartData[date] = { date, apy: 0, tvl: 0 };
+        }
+        chartData[date].tvl = row.tvlUsd;
       }
-      chartData[date].tvl = row.tvlUsd;
     });
 
     return Object.values(chartData).sort((a, b) => a.date.localeCompare(b.date));

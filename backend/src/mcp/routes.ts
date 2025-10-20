@@ -35,8 +35,12 @@ export class D1Agent extends McpAgent {
         a: z.number().describe("The first operand for the calculation."),
         b: z.number().describe("The second operand for the calculation."),
       },
-      async ({ operation, a, b }) => {
-        let result: number;
+      async (args) => {
+        const a = args.a as number;
+        const b = args.b as number;
+        const operation = args.operation as string;
+        let result: number = 0;
+        
         switch (operation) {
           case "add":
             result = a + b;
@@ -70,6 +74,9 @@ export class D1Agent extends McpAgent {
       "Returns the total number of registered users.",
       {},
       async () => {
+        if (!this.env.D1_DATABASE) {
+          return { content: [{ type: "text", text: "Database unavailable" }] };
+        }
         const { results } = await this.env.D1_DATABASE.prepare(
           "SELECT COUNT(*) as userCount FROM users"
         ).all();
@@ -138,6 +145,9 @@ export class D1Agent extends McpAgent {
         console.log('User search params:', values);
 
         // Execute query using this.env
+        if (!this.env.D1_DATABASE) {
+          return { content: [{ type: "text", text: "Database unavailable" }] };
+        }
         const { results } = await this.env.D1_DATABASE.prepare(sql)
           .bind(...values)
           .all();
@@ -157,7 +167,15 @@ export class D1Agent extends McpAgent {
         ];
 
         const model = '@cf/mistralai/mistral-small-3.1-24b-instruct';
-        const response = await this.env.AI.run(model, { messages });
+        
+        // Check if AI binding is available
+        if (!('AI' in this.env)) {
+          return {
+            content: [{ type: "text", text: context }]
+          };
+        }
+        
+        const response = await (this.env as any).AI.run(model, { messages });
 
         return {
           content: [

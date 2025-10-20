@@ -95,8 +95,8 @@ export function getConnectionInfo(env: HyperdriveEnv) {
 }
 
 /**
- * Execute a database transaction with postgres.js
- * Automatically handles BEGIN, COMMIT, and ROLLBACK
+ * Execute a function within a database transaction
+ * Automatically commits on success or rolls back on error
  */
 export async function withTransaction<T>(
   env: HyperdriveEnv,
@@ -105,9 +105,10 @@ export async function withTransaction<T>(
   const sql = createPgClient(env);
   try {
     // postgres.js provides automatic transaction support via .begin()
-    return await sql.begin(async (tx) => {
+    const result = await sql.begin(async (tx) => {
       return await callback(tx as any);
     });
+    return result as T;
   } catch (error) {
     console.error('Transaction failed:', error);
     throw error;

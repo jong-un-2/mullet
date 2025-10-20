@@ -1177,6 +1177,6 @@ git push origin feature/amazing-feature
 
 **Built with ❤️ by the Mars Protocol Team**
 
-*最后更新: 2024年12月*
+*最后更新: 2025年10月*
 
 </div>

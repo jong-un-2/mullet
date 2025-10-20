@@ -16,6 +16,7 @@ import { createMarsWithdrawManager } from './transactions/withdraw';
 import { createWalletConnectionManager } from './wallet/manager';
 import { marsVaultRoutes } from './vault/routes';
 import { handleLiFiRoutes } from './lifi/routes';
+import positionsRoutes from './positions/routes';
 
 import type { 
   ApiResponse, 
@@ -214,11 +215,16 @@ export function createMarsRoutes() {
       const cache = new MarsDataCache(c.env.KV);
       
       const jupiterClient = createJupiterLendClient(cache);
-      const kaminoClient = createKaminoSDKClient(cache);
+      
+      // Import the new positions collector for Kamino data
+      const { getUserPositionsCollector } = await import('../services/userPositionsCollector');
+      const positionsCollector = await getUserPositionsCollector(c.env.SOLANA_RPC_URL);
 
       // 获取用户在各协议的仓位
       const jupiterPositions = await jupiterClient.getUserPositions(userAddress);
-      const kaminoPositions = await kaminoClient.getUserPositions(userAddress);
+      
+      // Get Kamino positions from the new collector service
+      const kaminoPositions = await positionsCollector.fetchUserPositions(userAddress);
 
       // 按协议分类处理仓位数据
       const jupiterActivePositions = jupiterPositions
@@ -237,8 +243,28 @@ export function createMarsRoutes() {
           lastUpdate: new Date()
         }));
 
+      // Format Kamino positions for response
       const kaminoActivePositions = kaminoPositions
-        .filter(p => p.amount && p.amount > 0);
+        .filter(p => parseFloat(p.totalShares) > 0)
+        .map(p => ({
+          id: p.id,
+          userAddress: p.userAddress,
+          protocol: p.protocol,
+          asset: p.baseToken,
+          amount: parseFloat(p.totalSupplied),
+          shares: parseFloat(p.totalShares),
+          entryAPY: p.totalAPY,
+          lendingAPY: p.lendingAPY,
+          incentivesAPY: p.incentivesAPY,
+          currentValue: parseFloat(p.currentValue),
+          unrealizedGain: parseFloat(p.unrealizedPnl),
+          interestEarned: parseFloat(p.interestEarned),
+          dailyInterestUSD: parseFloat(p.dailyInterestUSD),
+          rewards: p.rewards,
+          pendingRewards: p.pendingRewards,
+          depositTime: p.firstDepositTime,
+          lastUpdate: p.lastFetchTime
+        }));
 
       // 按协议分类返回数据
       const positionsData = {
@@ -593,6 +619,9 @@ export function createMarsRoutes() {
   // ==================== 数据API端点 ====================
   // 挂载Mars Vault API routes (real data from Neon PostgreSQL)
   app.route('/vault', marsVaultRoutes);
+  
+  // User Positions API routes (cached position data)
+  app.route('/positions', positionsRoutes);
 
   // ==================== LI.FI跨链桥接端点 ====================
   app.all('/lifi/*', async (c) => {

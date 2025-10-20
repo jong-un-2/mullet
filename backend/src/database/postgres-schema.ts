@@ -128,21 +128,59 @@ export const marsVaultStates = pgTable('mars_vault_states', {
 
 /**
  * Mars User Positions - Aggregated user positions per vault
+ * Extended with Kamino/Jupiter protocol details
  */
 export const marsUserPositions = pgTable('mars_user_positions', {
   id: text('id').primaryKey(),
   userAddress: text('user_address').notNull(),
   vaultAddress: text('vault_address').notNull(),
+  
+  // Core position data
   totalShares: decimal('total_shares', { precision: 20, scale: 0 }).notNull(),
   totalDeposited: decimal('total_deposited', { precision: 20, scale: 0 }).notNull(),
   totalWithdrawn: decimal('total_withdrawn', { precision: 20, scale: 0 }).notNull(),
   realizedPnl: decimal('realized_pnl', { precision: 20, scale: 0 }).notNull(),
+  
+  // Protocol specific fields
+  protocol: text('protocol').notNull(), // 'kamino' | 'jupiter' | 'mars'
+  strategyAddress: text('strategy_address'), // Kamino strategy or Jupiter vault address
+  strategyName: text('strategy_name'), // Strategy/Farm name
+  
+  // Token information
+  baseToken: text('base_token').notNull(), // PYUSD, SOL, USDC, etc.
+  baseTokenMint: text('base_token_mint').notNull(),
+  rewardTokens: text('reward_tokens'), // JSON array of reward token mints
+  
+  // Performance metrics
+  currentValue: decimal('current_value', { precision: 20, scale: 0 }), // Current position value in base token
+  unrealizedPnl: decimal('unrealized_pnl', { precision: 20, scale: 0 }), // Current unrealized profit/loss
+  apr: decimal('apr', { precision: 10, scale: 4 }), // Annual Percentage Rate
+  apy: decimal('apy', { precision: 10, scale: 4 }), // Annual Percentage Yield (with compounding)
+  
+  // TVL and liquidity
+  tvl: decimal('tvl', { precision: 20, scale: 0 }), // Total Value Locked in strategy
+  liquidityDepth: decimal('liquidity_depth', { precision: 20, scale: 0 }), // Available liquidity for withdrawal
+  
+  // Rewards tracking
+  pendingRewards: text('pending_rewards'), // JSON object: { tokenMint: amount }
+  totalRewardsClaimed: text('total_rewards_claimed'), // JSON object: { tokenMint: totalAmount }
+  lastRewardClaim: timestamp('last_reward_claim'), // Last time rewards were claimed
+  
+  // Risk and status
+  riskLevel: text('risk_level'), // 'low' | 'medium' | 'high'
+  status: text('status').notNull().default('active'), // 'active' | 'unstaking' | 'closed'
+  
+  // Timestamps
   firstDepositTime: timestamp('first_deposit_time').notNull(),
   lastActivityTime: timestamp('last_activity_time').notNull(),
+  lastFetchTime: timestamp('last_fetch_time'), // Last time data was fetched from chain
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
   userIdx: index('mars_positions_user_idx').on(table.userAddress),
   vaultIdx: index('mars_positions_vault_idx').on(table.vaultAddress),
+  protocolIdx: index('mars_positions_protocol_idx').on(table.protocol),
+  statusIdx: index('mars_positions_status_idx').on(table.status),
+  lastFetchIdx: index('mars_positions_last_fetch_idx').on(table.lastFetchTime),
   userVaultUnique: uniqueIndex('mars_positions_user_vault_unique').on(table.userAddress, table.vaultAddress),
 }));
 

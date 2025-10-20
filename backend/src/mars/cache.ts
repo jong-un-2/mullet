@@ -222,7 +222,7 @@ export function cached(ttlSeconds: number = 300) {
   return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
     const method = descriptor.value;
     
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (this: any, ...args: any[]) {
       const cache = this.cache as MarsDataCache;
       if (!cache) {
         return method.apply(this, args);

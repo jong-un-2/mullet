@@ -8,6 +8,8 @@ import { D1Agent } from './mcp/routes';
 import { createDBRoutes } from './database/routes';
 import { createCacheRoutes } from './cache/routes';
 import { runCacheWarming } from './cache/warmer';
+import { getUserPositionsCollector } from './services/userPositionsCollector';
+import { neon } from '@neondatabase/serverless';
 
 import { createIndexerRoutes } from './containers';
 import { createMarsRoutes } from './mars/routes';
@@ -167,7 +169,7 @@ export default {
 		try {
 			// Lightweight tasks for pure GraphQL architecture
 			switch (controller.cron) {
-				case "*/1 * * * *": // Every 1 minute - Substreams batch indexing & cache warming
+				case "*/1 * * * *": // Every 1 minute - Substreams batch indexing & cache warming & user positions sync
 					console.log("🔄 Running Substreams incremental sync...");
 					try {
 						const stats = await runIncrementalSync(env);
@@ -178,6 +180,94 @@ export default {
 					
 					console.log("🔥 Running cache warming...");
 					await runCacheWarming(env);
+					
+					// User positions sync (update positions for active users)
+					console.log("📊 Syncing user positions...");
+					try {
+						const sql = neon(env.NEON_DATABASE_URL!);
+						
+						// Get list of active users from multiple sources:
+						// 1. Users with existing positions in last 7 days
+						// 2. Hardcoded known users with vault positions
+						const activeUsers = await sql`
+							SELECT DISTINCT user_address FROM (
+								-- Users with existing positions
+								SELECT DISTINCT user_address
+								FROM mars_user_positions
+								WHERE last_activity_time > NOW() - INTERVAL '7 days'
+								AND status = 'active'
+								
+								UNION
+								
+								-- Known users with Kamino Vault positions
+								SELECT '4AiFD35M6ZmddV9BbG6mKxvABMq8aeqz4usJSsT7c17w' as user_address
+								
+								UNION
+								
+								-- Test user
+								SELECT '7rQ1QFNosMkUCuh7Z7fPbTHvh73b68sQYdirycEzJVuw' as user_address
+							) AS combined_users
+							LIMIT 50
+						`;
+						
+						if (activeUsers.length > 0) {
+							const collector = await getUserPositionsCollector(env.SOLANA_RPC_URL);
+							const userAddresses = activeUsers.map((row: any) => row.user_address);
+							
+							console.log(`🔄 Updating positions for ${userAddresses.length} active users...`);
+							const results = await collector.batchUpdatePositions(userAddresses);
+							
+							// Save to database
+							for (const [userAddress, positions] of results.entries()) {
+								for (const position of positions) {
+									await sql`
+										INSERT INTO mars_user_positions (
+											id, user_address, vault_address, protocol, strategy_address, strategy_name,
+											base_token, base_token_mint,
+											total_shares, total_deposited, total_withdrawn, realized_pnl,
+											current_value, unrealized_pnl,
+											apr, apy,
+											tvl, liquidity_depth,
+											reward_tokens, pending_rewards, total_rewards_claimed, last_reward_claim,
+											risk_level, status,
+											first_deposit_time, last_activity_time, last_fetch_time, updated_at
+										) VALUES (
+											${position.id}, ${position.userAddress}, ${position.vaultAddress},
+											${position.protocol}, ${position.strategyAddress}, ${position.strategyName},
+											${position.baseToken}, ${position.baseTokenMint},
+											${position.totalShares}, ${position.totalSupplied}, '0', '0',
+											${position.currentValue}, ${position.unrealizedPnl},
+											${position.totalAPY}, ${position.totalAPY},
+											${position.tvl}, ${position.liquidityDepth},
+											${JSON.stringify(position.rewards)},
+											${JSON.stringify(position.pendingRewards)},
+											${JSON.stringify(position.totalRewardsClaimed)},
+											${position.lastRewardClaim},
+											${position.riskLevel}, ${position.status},
+											${position.firstDepositTime}, ${position.lastActivityTime},
+											${position.lastFetchTime}, NOW()
+										)
+										ON CONFLICT (id) DO UPDATE SET
+											total_shares = EXCLUDED.total_shares,
+											current_value = EXCLUDED.current_value,
+											unrealized_pnl = EXCLUDED.unrealized_pnl,
+											apr = EXCLUDED.apr,
+											apy = EXCLUDED.apy,
+											tvl = EXCLUDED.tvl,
+											pending_rewards = EXCLUDED.pending_rewards,
+											last_fetch_time = EXCLUDED.last_fetch_time,
+											updated_at = NOW()
+									`;
+								}
+							}
+							
+							console.log(`✅ Updated positions for ${results.size} users`);
+						} else {
+							console.log('ℹ️  No active users to update');
+						}
+					} catch (error) {
+						console.error("❌ User positions sync failed:", error);
+					}
 					break;
 
 				case "0 */2 * * *": // Every 2 hours - Collect vault historical data
