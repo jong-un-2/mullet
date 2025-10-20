@@ -9,7 +9,7 @@ import { PublicKey } from "@solana/web3.js";
 
 // Program ID (from declare_id! macro)
 export const MARS_PROGRAM_ID = new PublicKey(
-  "DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP"
+  "5QctE8ENPTdeYBkBUrWcVYGQMQZtRqBFKEfQF6CZyvh5"
 );
 
 // Kamino 集成

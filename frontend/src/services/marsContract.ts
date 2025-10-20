@@ -20,7 +20,7 @@ import {
 import { KaminoSDKHelper } from './kaminoSdkHelper';
 
 // Mars 合约常量
-const MARS_PROGRAM_ID = new PublicKey("DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP");
+const MARS_PROGRAM_ID = new PublicKey("5QctE8ENPTdeYBkBUrWcVYGQMQZtRqBFKEfQF6CZyvh5");
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");
 export const KLEND_PROGRAM = new PublicKey("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD");
 export const PYUSD_MINT = new PublicKey("2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo");
