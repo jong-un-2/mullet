@@ -21,19 +21,13 @@ pub struct UpdateVaultPlatformFee<'info> {
 }
 
 impl UpdateVaultPlatformFee<'_> {
-    pub fn process_instruction(
-        ctx: Context<Self>,
-        new_platform_fee_bps: u16,
-    ) -> Result<()> {
+    pub fn process_instruction(ctx: Context<Self>, new_platform_fee_bps: u16) -> Result<()> {
         // 验证费率在合理范围内（0-10000，即 0%-100%）
-        require!(
-            new_platform_fee_bps <= 10_000,
-            MarsError::InvalidParameter
-        );
+        require!(new_platform_fee_bps <= 10_000, MarsError::InvalidParameter);
 
         let vault_state = &mut ctx.accounts.vault_state;
         let old_fee = vault_state.platform_fee_bps;
-        
+
         vault_state.platform_fee_bps = new_platform_fee_bps;
         vault_state.last_updated = Clock::get()?.unix_timestamp;
 

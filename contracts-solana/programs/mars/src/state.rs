@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::constant::*;
+use anchor_lang::prelude::*;
 
 // 导入新的 Vault 状态定义
 pub mod vault_state;
@@ -56,7 +56,7 @@ pub struct Asset {
     // lp fee collected, this is the fee can be claimed by investors
     pub lp_fee_collected: u64,
 
-     // protocol fee collected, this is the fee that goes to the protocol
+    // protocol fee collected, this is the fee that goes to the protocol
     pub protocol_fee_collected: u64,
 
     // Insurance fee collected, this is the fee that will be used in case of loss of funds due to block reorganisation
@@ -149,8 +149,16 @@ pub struct TargetChainMinFee {
 /**
  * State of an order
  */
-#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-#[derive(anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
+#[derive(
+    Default,
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    anchor_lang::AnchorDeserialize,
+    anchor_lang::AnchorSerialize,
+)]
 #[repr(u16)]
 pub enum OrderStatus {
     #[default]
@@ -230,9 +238,7 @@ impl GlobalState {
 
 impl Asset {
     pub fn get_unclaimed_fees(&self) -> u64 {
-        self.unclaimed_base_fee
-            + self.unclaimed_lp_fee
-            + self.unclaimed_protocol_fee
+        self.unclaimed_base_fee + self.unclaimed_lp_fee + self.unclaimed_protocol_fee
     }
 }
 

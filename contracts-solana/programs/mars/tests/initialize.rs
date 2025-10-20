@@ -1,9 +1,9 @@
 #![cfg(feature = "test-bpf")]
 
-use solana_program_test::tokio;
+use genius::state::GlobalState;
 use genius_test_utils::initialize_util::InitializeInstruction;
 use genius_test_utils::*;
-use genius::state::GlobalState;
+use solana_program_test::tokio;
 
 #[tokio::test]
 async fn should_initialize_market() {
@@ -14,11 +14,7 @@ async fn should_initialize_market() {
 
     let global_state_address = GlobalState::generate_pda();
 
-    let global_state: GlobalState =
-        testenv.fetch_account(global_state_address).await;
+    let global_state: GlobalState = testenv.fetch_account(global_state_address).await;
 
-    assert_eq!(
-        global_state.rebalance_threshold,
-        70
-    );   
+    assert_eq!(global_state.rebalance_threshold, 70);
 }

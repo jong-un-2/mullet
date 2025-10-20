@@ -180,7 +180,9 @@ pub enum CustomError {
     #[msg("The length of the arrays: threshold_amounts and insurance_fees should be the same")]
     InsuranceFeeTiersLengthMismatched,
 
-    #[msg("The length of the arrays: threshold_amounts and insurance_fees should not be more than 10")]
+    #[msg(
+        "The length of the arrays: threshold_amounts and insurance_fees should not be more than 10"
+    )]
     InsuranceFeeTiersLengthExceeded,
 
     #[msg("The insurance fee should be less than 10_000")]

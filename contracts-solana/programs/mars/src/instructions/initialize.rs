@@ -30,9 +30,9 @@ pub struct Initialize<'info> {
     pub asset: Box<Account<'info, Asset>>,
 
     //  Store deposited assets
-    #[account(	
+    #[account(
         mut,
-        seeds = [VAULT_SEED],	
+        seeds = [VAULT_SEED],
         bump
     )]
     /// CHECK: This is not dangerous because we don't read or write from this account
@@ -40,10 +40,10 @@ pub struct Initialize<'info> {
 
     //  USDC ata of vault
     #[account(
-        init_if_needed, 
+        init_if_needed,
         payer = admin,
         associated_token::mint = usdc_mint,
-        
+
         //  Authority is set to vault
         associated_token::authority = vault,
     )]
@@ -59,7 +59,10 @@ pub struct Initialize<'info> {
 }
 
 impl Initialize<'_> {
-    pub fn process_instruction(ctx: Context<Self>, platform_fee_wallet: Option<Pubkey>) -> Result<()> {
+    pub fn process_instruction(
+        ctx: Context<Self>,
+        platform_fee_wallet: Option<Pubkey>,
+    ) -> Result<()> {
         msg!("Initializing global state, admin: {:?}", ctx.accounts.admin.key());
         let global_state = &mut ctx.accounts.global_state;
 
@@ -70,7 +73,7 @@ impl Initialize<'_> {
         global_state.base_mint = ctx.accounts.usdc_mint.key();
         global_state.frozen = false;
         global_state.max_order_amount = 100_000_000_000; // 100k USDC
-        
+
         // Set platform_fee_wallet: use provided value or default to admin
         global_state.platform_fee_wallet = platform_fee_wallet.unwrap_or(ctx.accounts.admin.key());
         msg!("Platform fee wallet set to: {:?}", global_state.platform_fee_wallet);

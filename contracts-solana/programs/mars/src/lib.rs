@@ -25,7 +25,7 @@ pub mod mars {
     use super::*;
 
     // === 原有管理指令 ===
-    
+
     //  called by contract deployer only 1 time to initialize global values
     //  send SOL to global_account, vault, ata_vault to initialize accounts
     pub fn initialize(ctx: Context<Initialize>, platform_fee_wallet: Option<Pubkey>) -> Result<()> {
@@ -43,7 +43,7 @@ pub mod mars {
     }
 
     // === 新增 Vault 核心功能 ===
-    
+
     /// 初始化新的金库
     pub fn initialize_vault(
         ctx: Context<InitializeVault>,
@@ -52,12 +52,12 @@ pub mod mars {
     ) -> Result<()> {
         InitializeVault::process_instruction(ctx, vault_id, platform_fee_bps)
     }
-    
+
     /// 用户存款到金库
     pub fn vault_deposit(ctx: Context<VaultDeposit>, amount: u64) -> Result<()> {
         VaultDeposit::process_instruction(ctx, amount)
     }
-    
+
     /// 用户从金库提款
     pub fn vault_withdraw(ctx: Context<VaultWithdraw>, shares_amount: u64) -> Result<()> {
         VaultWithdraw::process_instruction(ctx, shares_amount)
@@ -146,7 +146,7 @@ pub mod mars {
     pub fn claim_fees(ctx: Context<ClaimFees>, amount: u64, fee_type: FeeType) -> Result<()> {
         ClaimFees::process_instruction(ctx, amount, fee_type)
     }
-    
+
     /// 管理员提取 Vault 所有累积的费用
     pub fn claim_all_fees(ctx: Context<ClaimFees>) -> Result<()> {
         ClaimFees::claim_all_fees(ctx)
@@ -219,10 +219,7 @@ pub mod mars {
     }
 
     // Kamino Farm质押: 将vault shares质押到farm赚取奖励
-    pub fn kamino_stake_in_farm(
-        ctx: Context<KaminoStakeInFarm>,
-        shares_amount: u64,
-    ) -> Result<()> {
+    pub fn kamino_stake_in_farm(ctx: Context<KaminoStakeInFarm>, shares_amount: u64) -> Result<()> {
         handler_kamino_stake_in_farm(ctx, shares_amount)
     }
 
@@ -236,9 +233,7 @@ pub mod mars {
     }
 
     // Kamino Farm取消质押: 第二步，从farm取回已unstake的shares到钱包
-    pub fn kamino_unstake_from_farm(
-        ctx: Context<KaminoUnstakeFromFarm>,
-    ) -> Result<()> {
+    pub fn kamino_unstake_from_farm(ctx: Context<KaminoUnstakeFromFarm>) -> Result<()> {
         handler_kamino_unstake_from_farm(ctx)
     }
 
@@ -249,6 +244,4 @@ pub mod mars {
     ) -> Result<()> {
         handler_kamino_deposit_and_stake(ctx, max_amount)
     }
-
-
 }

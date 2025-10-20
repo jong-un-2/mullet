@@ -1,7 +1,7 @@
-use anchor_lang::prelude::*;
-use crate::state::*;
-use crate::error::MarsError;
 use crate::constant::GLOBAL_SEED;
+use crate::error::MarsError;
+use crate::state::*;
+use anchor_lang::prelude::*;
 
 /// 更新平台费用钱包地址
 /// 只有管理员可以调用此指令
@@ -27,16 +27,13 @@ impl<'info> UpdatePlatformFeeWallet<'info> {
         new_platform_fee_wallet: Pubkey,
     ) -> Result<()> {
         let old_wallet = ctx.accounts.global_state.platform_fee_wallet;
-        
+
         msg!("🔧 Updating platform fee wallet");
         msg!("  Old wallet: {}", old_wallet);
         msg!("  New wallet: {}", new_platform_fee_wallet);
 
         // 验证新地址不是默认值
-        require!(
-            new_platform_fee_wallet != Pubkey::default(),
-            MarsError::InvalidParameter
-        );
+        require!(new_platform_fee_wallet != Pubkey::default(), MarsError::InvalidParameter);
 
         // 更新平台费用钱包地址
         ctx.accounts.global_state.platform_fee_wallet = new_platform_fee_wallet;

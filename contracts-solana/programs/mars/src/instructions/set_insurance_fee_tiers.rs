@@ -48,10 +48,16 @@ impl SetInsuranceFeeTiers<'_> {
         require!(insurance_fees.len() > 0, MarsError::EmptyArray);
 
         // Check for length mismatch
-        require!(threshold_length == insurance_fees.len(), MarsError::InsuranceFeeTiersLengthMismatched);
+        require!(
+            threshold_length == insurance_fees.len(),
+            MarsError::InsuranceFeeTiersLengthMismatched
+        );
 
         // Check for maximum allowed length
-        require!(threshold_length <= MAX_FEE_TIERS_LENGTH, MarsError::InsuranceFeeTiersLengthExceeded);
+        require!(
+            threshold_length <= MAX_FEE_TIERS_LENGTH,
+            MarsError::InsuranceFeeTiersLengthExceeded
+        );
 
         let insurance_fee_tiers = &mut ctx.accounts.insurance_fee_tiers;
         insurance_fee_tiers.length = threshold_length as u16;

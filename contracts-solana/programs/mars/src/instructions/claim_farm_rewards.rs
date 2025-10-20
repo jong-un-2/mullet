@@ -1,20 +1,19 @@
+use crate::constant::GLOBAL_SEED;
+use crate::error::MarsError;
+use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
-use crate::state::*;
-use crate::error::MarsError;
-use crate::constant::GLOBAL_SEED;
 
 /// 读取 Token Account 的 amount 字段（支持 SPL Token 和 Token-2022）
 /// Token Account 布局：mint(32) + owner(32) + amount(8) + ...
 fn get_token_account_amount(account: &UncheckedAccount) -> Result<u64> {
     let data = account.try_borrow_data()?;
     require!(data.len() >= 72, MarsError::InvalidTokenAccount);
-    
+
     // amount 字段在偏移量 64 处（32 bytes mint + 32 bytes owner）
-    let amount_bytes: [u8; 8] = data[64..72]
-        .try_into()
-        .map_err(|_| MarsError::InvalidTokenAccount)?;
-    
+    let amount_bytes: [u8; 8] =
+        data[64..72].try_into().map_err(|_| MarsError::InvalidTokenAccount)?;
+
     Ok(u64::from_le_bytes(amount_bytes))
 }
 
@@ -115,42 +114,29 @@ impl<'info> ClaimFarmRewards<'info> {
         msg!("🎁 Starting claim farm rewards (reward index: {})", reward_index);
 
         // Validate global_state and vault_state are properly initialized
-        require!(
-            ctx.accounts.global_state.admin != Pubkey::default(),
-            MarsError::OnlyAdmin
-        );
-        require!(
-            ctx.accounts.vault_state.admin != Pubkey::default(),
-            MarsError::InvalidAdmin
-        );
+        require!(ctx.accounts.global_state.admin != Pubkey::default(), MarsError::OnlyAdmin);
+        require!(ctx.accounts.vault_state.admin != Pubkey::default(), MarsError::InvalidAdmin);
 
         // 验证 platform_fee_ata 的所有权
         // 读取 platform_fee_ata 的 owner 字段（偏移量 32，即 mint 之后）
         let platform_fee_data = ctx.accounts.platform_fee_ata.try_borrow_data()?;
-        require!(
-            platform_fee_data.len() >= 72,
-            MarsError::InvalidTokenAccount
-        );
-        
-        let platform_fee_owner_bytes: [u8; 32] = platform_fee_data[32..64]
-            .try_into()
-            .map_err(|_| MarsError::InvalidTokenAccount)?;
+        require!(platform_fee_data.len() >= 72, MarsError::InvalidTokenAccount);
+
+        let platform_fee_owner_bytes: [u8; 32] =
+            platform_fee_data[32..64].try_into().map_err(|_| MarsError::InvalidTokenAccount)?;
         let platform_fee_owner = Pubkey::new_from_array(platform_fee_owner_bytes);
-        
+
         // 验证 platform_fee_ata 的所有者必须是 global_state 中设置的平台费用钱包
         require!(
             platform_fee_owner == ctx.accounts.global_state.platform_fee_wallet,
             MarsError::InvalidPlatformFeeAccount
         );
-        
+
         msg!("✅ Platform fee account verified: owner = {}", platform_fee_owner);
         drop(platform_fee_data); // 释放 borrow
 
         // 检查 vault 是否冻结
-        require!(
-            !ctx.accounts.global_state.frozen,
-            MarsError::GlobalStateFrozen
-        );
+        require!(!ctx.accounts.global_state.frozen, MarsError::GlobalStateFrozen);
 
         // 记录领取前的奖励余额（手动读取 Token Account）
         let reward_before = get_token_account_amount(&ctx.accounts.user_reward_ata)?;
@@ -170,16 +156,16 @@ impl<'info> ClaimFarmRewards<'info> {
         // 9: scopePrices (readonly, optional)
         // 10: tokenProgram (readonly)
         let cpi_accounts = vec![
-            AccountMeta::new(ctx.accounts.user.key(), true),                          // 0: owner
-            AccountMeta::new(ctx.accounts.user_farm.key(), false),                    // 1: userState
-            AccountMeta::new(ctx.accounts.farm_state.key(), false),                   // 2: farmState
-            AccountMeta::new_readonly(ctx.accounts.global_config.key(), false),       // 3: globalConfig
-            AccountMeta::new_readonly(ctx.accounts.reward_mint.key(), false),         // 4: rewardMint
-            AccountMeta::new(ctx.accounts.user_reward_ata.key(), false),              // 5: userRewardAta
-            AccountMeta::new(ctx.accounts.reward_vault.key(), false),                 // 6: rewardsVault
-            AccountMeta::new(ctx.accounts.treasury_vault.key(), false),               // 7: rewardsTreasuryVault
-            AccountMeta::new_readonly(ctx.accounts.farm_authority.key(), false),      // 8: farmVaultsAuthority
-            AccountMeta::new_readonly(ctx.accounts.scope_prices.key(), false),        // 9: scopePrices
+            AccountMeta::new(ctx.accounts.user.key(), true), // 0: owner
+            AccountMeta::new(ctx.accounts.user_farm.key(), false), // 1: userState
+            AccountMeta::new(ctx.accounts.farm_state.key(), false), // 2: farmState
+            AccountMeta::new_readonly(ctx.accounts.global_config.key(), false), // 3: globalConfig
+            AccountMeta::new_readonly(ctx.accounts.reward_mint.key(), false), // 4: rewardMint
+            AccountMeta::new(ctx.accounts.user_reward_ata.key(), false), // 5: userRewardAta
+            AccountMeta::new(ctx.accounts.reward_vault.key(), false), // 6: rewardsVault
+            AccountMeta::new(ctx.accounts.treasury_vault.key(), false), // 7: rewardsTreasuryVault
+            AccountMeta::new_readonly(ctx.accounts.farm_authority.key(), false), // 8: farmVaultsAuthority
+            AccountMeta::new_readonly(ctx.accounts.scope_prices.key(), false),   // 9: scopePrices
             AccountMeta::new_readonly(ctx.accounts.reward_token_program.key(), false), // 10: tokenProgram
         ];
 
@@ -234,13 +220,13 @@ impl<'info> ClaimFarmRewards<'info> {
         } else {
             ctx.accounts.vault_state.platform_fee_bps as u64
         };
-        
+
         let platform_fee = reward_claimed
             .checked_mul(platform_fee_bps)
             .ok_or(MarsError::MathOverflow)?
             .checked_div(10_000)
             .ok_or(MarsError::MathOverflow)?;
-        
+
         let user_reward_after_fee = reward_claimed.saturating_sub(platform_fee);
 
         msg!("💰 Fee calculation:");
@@ -254,7 +240,7 @@ impl<'info> ClaimFarmRewards<'info> {
             let reward_mint_data = ctx.accounts.reward_mint.try_borrow_data()?;
             require!(reward_mint_data.len() >= 45, MarsError::InvalidTokenAccount);
             let decimals = reward_mint_data[44];
-            
+
             // 使用 TransferChecked 指令（支持 Token-2022 和 SPL Token）
             // TransferChecked instruction layout: [12, amount_bytes(8), decimals(1)]
             // 12 = TransferChecked instruction discriminator
@@ -265,10 +251,10 @@ impl<'info> ClaimFarmRewards<'info> {
             // 构建转账指令账户
             // TransferChecked accounts: source, mint, destination, authority
             let transfer_accounts = vec![
-                AccountMeta::new(ctx.accounts.user_reward_ata.key(), false),      // source
+                AccountMeta::new(ctx.accounts.user_reward_ata.key(), false), // source
                 AccountMeta::new_readonly(ctx.accounts.reward_mint.key(), false), // mint
-                AccountMeta::new(ctx.accounts.platform_fee_ata.key(), false),     // destination
-                AccountMeta::new_readonly(ctx.accounts.user.key(), true),         // authority
+                AccountMeta::new(ctx.accounts.platform_fee_ata.key(), false), // destination
+                AccountMeta::new_readonly(ctx.accounts.user.key(), true),    // authority
             ];
 
             let transfer_ix = solana_program::instruction::Instruction {
@@ -293,23 +279,23 @@ impl<'info> ClaimFarmRewards<'info> {
         }
 
         // 更新 vault_state 中的统计信息
-        ctx.accounts.vault_state.total_rewards_claimed = ctx
-            .accounts
-            .vault_state
-            .total_rewards_claimed
-            .saturating_add(reward_claimed);
-        
+        ctx.accounts.vault_state.total_rewards_claimed =
+            ctx.accounts.vault_state.total_rewards_claimed.saturating_add(reward_claimed);
+
         // 记录平台费
-        ctx.accounts.vault_state.total_platform_fee_collected = ctx
-            .accounts
-            .vault_state
-            .total_platform_fee_collected
-            .saturating_add(platform_fee);
+        ctx.accounts.vault_state.total_platform_fee_collected =
+            ctx.accounts.vault_state.total_platform_fee_collected.saturating_add(platform_fee);
 
         msg!("🎉 Claim farm rewards completed!");
-        msg!("  Total rewards claimed (lifetime): {}", ctx.accounts.vault_state.total_rewards_claimed);
+        msg!(
+            "  Total rewards claimed (lifetime): {}",
+            ctx.accounts.vault_state.total_rewards_claimed
+        );
         msg!("  Platform fee collected: {}", platform_fee);
-        msg!("  Total platform fees (lifetime): {}", ctx.accounts.vault_state.total_platform_fee_collected);
+        msg!(
+            "  Total platform fees (lifetime): {}",
+            ctx.accounts.vault_state.total_platform_fee_collected
+        );
 
         // 发出事件
         emit!(crate::events::FarmRewardsClaimedEvent {

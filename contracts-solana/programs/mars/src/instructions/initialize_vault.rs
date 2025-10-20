@@ -1,8 +1,8 @@
+use crate::constant::GLOBAL_SEED;
+use crate::error::MarsError;
+use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
-use crate::state::*;
-use crate::error::MarsError;
-use crate::constant::GLOBAL_SEED;
 
 #[derive(Accounts)]
 #[instruction(vault_id: [u8; 32])]
@@ -65,10 +65,7 @@ impl<'info> InitializeVault<'info> {
         msg!("  Admin: {}", ctx.accounts.admin.key());
 
         // 验证平台费率在合理范围内 (0-10000 = 0%-100%)
-        require!(
-            platform_fee_bps <= 10_000,
-            MarsError::InvalidParameter
-        );
+        require!(platform_fee_bps <= 10_000, MarsError::InvalidParameter);
 
         let vault_state = &mut ctx.accounts.vault_state;
         let bump = ctx.bumps.vault_state;

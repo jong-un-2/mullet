@@ -37,18 +37,18 @@ pub struct RemoveBridgeLiquidity<'info> {
     pub ata_admin: Box<Account<'info, TokenAccount>>,
 
     //  Needed to check vault authority
-    #[account(	
-        seeds = [VAULT_SEED],	
-        bump,	
+    #[account(
+        seeds = [VAULT_SEED],
+        bump,
     )]
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub vault: AccountInfo<'info>,
 
     //  USDC ata of vault
     #[account(
-        mut, 
-        associated_token::mint = usdc_mint, 
-        
+        mut,
+        associated_token::mint = usdc_mint,
+
         //  Authority is set to vault
         associated_token::authority = vault,
     )]
@@ -76,9 +76,7 @@ impl RemoveBridgeLiquidity<'_> {
         require!(
             balance_within_threshold(
                 current_balance,
-                current_balance
-                    .checked_sub(amount)
-                    .ok_or(MarsError::InvalidAmount)?,
+                current_balance.checked_sub(amount).ok_or(MarsError::InvalidAmount)?,
                 ctx.accounts.global_state.rebalance_threshold,
                 unclaimed_fees
             ),

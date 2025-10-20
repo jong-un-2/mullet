@@ -1,6 +1,6 @@
 use crate::*;
-use anchor_spl::token::{self, TokenAccount};
 use anchor_lang::solana_program::program::{invoke, invoke_signed};
+use anchor_spl::token::{self, TokenAccount};
 
 // transfer sol from PDA
 pub fn sol_transfer_with_signer<'a>(
@@ -10,7 +10,11 @@ pub fn sol_transfer_with_signer<'a>(
     signers: &[&[&[u8]]; 1],
     amount: u64,
 ) -> Result<()> {
-    let ix = anchor_lang::solana_program::system_instruction::transfer(source.key, destination.key, amount);
+    let ix = anchor_lang::solana_program::system_instruction::transfer(
+        source.key,
+        destination.key,
+        amount,
+    );
     invoke_signed(&ix, &[source, destination, system_program], signers)?;
     Ok(())
 }
@@ -22,7 +26,11 @@ pub fn sol_transfer_user<'a>(
     system_program: AccountInfo<'a>,
     amount: u64,
 ) -> Result<()> {
-    let ix = anchor_lang::solana_program::system_instruction::transfer(source.key, destination.key, amount);
+    let ix = anchor_lang::solana_program::system_instruction::transfer(
+        source.key,
+        destination.key,
+        amount,
+    );
     invoke(&ix, &[source, destination, system_program])?;
     Ok(())
 }
@@ -46,8 +54,11 @@ pub fn unwrap_and_transfer_sol<'a>(
     anchor_spl::token::close_account(CpiContext::new(token_program, close_ix))?;
 
     // Then transfer the SOL to receiver
-    let transfer_ix =
-        anchor_lang::solana_program::system_instruction::transfer(&authority.key(), &receiver.key(), amount);
+    let transfer_ix = anchor_lang::solana_program::system_instruction::transfer(
+        &authority.key(),
+        &receiver.key(),
+        amount,
+    );
 
     // Execute the transfer
     invoke(&transfer_ix, &[authority, receiver, system_program])?;
