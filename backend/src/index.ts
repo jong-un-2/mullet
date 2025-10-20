@@ -203,7 +203,7 @@ export default {
 								-- Users with recent deposits
 								SELECT DISTINCT "user" as user_address
 								FROM kaminodepositevent
-								WHERE _block_timestamp_ > EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days')
+								WHERE _block_timestamp_ > CAST(EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days') AS NUMERIC)
 								AND "user" IS NOT NULL
 								AND "user" != ''
 								AND "user" != 'neondb_owner'
@@ -213,7 +213,7 @@ export default {
 								-- Users with recent withdrawals
 								SELECT DISTINCT "user" as user_address
 								FROM kaminowithdrawevent
-								WHERE _block_timestamp_ > EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days')
+								WHERE _block_timestamp_ > CAST(EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days') AS NUMERIC)
 								AND "user" IS NOT NULL
 								AND "user" != ''
 								AND "user" != 'neondb_owner'
