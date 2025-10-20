@@ -845,6 +845,7 @@ fn parse_anchor_event_log(
 /// - farm_state: Pubkey (32 bytes)
 /// - reward_mint: Pubkey (32 bytes)
 /// - reward_amount: u64 (8 bytes)
+/// - platform_fee: u64 (8 bytes)
 /// - total_rewards_claimed: u64 (8 bytes)
 /// - timestamp: i64 (8 bytes)
 fn parse_farm_rewards_claimed_event(
@@ -853,7 +854,7 @@ fn parse_farm_rewards_claimed_event(
     slot: u64,
     timestamp: i64,
 ) -> Option<VaultEvent> {
-    if data.len() < 32 + 32 + 32 + 32 + 8 + 8 + 8 {
+    if data.len() < 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 {
         return None;
     }
     
@@ -879,6 +880,10 @@ fn parse_farm_rewards_claimed_event(
     let reward_amount = u64::from_le_bytes(data[offset..offset+8].try_into().ok()?);
     offset += 8;
     
+    // Parse platform_fee (8 bytes)
+    let platform_fee = u64::from_le_bytes(data[offset..offset+8].try_into().ok()?);
+    offset += 8;
+    
     // Parse total_rewards_claimed (8 bytes)
     let total_rewards_claimed = u64::from_le_bytes(data[offset..offset+8].try_into().ok()?);
     offset += 8;
@@ -898,7 +903,7 @@ fn parse_farm_rewards_claimed_event(
                 farm_state,
                 reward_mint,
                 reward_amount,
-                platform_fee: 0,  // 将从事件日志中解析，这里先设为0
+                platform_fee,
                 total_rewards_claimed,
                 timestamp,
             },
