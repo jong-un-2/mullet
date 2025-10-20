@@ -101,10 +101,10 @@ anchor idl upgrade -f target/idl/mars.json <PROGRAM_ID>
 
 ```bash
 # 初次上传
-anchor idl init -f target/idl/mars.json 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
+anchor idl init -f target/idl/mars.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 
 # 更新 IDL
-anchor idl upgrade -f target/idl/mars.json 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
+anchor idl upgrade -f target/idl/mars.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 ```
 
 ### 2.3 从链上下载 IDL（验证上传）
@@ -114,7 +114,7 @@ anchor idl upgrade -f target/idl/mars.json 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZ
 anchor idl fetch -o ./downloaded-idl.json <PROGRAM_ID>
 
 # 下载我们的合约 IDL
-anchor idl fetch -o ./downloaded-idl.json 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
+anchor idl fetch -o ./downloaded-idl.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 ```
 
 ### 2.4 删除链上 IDL（如需要）
@@ -146,8 +146,8 @@ anchor build --verifiable
 ```bash
 solana-verify verify-from-repo \
   --remote \
-  -um \
-  --program-id 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD \
+  --program-id 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3 \
+  --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
   https://github.com/jong-un-1/mars \
   --library-name mars \
   --mount-path contracts-solana
@@ -155,8 +155,8 @@ solana-verify verify-from-repo \
 
 **参数说明：**
 - `--remote`: 使用远程构建（在云端构建）
-- `-um`: 使用主网 (mainnet)
 - `--program-id`: 您的程序 ID
+- `--url`: Helius RPC URL（推荐使用）
 - `--library-name`: Cargo.toml 中的包名
 - `--mount-path`: 合约代码在仓库中的路径
 
@@ -165,8 +165,8 @@ solana-verify verify-from-repo \
 ```bash
 # 验证主网程序
 solana-verify verify-from-repo \
-  --url https://api.mainnet-beta.solana.com \
-  --program-id 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD \
+  --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
+  --program-id 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3 \
   https://github.com/jong-un-1/mars \
   --library-name mars \
   --mount-path contracts-solana
@@ -174,7 +174,7 @@ solana-verify verify-from-repo \
 # 验证开发网程序
 solana-verify verify-from-repo \
   --url https://api.devnet.solana.com \
-  --program-id 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD \
+  --program-id 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3 \
   https://github.com/jong-un-1/mars \
   --library-name mars \
   --mount-path contracts-solana
@@ -192,8 +192,8 @@ solana-verify get-program-hash target/deploy/mars.so
 
 ```bash
 solana-verify get-program-hash \
-  --url https://api.mainnet-beta.solana.com \
-  6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
+  --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
+  9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 ```
 
 两个哈希应该匹配，证明链上代码与源代码一致。
@@ -208,17 +208,17 @@ solana-verify get-program-hash \
 
 #### Solana.fm
 ```
-https://solana.fm/address/6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD?cluster=mainnet-alpha
+https://solana.fm/address/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3?cluster=mainnet-alpha
 ```
 
 #### Solscan
 ```
-https://solscan.io/account/6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
+https://solscan.io/account/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 ```
 
 #### SolanaFM Explorer
 ```
-https://explorer.solana.com/address/6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
+https://explorer.solana.com/address/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 ```
 
 ### 4.2 验证程序 API
@@ -227,7 +227,7 @@ https://explorer.solana.com/address/6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
 
 ```bash
 # 查看 Otter Sec 的验证程序 API
-curl https://verify.osec.io/status/6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
+curl https://verify.osec.io/status/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 ```
 
 API 仓库：https://github.com/otter-sec/solana-verified-programs-api
@@ -256,7 +256,7 @@ anchor deploy --provider.cluster mainnet
 ### 步骤 3：上传 IDL
 
 ```bash
-anchor idl init -f target/idl/mars.json 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD
+anchor idl init -f target/idl/mars.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 ```
 
 ### 步骤 4：执行可验证构建
@@ -270,8 +270,8 @@ anchor build --verifiable
 ```bash
 solana-verify verify-from-repo \
   --remote \
-  -um \
-  --program-id 6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD \
+  --program-id 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3 \
+  --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
   https://github.com/jong-un-1/mars \
   --library-name mars \
   --mount-path contracts-solana
@@ -285,20 +285,21 @@ solana-verify verify-from-repo \
 
 ## 6. 常见问题
 
-### Q1: Docker 镜像拉取失败？
+### Q1: 验证失败，哈希不匹配？
 
-**方案 A：使用 GitHub Codespaces**
-```bash
-# Codespaces 有良好的网络环境
-gh codespace create
-gh codespace ssh
-```
+确保使用相同的代码版本和构建环境：
 
-**方案 B：使用代理**
 ```bash
-export https_proxy=http://127.0.0.1:7890
-export http_proxy=http://127.0.0.1:7890
-docker pull solanafoundation/anchor:v0.32.1
+# 1. 检查本地和链上的哈希
+solana-verify get-program-hash target/deploy/mars.so
+solana-verify get-program-hash --url <RPC_URL> <PROGRAM_ID>
+
+# 2. 如果不匹配，重新部署程序
+anchor build
+anchor upgrade target/deploy/mars.so --program-id <ID>
+
+# 3. 重新验证
+solana-verify verify-from-repo --remote --program-id <ID> ...
 ```
 
 ### Q2: IDL 上传失败？
@@ -341,10 +342,12 @@ anchor --version
 
 ## 8. 项目信息
 
-- **Program ID**: `6uwR1ALH4peF5Xs1AMYEmmuPX9Wz5PaTqiNXZA2TKuXD`
+- **Program ID**: `9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3`
 - **仓库**: https://github.com/jong-un-1/mars
 - **合约路径**: `contracts-solana`
 - **程序名称**: `mars`
+- **部署时间**: 2025-10-20
+- **RPC**: Helius (https://mainnet.helius-rpc.com)
 
 ---
 
@@ -361,15 +364,16 @@ anchor idl upgrade -f target/idl/mars.json <PROGRAM_ID>
 anchor idl fetch -o ./idl.json <PROGRAM_ID>
 
 # 验证
-solana-verify verify-from-repo --remote -um \
+solana-verify verify-from-repo --remote \
   --program-id <PROGRAM_ID> \
+  --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
   https://github.com/jong-un-1/mars \
   --library-name mars \
   --mount-path contracts-solana
 
 # 获取哈希
 solana-verify get-program-hash target/deploy/mars.so
-solana-verify get-program-hash --url <RPC_URL> <PROGRAM_ID>
+solana-verify get-program-hash --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" <PROGRAM_ID>
 ```
 
 ---
