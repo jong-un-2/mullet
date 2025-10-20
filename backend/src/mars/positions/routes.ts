@@ -33,21 +33,101 @@ app.get('/:userAddress', async (c) => {
     const sql = neon(c.env.NEON_DATABASE_URL);
     
     // Query cached positions from database
-    const positions = await sql`
+    let positions = await sql`
       SELECT * FROM mars_user_positions
       WHERE user_address = ${userAddress}
       AND status = 'active'
       ORDER BY last_fetch_time DESC
     `;
 
+    // If no cached positions, fetch live from blockchain
     if (positions.length === 0) {
-      return c.json({
-        success: true,
-        data: {
-          positions: [],
-          message: 'No positions found. Data will be available after next sync.'
+      console.log(`🔍 No cached positions for ${userAddress}, fetching live data...`);
+      
+      try {
+        const collector = await getUserPositionsCollector(c.env.SOLANA_RPC_URL);
+        const livePositions = await collector.fetchUserPositions(userAddress);
+        
+        if (livePositions.length === 0) {
+          return c.json({
+            success: true,
+            data: {
+              positions: [],
+              message: 'No positions found for this user.'
+            }
+          });
         }
-      });
+        
+        // Save to database for future requests
+        for (const position of livePositions) {
+          await sql`
+            INSERT INTO mars_user_positions (
+              id, user_address, vault_address, protocol, strategy_address, strategy_name,
+              base_token, base_token_mint,
+              total_shares, total_deposited, total_withdrawn, realized_pnl,
+              current_value, unrealized_pnl, interest_earned, daily_interest_usd,
+              apr, apy, lending_apy, incentives_apy, total_apy,
+              tvl, liquidity_depth,
+              reward_tokens, pending_rewards, total_rewards_claimed, last_reward_claim,
+              risk_level, status,
+              first_deposit_time, last_activity_time, last_fetch_time, updated_at
+            ) VALUES (
+              ${position.id}, ${position.userAddress}, ${position.vaultAddress},
+              ${position.protocol}, ${position.strategyAddress}, ${position.strategyName},
+              ${position.baseToken}, ${position.baseTokenMint},
+              ${position.totalShares}, ${position.totalSupplied}, '0', '0',
+              ${position.currentValue}, ${position.unrealizedPnl}, ${position.interestEarned}, ${position.dailyInterestUSD},
+              ${position.totalAPY}, ${position.totalAPY}, ${position.lendingAPY}, ${position.incentivesAPY}, ${position.totalAPY},
+              ${position.tvl}, ${position.liquidityDepth},
+              ${JSON.stringify(position.rewards)},
+              ${JSON.stringify(position.pendingRewards)},
+              ${JSON.stringify(position.totalRewardsClaimed)},
+              ${position.lastRewardClaim},
+              ${position.riskLevel}, ${position.status},
+              ${position.firstDepositTime}, ${position.lastActivityTime},
+              ${position.lastFetchTime}, NOW()
+            )
+            ON CONFLICT (id) DO UPDATE SET
+              total_shares = EXCLUDED.total_shares,
+              total_deposited = EXCLUDED.total_deposited,
+              current_value = EXCLUDED.current_value,
+              unrealized_pnl = EXCLUDED.unrealized_pnl,
+              interest_earned = EXCLUDED.interest_earned,
+              daily_interest_usd = EXCLUDED.daily_interest_usd,
+              apr = EXCLUDED.apr,
+              apy = EXCLUDED.apy,
+              lending_apy = EXCLUDED.lending_apy,
+              incentives_apy = EXCLUDED.incentives_apy,
+              total_apy = EXCLUDED.total_apy,
+              tvl = EXCLUDED.tvl,
+              reward_tokens = EXCLUDED.reward_tokens,
+              pending_rewards = EXCLUDED.pending_rewards,
+              base_token = EXCLUDED.base_token,
+              base_token_mint = EXCLUDED.base_token_mint,
+              strategy_name = EXCLUDED.strategy_name,
+              last_activity_time = EXCLUDED.last_activity_time,
+              last_fetch_time = EXCLUDED.last_fetch_time,
+              updated_at = NOW()
+          `;
+        }
+        
+        console.log(`✅ Saved ${livePositions.length} live positions to database`);
+        
+        // Reload positions from database after saving
+        positions = await sql`
+          SELECT * FROM mars_user_positions
+          WHERE user_address = ${userAddress}
+          AND status = 'active'
+          ORDER BY last_fetch_time DESC
+        `;
+      } catch (error) {
+        console.error('Failed to fetch live positions:', error);
+        return c.json({
+          success: false,
+          error: 'Failed to fetch live positions',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        }, 500);
+      }
     }
 
     // Transform database rows to API response format
