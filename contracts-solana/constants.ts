@@ -3,9 +3,14 @@
 
 import { PublicKey } from "@solana/web3.js";
 
-// Mars Program ID
-// Mars Program ID （Verified build with Cargo.lock）
-export const MARS_PROGRAM_ID = "9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3";
+// ------------------------
+// Mars Protocol Constants
+// ------------------------
+
+// Program ID (from declare_id! macro)
+export const MARS_PROGRAM_ID = new PublicKey(
+  "DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP"
+);
 
 // Kamino 集成
 export const KAMINO_V2_PROGRAM = new PublicKey("KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd");

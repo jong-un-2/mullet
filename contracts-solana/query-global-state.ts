@@ -5,7 +5,7 @@ import { readFileSync } from "fs";
 import { Mars } from "./target/types/mars";
 
 const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
-const PROGRAM_ID = "9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3";
+const PROGRAM_ID = "DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP";
 
 async function main() {
   const connection = new Connection(RPC_URL, "confirmed");

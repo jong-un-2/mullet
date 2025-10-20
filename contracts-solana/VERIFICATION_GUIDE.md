@@ -101,10 +101,10 @@ anchor idl upgrade -f target/idl/mars.json <PROGRAM_ID>
 
 ```bash
 # 初次上传
-anchor idl init -f target/idl/mars.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
+anchor idl init -f target/idl/mars.json DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP
 
 # 更新 IDL
-anchor idl upgrade -f target/idl/mars.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
+anchor idl upgrade -f target/idl/mars.json DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP
 ```
 
 ### 2.3 从链上下载 IDL（验证上传）
@@ -114,7 +114,7 @@ anchor idl upgrade -f target/idl/mars.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybx
 anchor idl fetch -o ./downloaded-idl.json <PROGRAM_ID>
 
 # 下载我们的合约 IDL
-anchor idl fetch -o ./downloaded-idl.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
+anchor idl fetch -o ./downloaded-idl.json DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP
 ```
 
 ### 2.4 删除链上 IDL（如需要）
@@ -146,7 +146,7 @@ anchor build --verifiable
 ```bash
 solana-verify verify-from-repo \
   --remote \
-  --program-id 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3 \
+  --program-id DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP \
   --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
   https://github.com/jong-un-1/mars \
   --library-name mars \
@@ -166,7 +166,7 @@ solana-verify verify-from-repo \
 # 验证主网程序
 solana-verify verify-from-repo \
   --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
-  --program-id 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3 \
+  --program-id DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP \
   https://github.com/jong-un-1/mars \
   --library-name mars \
   --mount-path contracts-solana
@@ -174,7 +174,7 @@ solana-verify verify-from-repo \
 # 验证开发网程序
 solana-verify verify-from-repo \
   --url https://api.devnet.solana.com \
-  --program-id 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3 \
+  --program-id DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP \
   https://github.com/jong-un-1/mars \
   --library-name mars \
   --mount-path contracts-solana
@@ -193,7 +193,7 @@ solana-verify get-program-hash target/deploy/mars.so
 ```bash
 solana-verify get-program-hash \
   --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
-  9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
+  DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP
 ```
 
 两个哈希应该匹配，证明链上代码与源代码一致。
@@ -208,17 +208,17 @@ solana-verify get-program-hash \
 
 #### Solana.fm
 ```
-https://solana.fm/address/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3?cluster=mainnet-alpha
+https://solana.fm/address/DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP?cluster=mainnet-alpha
 ```
 
 #### Solscan
 ```
-https://solscan.io/account/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
+https://solscan.io/account/DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP
 ```
 
 #### SolanaFM Explorer
 ```
-https://explorer.solana.com/address/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
+https://explorer.solana.com/address/DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP
 ```
 
 ### 4.2 验证程序 API
@@ -227,7 +227,7 @@ https://explorer.solana.com/address/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
 
 ```bash
 # 查看 Otter Sec 的验证程序 API
-curl https://verify.osec.io/status/9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
+curl https://verify.osec.io/status/DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP
 ```
 
 API 仓库：https://github.com/otter-sec/solana-verified-programs-api
@@ -256,7 +256,7 @@ anchor deploy --provider.cluster mainnet
 ### 步骤 3：上传 IDL
 
 ```bash
-anchor idl init -f target/idl/mars.json 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3
+anchor idl init -f target/idl/mars.json DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP
 ```
 
 ### 步骤 4：执行可验证构建
@@ -270,7 +270,7 @@ anchor build --verifiable
 ```bash
 solana-verify verify-from-repo \
   --remote \
-  --program-id 9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3 \
+  --program-id DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP \
   --url "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY" \
   https://github.com/jong-un-1/mars \
   --library-name mars \
@@ -342,7 +342,7 @@ anchor --version
 
 ## 8. 项目信息
 
-- **Program ID**: `9EMwepsivNVgPPfCzejZFmQ8b8gY9VmCZDybxUF8FDx3`
+- **Program ID**: `DVQQqngDP8hkALbHvPEJKT2Rb4wfiDnnryMkBE8cnJqP`
 - **仓库**: https://github.com/jong-un-1/mars
 - **合约路径**: `contracts-solana`
 - **程序名称**: `mars`
