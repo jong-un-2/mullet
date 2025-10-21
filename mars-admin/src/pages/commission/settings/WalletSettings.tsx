@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Card, Button, Space, message, Form, InputNumber, Input, Typography, Divider, Alert, Modal } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Button, Space, message, Form, InputNumber, Input, Typography, Divider, Alert, Modal, Spin } from 'antd';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
@@ -11,8 +11,8 @@ const { Title, Text, Paragraph } = Typography;
 
 // 智能合约常量
 const PROGRAM_ID = new PublicKey('Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9');
+const VAULT_ID = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK'); // Kamino PYUSD Vault
 const PYUSD_MINT = new PublicKey('2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo');
-const CURRENT_FEE_WALLET = 'A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6';
 
 const WalletSettings: React.FC = () => {
   const { connection } = useConnection();
@@ -20,7 +20,70 @@ const WalletSettings: React.FC = () => {
   const [feeForm] = Form.useForm();
   const [walletForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(false);
   const [txSignature, setTxSignature] = useState<string>('');
+  const [currentPlatformFee, setCurrentPlatformFee] = useState<number | null>(null);
+  const [currentFeeWallet, setCurrentFeeWallet] = useState<string>('');
+
+  // 从链上读取当前配置
+  const fetchOnChainData = async () => {
+    try {
+      setFetchingData(true);
+      
+      // 创建 Provider（不需要钱包签名）
+      const provider = new AnchorProvider(
+        connection,
+        wallet as any,
+        { commitment: 'confirmed' }
+      );
+      
+      const program = new Program(MarsIDL as any, provider);
+      
+      // 派生 vault state PDA
+      const [vaultStatePDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('vault-state'), VAULT_ID.toBuffer()],
+        PROGRAM_ID
+      );
+      
+      // 派生 global state PDA
+      const [globalStatePDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('mars-global-state-seed')],
+        PROGRAM_ID
+      );
+      
+      // 读取 vault state
+      const vaultState = await program.account.vaultState.fetch(vaultStatePDA);
+      const platformFeeBps = vaultState.platformFeeBps as number;
+      const platformFeePercent = platformFeeBps / 100;
+      
+      setCurrentPlatformFee(platformFeePercent);
+      feeForm.setFieldsValue({ platformFeeRate: platformFeePercent });
+      
+      // 读取 global state
+      const globalState = await program.account.globalState.fetch(globalStatePDA);
+      const feeWallet = globalState.platformFeeWallet.toBase58();
+      
+      setCurrentFeeWallet(feeWallet);
+      walletForm.setFieldsValue({ newFeeWallet: feeWallet });
+      
+      console.log('链上数据:', {
+        platformFeeBps,
+        platformFeePercent,
+        feeWallet
+      });
+      
+    } catch (error: any) {
+      console.error('读取链上数据失败:', error);
+      message.warning('无法读取链上配置，请检查网络连接');
+    } finally {
+      setFetchingData(false);
+    }
+  };
+  
+  // 组件加载时读取链上数据
+  useEffect(() => {
+    fetchOnChainData();
+  }, []);
 
   // 更新平台费率
   const handleUpdatePlatformFee = async () => {
@@ -40,9 +103,9 @@ const WalletSettings: React.FC = () => {
         return;
       }
 
-      // 派生 vault state PDA
+      // 派生 vault state PDA - 使用 VAULT_ID 而不是 PYUSD_MINT
       const [vaultStatePDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from('vault-state'), PYUSD_MINT.toBuffer()],
+        [Buffer.from('vault-state'), VAULT_ID.toBuffer()],
         PROGRAM_ID
       );
 
@@ -69,6 +132,9 @@ const WalletSettings: React.FC = () => {
 
       setTxSignature(tx);
       message.success({ content: `平台费率已更新为 ${values.platformFeeRate}%`, key: 'tx' });
+      
+      // 重新读取链上数据
+      await fetchOnChainData();
       
       // 显示交易链接
       Modal.success({
@@ -167,6 +233,9 @@ const WalletSettings: React.FC = () => {
         ),
       });
       
+      // 重新读取链上数据
+      await fetchOnChainData();
+      
     } catch (error: any) {
       console.error('更新失败:', error);
       message.error({ content: `更新失败: ${error.message}`, key: 'tx' });
@@ -227,15 +296,26 @@ const WalletSettings: React.FC = () => {
         <Card 
           title="平台费率设置"
           extra={
-            <Text type="secondary">
-              当前费率: 25% (2500 BPS)
-            </Text>
+            currentPlatformFee !== null ? (
+              <Text type="secondary">
+                链上当前费率: {currentPlatformFee}% ({Math.round(currentPlatformFee * 100)} BPS)
+              </Text>
+            ) : (
+              <Spin size="small" />
+            )
           }
         >
+          {fetchingData && (
+            <Alert
+              message="正在从链上读取当前配置..."
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
           <Form 
             form={feeForm} 
-            layout="vertical" 
-            initialValues={{ platformFeeRate: 25 }}
+            layout="vertical"
           >
             <Form.Item
               label="平台费率 (%)"
@@ -283,9 +363,13 @@ const WalletSettings: React.FC = () => {
         <Card 
           title="平台费用钱包"
           extra={
-            <Text type="secondary">
-              当前钱包: {CURRENT_FEE_WALLET.slice(0, 8)}...
-            </Text>
+            currentFeeWallet ? (
+              <Text type="secondary">
+                当前钱包: {currentFeeWallet.slice(0, 8)}...{currentFeeWallet.slice(-6)}
+              </Text>
+            ) : (
+              <Spin size="small" />
+            )
           }
         >
           <Form form={walletForm} layout="vertical">
@@ -306,14 +390,16 @@ const WalletSettings: React.FC = () => {
                 }
               ]}
               extra={
-                <Space direction="vertical" size="small" style={{ marginTop: 8 }}>
-                  <Text type="secondary">
-                    当前钱包地址: 
-                    <Text code copyable style={{ marginLeft: 8 }}>
-                      {CURRENT_FEE_WALLET}
+                currentFeeWallet ? (
+                  <Space direction="vertical" size="small" style={{ marginTop: 8 }}>
+                    <Text type="secondary">
+                      当前钱包地址: 
+                      <Text code copyable style={{ marginLeft: 8 }}>
+                        {currentFeeWallet}
+                      </Text>
                     </Text>
-                  </Text>
-                </Space>
+                  </Space>
+                ) : null
               }
             >
               <Input
