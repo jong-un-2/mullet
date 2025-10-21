@@ -47,7 +47,7 @@ const EMPTY_POSITION: UserVaultPosition = {
 };
 
 /**
- * 从后端获取用户 Kamino Vault 持仓
+ * 从后端获取用户 Mars Vault 持仓
  * 与原来的接口兼容，但数据来自后端缓存
  */
 export const useUserVaultPosition = (
@@ -85,7 +85,7 @@ export const useUserVaultPosition = (
           const kaminoData = response.data.data.kamino;
           const kaminoPositions = kaminoData?.positions || [];
           
-          // Find Kamino Vault position
+          // Find Mars Vault position (protocol: 'mars-vault')
           const vaultPosition = kaminoPositions.find((p: any) => p.protocol === 'mars-vault');
           
           if (vaultPosition) {
@@ -109,11 +109,11 @@ export const useUserVaultPosition = (
               loading: false,
             };
             
-            console.log('✅ Loaded Kamino position from backend:', formattedPosition);
+            console.log('✅ Loaded Mars Vault position from backend:', formattedPosition);
             setPosition(formattedPosition);
           } else {
             // No position found
-            console.log('⚠️ No Kamino vault position found');
+            console.log('⚠️ No Mars vault position found');
             setPosition({ ...EMPTY_POSITION, loading: false });
           }
         } else {
