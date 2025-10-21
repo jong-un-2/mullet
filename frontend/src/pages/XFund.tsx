@@ -1245,11 +1245,8 @@ const XFundPage = () => {
   const getCalendarDataFromEarnings = () => {
     const earningDetails = getEarningDetails();
     if (earningDetails.length === 0) {
-      console.log('No earning details available for calendar');
       return null;
     }
-
-    console.log('Processing earning details for calendar:', earningDetails.length, 'records');
 
     // Group earnings by date
     const dailyEarnings: Record<string, number> = {};
@@ -1259,12 +1256,6 @@ const XFundPage = () => {
     earningDetails.forEach(detail => {
       // Use the 'date' field from API which is already in ISO format
       const dateStr = new Date(detail.timestamp).toISOString().split('T')[0];
-      
-      console.log('Processing earning:', {
-        timestamp: detail.timestamp,
-        dateStr,
-        amount: detail.rewardAmount
-      });
       
       if (!dailyEarnings[dateStr]) {
         dailyEarnings[dateStr] = 0;
