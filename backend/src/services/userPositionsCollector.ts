@@ -178,8 +178,15 @@ export class UserPositionsCollector {
         vault
       );
       
+      console.log('📊 User shares for vault:', {
+        userAddr,
+        vaultAddr: PYUSD_VAULT_ADDRESS,
+        shares: userSharesForVault?.totalShares?.toString() || 'null'
+      });
+      
       if (!userSharesForVault || userSharesForVault.totalShares.isZero()) {
-        console.log('❌ No vault shares found for user');
+        console.log('❌ No vault shares found for user - checking if position exists in DB');
+        // Even if on-chain shares are 0, return empty to allow DB cleanup
         return positions;
       }
       

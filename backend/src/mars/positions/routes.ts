@@ -49,12 +49,34 @@ app.get('/:userAddress', async (c) => {
         const livePositions = await collector.fetchUserPositions(userAddress);
         
         if (livePositions.length === 0) {
+          console.log(`ℹ️ No live positions found for ${userAddress}`);
           return c.json({
             success: true,
             data: {
-              positions: [],
-              message: 'No positions found for this user.'
-            }
+              jupiter: {
+                protocol: 'jupiter',
+                totalPositions: 0,
+                totalValue: 0,
+                avgAPY: 0,
+                positions: []
+              },
+              kamino: {
+                protocol: 'kamino',
+                totalPositions: 0,
+                totalValue: 0,
+                avgAPY: 0,
+                positions: []
+              },
+              summary: {
+                totalProtocols: 0,
+                totalPositions: 0,
+                totalValue: 0,
+                avgAPY: 0
+              }
+            },
+            timestamp: new Date().toISOString(),
+            cached: false,
+            message: 'No positions found for this user.'
           });
         }
         
@@ -85,26 +107,26 @@ app.get('/:userAddress', async (c) => {
               ${position.firstDepositTime}, ${position.lastActivityTime},
               ${position.lastFetchTime}, NOW()
             )
-            ON CONFLICT (id) DO UPDATE SET
-              total_shares = EXCLUDED.total_shares,
-              total_deposited = EXCLUDED.total_deposited,
-              current_value = EXCLUDED.current_value,
-              unrealized_pnl = EXCLUDED.unrealized_pnl,
-              interest_earned = EXCLUDED.interest_earned,
-              daily_interest_usd = EXCLUDED.daily_interest_usd,
-              apy = EXCLUDED.apy,
-              lending_apy = EXCLUDED.lending_apy,
-              incentives_apy = EXCLUDED.incentives_apy,
-              total_apy = EXCLUDED.total_apy,
-              reward_tokens = EXCLUDED.reward_tokens,
-              pending_rewards = EXCLUDED.pending_rewards,
-              base_token = EXCLUDED.base_token,
-              base_token_mint = EXCLUDED.base_token_mint,
-              strategy_name = EXCLUDED.strategy_name,
-              last_activity_time = EXCLUDED.last_activity_time,
-              last_fetch_time = EXCLUDED.last_fetch_time,
-              updated_at = NOW()
-          `;
+          ON CONFLICT (user_address, vault_address) DO UPDATE SET
+            total_shares = EXCLUDED.total_shares,
+            total_deposited = EXCLUDED.total_deposited,
+            current_value = EXCLUDED.current_value,
+            unrealized_pnl = EXCLUDED.unrealized_pnl,
+            interest_earned = EXCLUDED.interest_earned,
+            daily_interest_usd = EXCLUDED.daily_interest_usd,
+            apy = EXCLUDED.apy,
+            lending_apy = EXCLUDED.lending_apy,
+            incentives_apy = EXCLUDED.incentives_apy,
+            total_apy = EXCLUDED.total_apy,
+            reward_tokens = EXCLUDED.reward_tokens,
+            pending_rewards = EXCLUDED.pending_rewards,
+            base_token = EXCLUDED.base_token,
+            base_token_mint = EXCLUDED.base_token_mint,
+            strategy_name = EXCLUDED.strategy_name,
+            last_activity_time = EXCLUDED.last_activity_time,
+            last_fetch_time = EXCLUDED.last_fetch_time,
+            updated_at = NOW()
+        `;
         }
         
         console.log(`✅ Saved ${livePositions.length} live positions to database`);
@@ -268,6 +290,27 @@ app.post('/:userAddress/refresh', async (c) => {
     // Save to database
     const sql = neon(c.env.NEON_DATABASE_URL);
     
+    // If no positions found on-chain, mark existing positions as inactive
+    if (positions.length === 0) {
+      console.log(`🗑️ No positions found on-chain for ${userAddress}, marking existing positions as inactive`);
+      await sql`
+        UPDATE mars_user_positions
+        SET status = 'inactive', updated_at = NOW()
+        WHERE user_address = ${userAddress}
+        AND status = 'active'
+      `;
+      
+      return c.json({
+        success: true,
+        data: {
+          positions: [],
+          refreshed: true,
+          message: 'No active positions found on-chain. Existing positions marked as inactive.',
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+    
     for (const position of positions) {
       await sql`
         INSERT INTO mars_user_positions (
@@ -294,7 +337,7 @@ app.post('/:userAddress/refresh', async (c) => {
           ${position.firstDepositTime}, ${position.lastActivityTime},
           ${position.lastFetchTime}, NOW()
         )
-        ON CONFLICT (id) DO UPDATE SET
+        ON CONFLICT (user_address, vault_address) DO UPDATE SET
           total_shares = EXCLUDED.total_shares,
           current_value = EXCLUDED.current_value,
           unrealized_pnl = EXCLUDED.unrealized_pnl,
