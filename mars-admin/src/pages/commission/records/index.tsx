@@ -28,10 +28,20 @@ const CommissionRecords: React.FC = () => {
 
   const columns: ColumnsType<CommissionRecord> = [
     {
-      title: '区块号',
+      title: '交易区块',
       dataIndex: 'blockNumber',
       key: 'blockNumber',
       width: 120,
+      render: (blockNumber: number) => (
+        <a 
+          href={`https://solscan.io/block/${blockNumber}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: '#1890ff', fontFamily: 'monospace' }}
+        >
+          {blockNumber}
+        </a>
+      ),
       sorter: (a, b) => a.blockNumber - b.blockNumber,
     },
     {
@@ -91,7 +101,7 @@ const CommissionRecords: React.FC = () => {
           pending: { color: 'processing', text: '处理中' },
           failed: { color: 'error', text: '失败' },
         };
-        const config = statusConfig[status as keyof typeof statusConfig];
+        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.success;
         return <Tag color={config.color}>{config.text}</Tag>;
       },
       filters: [

@@ -64,16 +64,17 @@ export function createNeonCommissionRoutes() {
 
         // 格式化数据，确保数值类型正确
         const formattedRecords = result.map((row: any) => ({
-          blockNumber: parseInt(row._block_number_) || 0,
-          blockTimestamp: row._block_timestamp_,
+          blockNumber: parseInt(row.blockNumber) || 0,
+          blockTimestamp: row.blockTimestamp,
           user: row.user,
-          vaultMint: row.vault_mint,
-          farmState: row.farm_state,
-          rewardMint: row.reward_mint,
+          vaultMint: row.vaultMint,
+          farmState: row.farmState,
+          rewardMint: row.rewardMint,
           rewardAmount: parseFloat(row.rewardAmount) || 0,
           platformFee: parseFloat(row.platformFee) || 0,
           totalRewardsClaimed: parseFloat(row.totalRewardsClaimed) || 0,
-          timestamp: row.timestamp
+          timestamp: row.timestamp,
+          status: row.status || 'success'
         }));
 
         return c.json({
