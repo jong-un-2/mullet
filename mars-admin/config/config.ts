@@ -6,6 +6,9 @@ import proxy from './proxy';
 import routes from './routes';
 const { REACT_APP_ENV = 'dev' } = process.env;
 
+// Webpack plugin for Buffer polyfill
+const webpack = require('webpack');
+
 /**
  * @name 使用公共路径
  * @description 部署时的路径，如果部署在非根目录下，需要配置这个变量
@@ -153,4 +156,37 @@ export default defineConfig({
   },
   esbuildMinifyIIFE: true,
   requestRecord: {},
+  /**
+   * @name webpack 配置
+   * @description 用于支持 Solana 钱包所需的 Buffer polyfill
+   */
+  chainWebpack(config: any) {
+    // 添加 Buffer polyfill
+    config.plugin('provide').use(webpack.ProvidePlugin, [
+      {
+        Buffer: ['buffer', 'Buffer'],
+        process: 'process/browser',
+      },
+    ]);
+    
+    // 配置 fallback
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      buffer: require.resolve('buffer'),
+      crypto: false,
+      stream: false,
+      assert: false,
+      http: false,
+      https: false,
+      os: false,
+      url: false,
+    };
+  },
+  /**
+   * @name 环境变量定义
+   * @description 用于在浏览器环境中使用 Anchor
+   */
+  define: {
+    'process.env.ANCHOR_BROWSER': true,
+  },
 });

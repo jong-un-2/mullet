@@ -8,6 +8,7 @@ import { history, Link } from '@umijs/max';
 import React from 'react';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
+import { WalletContextProvider } from '@/contexts/WalletContext';
 
 const isDev = process.env.NODE_ENV === 'development';
 const loginPath = '/user/login';
@@ -173,3 +174,15 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
 export const request = {
   ...errorConfig,
 };
+
+/**
+ * @name rootContainer 配置
+ * 用于包裹整个应用，添加全局上下文
+ */
+export function rootContainer(container: any) {
+  return (
+    <WalletContextProvider>
+      {container}
+    </WalletContextProvider>
+  );
+}
