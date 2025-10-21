@@ -46,11 +46,12 @@ const PortfolioPage = () => {
     return sum + (pos.unrealizedGain || 0);
   }, 0);
 
-  // Calculate total claimable rewards (sum of all pending rewards)
+  // Calculate total claimable rewards (use pendingRewards object, not rewards array)
   const totalClaimableRewards = allPositions.reduce((sum, pos: any) => {
-    if (pos.rewards && Array.isArray(pos.rewards)) {
-      const positionRewards = pos.rewards.reduce((rewardSum: number, reward: any) => {
-        return rewardSum + (reward.pendingBalance || 0);
+    if (pos.pendingRewards && typeof pos.pendingRewards === 'object') {
+      // pendingRewards is an object with tokenMint as key and amount as value
+      const positionRewards = Object.values(pos.pendingRewards).reduce((rewardSum: number, amount: any) => {
+        return rewardSum + (parseFloat(amount) || 0);
       }, 0);
       return sum + positionRewards;
     }
@@ -211,7 +212,7 @@ const PortfolioPage = () => {
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                 <Typography variant="h3" fontWeight={700} sx={{ color: '#10b981' }}>
-                  {avgAPY.toFixed(2)}%
+                  {(avgAPY * 100).toFixed(2)}%
                 </Typography>
                 <TrendingUpIcon sx={{ color: '#10b981', fontSize: 24 }} />
               </Box>
@@ -285,7 +286,7 @@ const PortfolioPage = () => {
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                               <Chip 
-                                label={`${position.entryAPY.toFixed(2)}% APY`}
+                                label={`${(position.entryAPY * 100).toFixed(2)}% APY`}
                                 size="small"
                                 sx={{ 
                                   backgroundColor: 'rgba(16, 185, 129, 0.2)',
@@ -344,7 +345,7 @@ const PortfolioPage = () => {
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                               <Chip 
-                                label={`${position.entryAPY.toFixed(2)}% APY`}
+                                label={`${(position.entryAPY * 100).toFixed(2)}% APY`}
                                 size="small"
                                 sx={{ 
                                   backgroundColor: 'rgba(16, 185, 129, 0.2)',
