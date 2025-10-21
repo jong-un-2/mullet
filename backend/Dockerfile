@@ -5,7 +5,7 @@
 # Mars vault events from Solana into PostgreSQL (Neon)
 # ============================================================
 
-# Using DaoCloud mirror to avoid Docker Hub connectivity issues
+# Using DaoCloud mirror for reliable connectivity
 FROM docker.m.daocloud.io/library/rust:1.90-slim-bookworm AS builder
 
 # Install dependencies
