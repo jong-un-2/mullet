@@ -11,16 +11,10 @@ interface WalletContextProviderProps {
 }
 
 export const WalletContextProvider: FC<WalletContextProviderProps> = ({ children }) => {
-  // 配置 Solana RPC endpoint
-  // 优先使用环境变量，否则使用 Helius mainnet RPC
-  const endpoint = useMemo(
-    () => 
-      process.env.SOLANA_RPC_URL || 
-      'https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY',
-    []
-  );
+  // RPC endpoint configuration - Using CLI's Helius API key
+  const endpoint = 'https://mainnet.helius-rpc.com/?api-key=e2ed9b0c-946c-4517-b414-360729bd6a77';
 
-  // 配置支持的钱包
+  // Configure supported wallets
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
