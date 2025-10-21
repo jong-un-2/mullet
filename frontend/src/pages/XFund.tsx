@@ -411,14 +411,17 @@ const XFundPage = () => {
         }
       };
 
+      // Get the token symbol without chain suffix (e.g., "USDC-Solana" -> "USDC")
+      const tokenSymbol = currentToken.symbol;
+      
       // 优先使用 Solana，其次 Ethereum
       const useSolana = solanaWallets.length > 0;
       const fromChainId = useSolana ? 1151111081099710 : 1; // Solana or Ethereum
       const toChainId = 1151111081099710; // PYUSD on Solana
       
-      const fromToken = useSolana ? TOKEN_ADDRESSES[selectedToken].solana : TOKEN_ADDRESSES[selectedToken].ethereum;
+      const fromToken = useSolana ? TOKEN_ADDRESSES[tokenSymbol].solana : TOKEN_ADDRESSES[tokenSymbol].ethereum;
       const toToken = TOKEN_ADDRESSES.PYUSD.solana;
-      const fromAmount = (amount * Math.pow(10, TOKEN_ADDRESSES[selectedToken].decimals)).toString();
+      const fromAmount = (amount * Math.pow(10, TOKEN_ADDRESSES[tokenSymbol].decimals)).toString();
       
       console.log(`� From: ${selectedToken} on ${useSolana ? 'Solana' : 'Ethereum'}`);
       console.log(`� To: PYUSD on Solana`);
