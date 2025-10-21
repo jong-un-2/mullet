@@ -1148,7 +1148,7 @@ const XFundPage = () => {
     // Use real Neon data if available
     if (vaultEarningDetailsData?.earningDetails && vaultEarningDetailsData.earningDetails.length > 0) {
       return vaultEarningDetailsData.earningDetails.map(detail => {
-        // 格式化日期为本地时间
+        // 格式化日期为本地时间 - use detail.date (ISO format)
         const date = new Date(detail.date);
         const formattedDate = date.toLocaleString('en-US', {
           month: 'short',
@@ -1165,7 +1165,7 @@ const XFundPage = () => {
           value: `$${(parseFloat(detail.rewardAmount) * 1).toFixed(2)}`, // Assuming $1 per token
           rewardMint: detail.rewardMint,
           totalClaimed: detail.totalRewardsClaimed,
-          timestamp: detail.timestamp,
+          timestamp: detail.date, // Use detail.date (ISO format) for calendar processing
           rewardAmount: parseFloat(detail.rewardAmount)
         };
       });
@@ -1179,8 +1179,11 @@ const XFundPage = () => {
   const getCalendarDataFromEarnings = () => {
     const earningDetails = getEarningDetails();
     if (earningDetails.length === 0) {
+      console.log('No earning details available for calendar');
       return null;
     }
+
+    console.log('Processing earning details for calendar:', earningDetails.length, 'records');
 
     // Group earnings by date
     const dailyEarnings: Record<string, number> = {};
@@ -1188,8 +1191,14 @@ const XFundPage = () => {
     const activeDaysSet = new Set<string>();
 
     earningDetails.forEach(detail => {
-      const timestamp = new Date(detail.timestamp);
-      const dateStr = timestamp.toISOString().split('T')[0];
+      // Use the 'date' field from API which is already in ISO format
+      const dateStr = new Date(detail.timestamp).toISOString().split('T')[0];
+      
+      console.log('Processing earning:', {
+        timestamp: detail.timestamp,
+        dateStr,
+        amount: detail.rewardAmount
+      });
       
       if (!dailyEarnings[dateStr]) {
         dailyEarnings[dateStr] = 0;
@@ -1206,6 +1215,14 @@ const XFundPage = () => {
       earnings,
       apy: 10.41 // Fixed APY for now
     }));
+
+    console.log('Calendar data generated:', {
+      year: parseInt(selectedYear),
+      month: parseInt(selectedMonth),
+      totalEarnings,
+      activeDays: activeDaysSet.size,
+      dailyBreakdown
+    });
 
     return {
       year: parseInt(selectedYear),

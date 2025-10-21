@@ -35,14 +35,8 @@ export function createNeonCommissionRoutes() {
             reward_mint as "rewardMint",
             reward_amount::numeric / 1000000.0 as "rewardAmount",
             total_rewards_claimed::numeric / 1000000.0 as "totalRewardsClaimed",
-            CASE 
-              WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-              ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
-            END as "platformFee",
-            CASE 
-              WHEN platform_fee > 0 THEN 'success'
-              ELSE 'success'
-            END as "status"
+            platform_fee::numeric / 1000000.0 as "platformFee",
+            'success' as "status"
           FROM farmrewardsclaimedevent 
           WHERE 1=1 
           ${startDate ? sql`AND _block_timestamp_ >= ${startDate}` : sql``}
@@ -109,18 +103,8 @@ export function createNeonCommissionRoutes() {
         const result = await sql`
           SELECT 
             COUNT(*) as "totalTransactions",
-            COALESCE(SUM(
-              CASE 
-                WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
-              END
-            ), 0) as "totalFee",
-            COALESCE(AVG(
-              CASE 
-                WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
-              END
-            ), 0) as "avgFee",
+            COALESCE(SUM(platform_fee::numeric / 1000000.0), 0) as "totalFee",
+            COALESCE(AVG(platform_fee::numeric / 1000000.0), 0) as "avgFee",
             COUNT(DISTINCT "user") as "activeUsers"
           FROM farmrewardsclaimedevent 
           WHERE 1=1 ${startDate ? sql`AND _block_timestamp_ >= ${startDate}` : sql``} ${endDate ? sql`AND _block_timestamp_ <= ${endDate}` : sql``}
@@ -164,12 +148,7 @@ export function createNeonCommissionRoutes() {
           SELECT 
             "user",
             COUNT(*) as "transactionCount",
-            COALESCE(SUM(
-              CASE 
-                WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
-              END
-            ), 0) as "totalFee",
+            COALESCE(SUM(platform_fee::numeric / 1000000.0), 0) as "totalFee",
             MAX(_block_timestamp_) as "lastTransaction"
           FROM farmrewardsclaimedevent 
           WHERE 1=1 
@@ -233,26 +212,16 @@ export function createNeonCommissionRoutes() {
       return await withDatabase(c.env as any, async (sql) => {
         const result = await sql`
           SELECT 
-            TO_CHAR(_block_timestamp_, ${dateFormat}) as date,
+            DATE_TRUNC(${timeUnit}, _block_timestamp_) as "date",
             COUNT(*) as "transactionCount",
-            COALESCE(SUM(
-              CASE 
-                WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
-              END
-            ), 0) as "totalFee",
-            COALESCE(AVG(
-              CASE 
-                WHEN platform_fee > 0 THEN platform_fee::numeric / 1000000.0
-                ELSE (total_rewards_claimed::numeric * 0.25) / 1000000.0
-              END
-            ), 0) as "avgFee"
+            COALESCE(SUM(platform_fee::numeric / 1000000.0), 0) as "totalFee",
+            COALESCE(AVG(platform_fee::numeric / 1000000.0), 0) as "avgFee"
           FROM farmrewardsclaimedevent 
-          WHERE 1=1
+          WHERE 1=1 
           ${startDate ? sql`AND _block_timestamp_ >= ${startDate}` : sql``}
           ${endDate ? sql`AND _block_timestamp_ <= ${endDate}` : sql``}
-          GROUP BY date 
-          ORDER BY date
+          GROUP BY "date" 
+          ORDER BY "date" ASC
         `;
 
         // 格式化趋势数据
