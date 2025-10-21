@@ -158,15 +158,10 @@ export const marsUserPositions = pgTable('mars_user_positions', {
   dailyInterestUSD: decimal('daily_interest_usd', { precision: 30, scale: 18 }), // Expected daily interest in USD
   
   // APY breakdown
-  apr: decimal('apr', { precision: 10, scale: 8 }), // Annual Percentage Rate (support higher precision)
   apy: decimal('apy', { precision: 10, scale: 8 }), // Annual Percentage Yield (with compounding)
   lendingAPY: decimal('lending_apy', { precision: 10, scale: 8 }), // Lending yield component
   incentivesAPY: decimal('incentives_apy', { precision: 10, scale: 8 }), // Incentives/rewards component
   totalAPY: decimal('total_apy', { precision: 10, scale: 8 }), // Total APY (lending + incentives)
-  
-  // TVL and liquidity
-  tvl: decimal('tvl', { precision: 30, scale: 18 }), // Total Value Locked in strategy
-  liquidityDepth: decimal('liquidity_depth', { precision: 30, scale: 18 }), // Available liquidity for withdrawal
   
   // Rewards tracking
   pendingRewards: text('pending_rewards'), // JSON object: { tokenMint: amount }
@@ -188,6 +183,7 @@ export const marsUserPositions = pgTable('mars_user_positions', {
   protocolIdx: index('mars_positions_protocol_idx').on(table.protocol),
   statusIdx: index('mars_positions_status_idx').on(table.status),
   lastFetchIdx: index('mars_positions_last_fetch_idx').on(table.lastFetchTime),
+  lastActivityIdx: index('mars_positions_last_activity_idx').on(table.lastActivityTime),
   userVaultUnique: uniqueIndex('mars_positions_user_vault_unique').on(table.userAddress, table.vaultAddress),
 }));
 

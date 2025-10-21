@@ -36,7 +36,7 @@ import { checkBalance } from '../services/balanceService';
 import { useVaultTransactions, useVaultEarningDetails } from '../hooks/useVaultData';
 import { useVaultHistoricalData } from '../hooks/useVaultHistoricalData';
 import { useMarsContract } from '../hooks/useMarsContract';
-import { useUserVaultPosition } from '../hooks/useUserVaultPosition';
+import { useUserVaultPosition, refreshUserPositions } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
 import { TokenIcon } from '../components/ChainIcons';
 import { SOLANA_CHAIN_ID, SUPPORTED_CHAINS } from '../services/marsLiFiService';
@@ -567,8 +567,17 @@ const XFundPage = () => {
         setDepositAmount('');
         
         // 触发余额和持仓刷新
-        setTimeout(() => {
+        setTimeout(async () => {
           console.log('🔄 Refreshing balances and position...');
+          // Force refresh from blockchain
+          if (userWalletAddress) {
+            try {
+              await refreshUserPositions(userWalletAddress);
+              console.log('✅ Position refreshed from blockchain');
+            } catch (error) {
+              console.error('⚠️ Failed to refresh position from blockchain:', error);
+            }
+          }
           setRefreshTrigger(prev => prev + 1);
         }, 2000); // 等待 2 秒确保链上数据更新
         
@@ -651,8 +660,17 @@ const XFundPage = () => {
         setWithdrawAmount('');
         
         // 触发余额和持仓刷新
-        setTimeout(() => {
+        setTimeout(async () => {
           console.log('🔄 Refreshing balances and position...');
+          // Force refresh from blockchain
+          if (userWalletAddress) {
+            try {
+              await refreshUserPositions(userWalletAddress);
+              console.log('✅ Position refreshed from blockchain');
+            } catch (error) {
+              console.error('⚠️ Failed to refresh position from blockchain:', error);
+            }
+          }
           setRefreshTrigger(prev => prev + 1);
         }, 2000); // 等待 2 秒确保链上数据更新
         
@@ -786,8 +804,17 @@ const XFundPage = () => {
       setWithdrawAmount('');
       
       // 触发余额和持仓刷新
-      setTimeout(() => {
+      setTimeout(async () => {
         console.log('🔄 Refreshing balances and position...');
+        // Force refresh from blockchain
+        if (userWalletAddress) {
+          try {
+            await refreshUserPositions(userWalletAddress);
+            console.log('✅ Position refreshed from blockchain');
+          } catch (error) {
+            console.error('⚠️ Failed to refresh position from blockchain:', error);
+          }
+        }
         setRefreshTrigger(prev => prev + 1);
       }, 2000); // 等待 2 秒确保链上数据更新
       
@@ -844,6 +871,19 @@ const XFundPage = () => {
         console.log('✅ Rewards claimed successfully!');
         setTxSignature(signature);
         setProgressMessage('Rewards claimed successfully!');
+        
+        // Force refresh position from blockchain
+        setTimeout(async () => {
+          if (userWalletAddress) {
+            try {
+              await refreshUserPositions(userWalletAddress);
+              console.log('✅ Position refreshed from blockchain after claim');
+            } catch (error) {
+              console.error('⚠️ Failed to refresh position from blockchain:', error);
+            }
+          }
+          setRefreshTrigger(prev => prev + 1);
+        }, 2000);
         
         setTimeout(() => {
           setShowProgress(false);
