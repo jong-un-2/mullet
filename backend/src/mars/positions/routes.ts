@@ -167,7 +167,7 @@ app.get('/:userAddress', async (c) => {
 
     // Group positions by protocol (jupiter, kamino, etc.)
     const jupiterPositions = transformedPositions.filter(p => p.protocol === 'jupiter');
-    const kaminoPositions = transformedPositions.filter(p => p.protocol === 'kamino-vault');
+    const kaminoPositions = transformedPositions.filter(p => p.protocol === 'mars-vault');
     
     // Format for frontend compatibility (matches mars/routes.ts format)
     const positionsData = {

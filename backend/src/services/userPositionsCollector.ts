@@ -50,7 +50,7 @@ export interface UserPosition {
   id: string;
   userAddress: string;
   vaultAddress: string;
-  protocol: 'kamino-vault' | 'kamino-lend' | 'jupiter' | 'mars';
+  protocol: 'mars-vault' | 'kamino-lend' | 'jupiter' | 'mars';
   strategyAddress: string;
   strategyName: string;
   
@@ -285,10 +285,10 @@ export class UserPositionsCollector {
       
       // 14. Build position object
       const position: UserPosition = {
-        id: `kamino-vault-${PYUSD_VAULT_ADDRESS}-${userAddr}`,
+        id: `mars-vault-${PYUSD_VAULT_ADDRESS}-${userAddr}`,
         userAddress: userAddr,
         vaultAddress: PYUSD_VAULT_ADDRESS,
-        protocol: 'kamino-vault',
+        protocol: 'mars-vault',
         strategyAddress: PYUSD_VAULT_ADDRESS,
         strategyName: 'PYUSD Vault',
         

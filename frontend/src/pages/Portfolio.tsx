@@ -1,10 +1,13 @@
 import {
   AccountBalanceWallet as WalletIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import {
   Box,
   Container,
   Typography,
+  Paper,
+  Chip,
 } from '@mui/material';
 import { useAccount } from 'wagmi';
 import { usePrivy } from '@privy-io/react-auth';
@@ -12,7 +15,7 @@ import { useWallets } from '@privy-io/react-auth/solana';
 import { useWallet } from '@solana/wallet-adapter-react';
 import Navigation from '../components/Navigation';
 
-import { getUserWalletAddress } from '../hooks/useMarsApi';
+import { getUserWalletAddress, useMarsUserPositions } from '../hooks/useMarsApi';
 
 const PortfolioPage = () => {
   const { address } = useAccount();
@@ -24,6 +27,35 @@ const PortfolioPage = () => {
   
   // Get user wallet address for Mars API (prioritize direct Solana connection)
   const userWalletAddress = getUserWalletAddress(address, solanaWallets, authenticated, user, solanaPublicKey);
+  
+  // Get Mars user positions
+  const { positions, loading: isLoading } = useMarsUserPositions(userWalletAddress);
+
+  // Calculate total net value from all positions
+  const totalNetValue = positions?.summary?.totalValue || 0;
+  const totalPositions = positions?.summary?.totalPositions || 0;
+  const avgAPY = positions?.summary?.avgAPY || 0;
+
+  // Calculate total interest earned (Fees & Interest)
+  const allPositions = [
+    ...(positions?.kamino?.positions || []),
+    ...(positions?.jupiter?.positions || [])
+  ];
+  const totalInterest = allPositions.reduce((sum, pos: any) => {
+    // unrealizedGain represents the interest/profit earned
+    return sum + (pos.unrealizedGain || 0);
+  }, 0);
+
+  // Calculate total claimable rewards (sum of all pending rewards)
+  const totalClaimableRewards = allPositions.reduce((sum, pos: any) => {
+    if (pos.rewards && Array.isArray(pos.rewards)) {
+      const positionRewards = pos.rewards.reduce((rewardSum: number, reward: any) => {
+        return rewardSum + (reward.pendingBalance || 0);
+      }, 0);
+      return sum + positionRewards;
+    }
+    return sum;
+  }, 0);
 
   // Debug wallet connection status
   console.log('🔍 Portfolio Wallet Status:', {
@@ -31,6 +63,8 @@ const PortfolioPage = () => {
     authenticated,
     solanaWalletsCount: solanaWallets.length,
     userWalletAddress,
+    positions,
+    totalNetValue,
     isAnyWalletConnected: address || authenticated || solanaWallets.length > 0 || !!solanaPublicKey
   });
 
@@ -119,66 +153,257 @@ const PortfolioPage = () => {
       
       <Box sx={{ position: 'relative', zIndex: 1 }}>
         <Navigation />
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-          {/* Coming Soon */}
-          <Box sx={{ 
-            textAlign: 'center', 
-            py: 12,
-            px: 3
-          }}>
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          {/* Portfolio Header */}
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
             <Typography 
-              variant="h2" 
+              variant="h3" 
               fontWeight={700} 
               sx={{ 
-                mb: 3, 
+                mb: 1, 
                 color: '#ffffff',
-                fontSize: { xs: '2.5rem', md: '3.5rem' },
-                textShadow: '0 4px 20px rgba(59, 130, 246, 0.3)'
+                fontSize: { xs: '2rem', md: '2.5rem' },
               }}
             >
               Portfolio
             </Typography>
             <Typography 
-              variant="h4" 
-              fontWeight={600} 
-              sx={{ 
-                mb: 2, 
-                color: '#60a5fa',
-                fontSize: { xs: '1.5rem', md: '2rem' }
-              }}
-            >
-              Coming Soon
-            </Typography>
-            <Typography 
               variant="body1" 
               sx={{ 
-                mb: 4, 
                 color: '#94a3b8',
-                maxWidth: 600,
-                mx: 'auto',
-                fontSize: { xs: '0.95rem', md: '1.1rem' },
-                lineHeight: 1.6
+                fontSize: { xs: '0.95rem', md: '1.05rem' },
               }}
             >
-              We're building a comprehensive portfolio management system. Track all your DeFi positions, earnings, and assets in one place.
+              Track all your Mars positions in one place
             </Typography>
-            <Box sx={{ 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: 2,
-              p: 3,
-              background: 'rgba(59, 130, 246, 0.1)',
+          </Box>
+
+          {/* Stats Cards */}
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, 
+            gap: 2, 
+            mb: 4 
+          }}>
+            {/* Net Value */}
+            <Paper sx={{
+              p: 2.5,
+              background: 'rgba(15, 23, 42, 0.8)',
               backdropFilter: 'blur(10px)',
-              borderRadius: 3,
-              border: '2px solid rgba(59, 130, 246, 0.3)',
-              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.2)'
+              border: '1px solid rgba(148, 163, 184, 0.1)',
+              borderRadius: 2,
             }}>
-              <WalletIcon sx={{ fontSize: 32, color: '#60a5fa' }} />
-              <Typography variant="body1" sx={{ color: '#e2e8f0', fontWeight: 500 }}>
-                Stay tuned for updates
+              <Typography variant="h3" fontWeight={700} sx={{ color: '#fff', mb: 0.5 }}>
+                ${totalNetValue.toFixed(2)}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                Net value
+              </Typography>
+            </Paper>
+
+            {/* Average APY */}
+            <Paper sx={{
+              p: 2.5,
+              background: 'rgba(15, 23, 42, 0.8)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(148, 163, 184, 0.1)',
+              borderRadius: 2,
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                <Typography variant="h3" fontWeight={700} sx={{ color: '#10b981' }}>
+                  {avgAPY.toFixed(2)}%
+                </Typography>
+                <TrendingUpIcon sx={{ color: '#10b981', fontSize: 24 }} />
+              </Box>
+              <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                Average APY
+              </Typography>
+            </Paper>
+
+            {/* Fees & Interest */}
+            <Paper sx={{
+              p: 2.5,
+              background: 'rgba(15, 23, 42, 0.8)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(148, 163, 184, 0.1)',
+              borderRadius: 2,
+            }}>
+              <Typography variant="h3" fontWeight={700} sx={{ color: totalInterest >= 0 ? '#10b981' : '#ef4444', mb: 0.5 }}>
+                {totalInterest >= 0 ? '+' : ''}${totalInterest.toFixed(2)}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                Fees & Interest
+              </Typography>
+            </Paper>
+
+            {/* Claimable Rewards */}
+            <Paper sx={{
+              p: 2.5,
+              background: 'rgba(15, 23, 42, 0.8)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(148, 163, 184, 0.1)',
+              borderRadius: 2,
+            }}>
+              <Typography variant="h3" fontWeight={700} sx={{ color: '#fff', mb: 0.5 }}>
+                {totalClaimableRewards < 0.01 && totalClaimableRewards > 0 ? '<' : ''}${totalClaimableRewards < 0.01 && totalClaimableRewards > 0 ? '0.01' : totalClaimableRewards.toFixed(2)}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                Claimable Rewards
+              </Typography>
+            </Paper>
+          </Box>
+
+          {/* Mars Positions Section */}
+          {positions && totalPositions > 0 ? (
+            <Box>
+              <Typography variant="h5" fontWeight={600} sx={{ color: '#fff', mb: 3 }}>
+                Mars Positions
+              </Typography>
+
+              {/* Kamino Positions */}
+              {positions.kamino.totalPositions > 0 && (
+                <Box sx={{ mb: 4 }}>
+                  
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {positions.kamino.positions.map((position, index) => (
+                      <Paper key={index} sx={{
+                        p: 3,
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(148, 163, 184, 0.1)',
+                        borderRadius: 2,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                        }
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 2 }}>
+                          <Box>
+                            <Typography variant="h6" fontWeight={600} sx={{ color: '#fff', mb: 1 }}>
+                              {position.asset || 'Unknown Asset'}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                              <Chip 
+                                label={`${position.entryAPY.toFixed(2)}% APY`}
+                                size="small"
+                                sx={{ 
+                                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                  color: '#10b981',
+                                  fontWeight: 500
+                                }}
+                              />
+                              <Chip 
+                                label={position.protocol}
+                                size="small"
+                                sx={{ 
+                                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                  color: '#60a5fa',
+                                  fontWeight: 500
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="h5" fontWeight={700} sx={{ color: '#fff' }}>
+                              ${position.currentValue.toFixed(2)}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: position.unrealizedGain >= 0 ? '#10b981' : '#ef4444' }}>
+                              {position.unrealizedGain >= 0 ? '+' : ''}${position.unrealizedGain.toFixed(2)}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Jupiter Positions */}
+              {positions.jupiter.totalPositions > 0 && (
+                <Box>
+                  
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {positions.jupiter.positions.map((position, index) => (
+                      <Paper key={index} sx={{
+                        p: 3,
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(148, 163, 184, 0.1)',
+                        borderRadius: 2,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          border: '1px solid rgba(168, 85, 247, 0.3)',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                        }
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 2 }}>
+                          <Box>
+                            <Typography variant="h6" fontWeight={600} sx={{ color: '#fff', mb: 1 }}>
+                              {position.asset || 'Unknown Asset'}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                              <Chip 
+                                label={`${position.entryAPY.toFixed(2)}% APY`}
+                                size="small"
+                                sx={{ 
+                                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                  color: '#10b981',
+                                  fontWeight: 500
+                                }}
+                              />
+                              <Chip 
+                                label={position.protocol}
+                                size="small"
+                                sx={{ 
+                                  backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                                  color: '#a855f7',
+                                  fontWeight: 500
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="h5" fontWeight={700} sx={{ color: '#fff' }}>
+                              ${position.currentValue.toFixed(2)}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: position.unrealizedGain >= 0 ? '#10b981' : '#ef4444' }}>
+                              {position.unrealizedGain >= 0 ? '+' : ''}${position.unrealizedGain.toFixed(2)}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: 8,
+              px: 3
+            }}>
+              <Typography 
+                variant="h5" 
+                fontWeight={600} 
+                sx={{ 
+                  mb: 2, 
+                  color: '#94a3b8',
+                }}
+              >
+                {isLoading ? 'Loading positions...' : 'No positions found'}
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: '#64748b',
+                }}
+              >
+                {isLoading ? 'Please wait while we fetch your data' : 'Start depositing to see your positions here'}
               </Typography>
             </Box>
-          </Box>
+          )}
         </Container>
       </Box>
     </Box>

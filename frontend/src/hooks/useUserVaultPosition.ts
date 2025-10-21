@@ -86,7 +86,7 @@ export const useUserVaultPosition = (
           const kaminoPositions = kaminoData?.positions || [];
           
           // Find Kamino Vault position
-          const vaultPosition = kaminoPositions.find((p: any) => p.protocol === 'kamino-vault');
+          const vaultPosition = kaminoPositions.find((p: any) => p.protocol === 'mars-vault');
           
           if (vaultPosition) {
             // Convert backend data format to frontend format
