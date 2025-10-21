@@ -154,8 +154,13 @@ export default defineConfig({
   mfsu: {
     strategy: 'normal',
   },
-  esbuildMinifyIIFE: true,
+  esbuildMinifyIIFE: false,
   requestRecord: {},
+  /**
+   * @name jsMinifier 配置
+   * @description 使用 terser 支持 BigInt
+   */
+  jsMinifier: 'terser',
   /**
    * @name webpack 配置
    * @description 用于支持 Solana 钱包所需的 Buffer polyfill
@@ -169,9 +174,8 @@ export default defineConfig({
       },
     ]);
     
-    // 配置 fallback
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
+    // 配置 fallback - 使用 merge 方法
+    config.resolve.fallback.merge({
       buffer: require.resolve('buffer'),
       crypto: false,
       stream: false,
@@ -180,7 +184,7 @@ export default defineConfig({
       https: false,
       os: false,
       url: false,
-    };
+    });
   },
   /**
    * @name 环境变量定义
