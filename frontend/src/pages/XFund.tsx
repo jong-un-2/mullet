@@ -459,11 +459,47 @@ const XFundPage = () => {
         console.log('� Configuring Solana provider...');
         console.log('🔌 Solana wallet address:', solanaWallet.address);
         
-        // Use Privy Solana wallet directly (it already implements SignerWalletAdapter)
+        // Configure Solana provider with proper wallet adapter (same as XStock)
         const solanaProvider = Solana({
           getWalletAdapter: async () => {
-            console.log('✅ Solana wallet adapter requested');
-            return solanaWallet as any;
+            // Create a PublicKey object from the address
+            const publicKey = new PublicKey(solanaWallet.address);
+            console.log('✅ Created PublicKey:', publicKey.toBase58());
+            
+            // Create a proper wallet adapter for LiFi SDK
+            const adapter = {
+              publicKey,
+              signTransaction: async (transaction: any) => {
+                console.log('🔵 Signing Solana transaction with Privy wallet...');
+                console.log('🔵 Transaction type:', transaction.constructor.name);
+                
+                try {
+                  const serialized = transaction.serialize({ requireAllSignatures: false });
+                  console.log('🔵 Serialized transaction length:', serialized.length);
+                  
+                  const result = await solanaWallet.signTransaction({ transaction: serialized });
+                  console.log('✅ Transaction signed successfully');
+                  
+                  // Deserialize the signed transaction
+                  return VersionedTransaction.deserialize(result.signedTransaction);
+                } catch (error) {
+                  console.error('❌ Failed to sign transaction:', error);
+                  throw error;
+                }
+              },
+              signAllTransactions: async (transactions: any[]) => {
+                console.log('🔵 Signing multiple Solana transactions with Privy wallet...');
+                const results = [];
+                for (const tx of transactions) {
+                  const signed = await adapter.signTransaction(tx);
+                  results.push(signed);
+                }
+                return results;
+              },
+            };
+            
+            console.log('✅ Solana wallet adapter created');
+            return adapter as any;
           }
         });
         
@@ -515,6 +551,18 @@ const XFundPage = () => {
         },
       });
       
+      // Validate route object integrity (same as XStock)
+      if (!route) {
+        throw new Error('Route is undefined');
+      }
+      if (!route.fromChainId) {
+        throw new Error('Route fromChainId is undefined');
+      }
+      if (!route.toChainId) {
+        throw new Error('Route toChainId is undefined');
+      }
+      
+      console.log('✅ Route validation passed');
       console.log('📝 Executing route with LiFi SDK...');
       console.log('📋 Route details:', {
         fromChain: route.fromChainId,

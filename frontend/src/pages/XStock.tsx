@@ -607,11 +607,6 @@ const XStockPage = () => {
         throw new Error('Solana wallet not found');
       }
       
-      // 验证 Solana wallet 有必要的方法
-      if (!solanaWallet.signTransaction) {
-        throw new Error('Solana wallet does not support signTransaction');
-      }
-      
       // 配置 Solana provider with proper wallet adapter
       const solanaProvider = Solana({
         getWalletAdapter: async () => {
