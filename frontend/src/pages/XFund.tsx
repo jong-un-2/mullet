@@ -775,45 +775,37 @@ const XFundPage = () => {
       const route = routesResponse.routes[0];
       console.log('✅ Got LiFi swap route:', route);
 
-      // Configure LiFi SDK for Solana
+      // Configure LiFi SDK for Solana (same pattern as deposit)
       const solanaWallet = solanaWallets[0];
       const walletAdapter = {
         publicKey: new PublicKey(solanaWallet.address),
         signTransaction: async (transaction: Transaction | VersionedTransaction) => {
-          const serializedTx = transaction.serialize({
-            requireAllSignatures: false,
-            verifySignatures: false,
-          });
-          const result = await solanaWallet.signTransaction({ transaction: serializedTx });
-          if ('version' in transaction) {
-            return VersionedTransaction.deserialize(new Uint8Array(result.signedTransaction));
-          } else {
-            return Transaction.from(new Uint8Array(result.signedTransaction));
+          console.log('🔵 Signing withdrawal Solana transaction...');
+          console.log('🔵 Transaction type:', transaction.constructor.name);
+          
+          try {
+            const serialized = transaction.serialize({ requireAllSignatures: false });
+            console.log('🔵 Serialized transaction length:', serialized.length);
+            
+            const result = await solanaWallet.signTransaction({ transaction: serialized });
+            console.log('✅ Transaction signed successfully');
+            
+            // Deserialize the signed transaction (same as deposit)
+            return VersionedTransaction.deserialize(result.signedTransaction);
+          } catch (error) {
+            console.error('❌ Failed to sign transaction:', error);
+            throw error;
           }
         },
         signAllTransactions: async (transactions: (Transaction | VersionedTransaction)[]) => {
-          const signedTxs = await Promise.all(
-            transactions.map(async (tx) => {
-              const serializedTx = tx.serialize({
-                requireAllSignatures: false,
-                verifySignatures: false,
-              });
-              const result = await solanaWallet.signTransaction({ transaction: serializedTx });
-              if ('version' in tx) {
-                return VersionedTransaction.deserialize(new Uint8Array(result.signedTransaction));
-              } else {
-                return Transaction.from(new Uint8Array(result.signedTransaction));
-              }
-            })
-          );
-          return signedTxs;
+          console.log('🔵 Signing multiple Solana transactions for withdrawal...');
+          const results = [];
+          for (const tx of transactions) {
+            const signed = await walletAdapter.signTransaction(tx);
+            results.push(signed);
+          }
+          return results;
         },
-        signMessage: async (message: Uint8Array) => {
-          const result = await solanaWallet.signMessage({ message });
-          return result.signature;
-        },
-        toString: () => solanaWallet.address,
-        toJSON: () => solanaWallet.address,
       };
 
       const solanaProvider = Solana({
@@ -834,11 +826,34 @@ const XFundPage = () => {
         },
       });
 
+      // Validate route object integrity (same as deposit)
+      if (!route) {
+        throw new Error('Route is undefined');
+      }
+      if (!route.fromChainId) {
+        throw new Error('Route fromChainId is undefined');
+      }
+      if (!route.toChainId) {
+        throw new Error('Route toChainId is undefined');
+      }
+      
+      console.log('✅ Route validation passed');
+      console.log('📝 Executing route with LiFi SDK...');
+      console.log('📋 Route details:', {
+        fromChain: route.fromChainId,
+        toChain: route.toChainId,
+        fromToken: route.fromToken.symbol,
+        toToken: route.toToken.symbol,
+        fromAmount: route.fromAmount,
+        toAmount: route.toAmount,
+      });
+
       // Execute swap
       console.log('🔄 Executing swap...');
       const swapResult = await executeRoute(route, {
-        updateRouteHook: () => {
+        updateRouteHook: (updatedRoute) => {
           console.log('🔄 Swap in progress...');
+          console.log('🔄 Route updated:', updatedRoute);
         },
         executeInBackground: false,
       });
