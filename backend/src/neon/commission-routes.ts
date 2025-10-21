@@ -62,9 +62,23 @@ export function createNeonCommissionRoutes() {
           ${user ? sql`AND "user" ILIKE ${`%${user}%`}` : sql``}
         `;
 
+        // 格式化数据，确保数值类型正确
+        const formattedRecords = result.map((row: any) => ({
+          blockNumber: parseInt(row._block_number_) || 0,
+          blockTimestamp: row._block_timestamp_,
+          user: row.user,
+          vaultMint: row.vault_mint,
+          farmState: row.farm_state,
+          rewardMint: row.reward_mint,
+          rewardAmount: parseFloat(row.rewardAmount) || 0,
+          platformFee: parseFloat(row.platformFee) || 0,
+          totalRewardsClaimed: parseFloat(row.totalRewardsClaimed) || 0,
+          timestamp: row.timestamp
+        }));
+
         return c.json({
           success: true,
-          data: result || [],
+          data: formattedRecords,
           total: parseInt(countResult[0]?.total as string) || 0,
         });
       });
@@ -165,9 +179,17 @@ export function createNeonCommissionRoutes() {
           LIMIT ${limit}
         `;
 
+        // 转换数据类型
+        const formattedData = result.map((row: any) => ({
+          user: row.user,
+          transactionCount: parseInt(row.transactionCount) || 0,
+          totalFee: parseFloat(row.totalFee) || 0,
+          lastTransaction: row.lastTransaction
+        }));
+
         return c.json({
           success: true,
-          data: result || []
+          data: formattedData
         });
       });
     } catch (error) {
@@ -232,9 +254,17 @@ export function createNeonCommissionRoutes() {
           ORDER BY date
         `;
 
+        // 格式化趋势数据
+        const formattedTrend = result.map((row: any) => ({
+          date: row.date,
+          transactionCount: parseInt(row.transactionCount) || 0,
+          totalFee: parseFloat(row.totalFee) || 0,
+          avgFee: parseFloat(row.avgFee) || 0
+        }));
+
         return c.json({
           success: true,
-          data: result || []
+          data: formattedTrend
         });
       });
     } catch (error) {
