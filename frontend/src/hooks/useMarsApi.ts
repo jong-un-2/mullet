@@ -248,7 +248,6 @@ export const getUserWalletAddress = (
     );
     
     if (externalWallet) {
-      console.log('✅ Using external Solana wallet:', externalWallet.address);
       return externalWallet.address;
     }
     
