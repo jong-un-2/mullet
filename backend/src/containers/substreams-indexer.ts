@@ -152,4 +152,36 @@ export class SubstreamsIndexerContainer extends Container {
     
     return await response.json();
   }
+
+  /**
+   * Alarm handler for periodic health checks
+   * This is called when a Durable Object alarm fires
+   */
+  async alarm() {
+    try {
+      // Perform health check
+      console.log('[Container Alarm] Running periodic health check...');
+      const status = await this.getStatus();
+      console.log('[Container Alarm] Health check result:', status);
+      
+      // If container is unhealthy, log it
+      if (!status.healthy) {
+        console.error('[Container Alarm] Container is unhealthy:', status);
+      }
+      
+      // Schedule next alarm in 5 minutes
+      const nextAlarm = Date.now() + 5 * 60 * 1000;
+      await this.ctx.storage.setAlarm(nextAlarm);
+      console.log('[Container Alarm] Next alarm scheduled for:', new Date(nextAlarm).toISOString());
+    } catch (error) {
+      console.error('[Container Alarm] Error during alarm execution:', error);
+      // Still try to schedule next alarm even if there was an error
+      try {
+        const nextAlarm = Date.now() + 5 * 60 * 1000;
+        await this.ctx.storage.setAlarm(nextAlarm);
+      } catch (scheduleError) {
+        console.error('[Container Alarm] Failed to schedule next alarm:', scheduleError);
+      }
+    }
+  }
 }
