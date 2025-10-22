@@ -233,8 +233,8 @@ const XFundPage = () => {
         // Call backend to refresh from blockchain
         await refreshUserPositions(userWalletAddress);
         console.log('✅ Position refreshed from blockchain');
-        // Wait 15 seconds for backend to process and cache the data
-        await new Promise(resolve => setTimeout(resolve, 15000));
+        // Wait 10 seconds for backend to process and cache the data
+        await new Promise(resolve => setTimeout(resolve, 10000));
         // Trigger frontend to fetch the updated data
         setRefreshTrigger(prev => prev + 1);
         console.log('✅ Frontend data refreshed');

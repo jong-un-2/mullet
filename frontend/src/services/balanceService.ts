@@ -20,7 +20,6 @@ interface BalanceResult {
  */
 const getSolanaConnection = (): Connection => {
   const rpcEndpoint = networkConfig.getCurrentSolanaNetwork().rpcUrl;
-  console.log('🔗 Using Solana RPC:', rpcEndpoint);
   return new Connection(rpcEndpoint, 'confirmed');
 };
 
