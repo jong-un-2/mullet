@@ -225,6 +225,30 @@ const XFundPage = () => {
   // Get user's vault position from backend (cached data, auto-refresh every 60s)
   const userVaultPosition = useUserVaultPosition(userWalletAddress || null, refreshTrigger);
   
+  // Unified function to refresh user positions from blockchain
+  const forceRefreshPositions = async () => {
+    console.log('🔄 Refreshing balances and position...');
+    if (userWalletAddress) {
+      try {
+        // Call backend to refresh from blockchain
+        await refreshUserPositions(userWalletAddress);
+        console.log('✅ Position refreshed from blockchain');
+        // Wait for backend to process and cache the data
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Trigger frontend to fetch the updated data
+        setRefreshTrigger(prev => prev + 1);
+        console.log('✅ Frontend data refreshed');
+      } catch (error) {
+        console.error('⚠️ Failed to refresh position:', error);
+        // Still trigger refresh even if backend call fails
+        setRefreshTrigger(prev => prev + 1);
+      }
+    } else {
+      // No user wallet, just trigger frontend refresh
+      setRefreshTrigger(prev => prev + 1);
+    }
+  };
+  
   // Calculate current vault stats from historical data
   const getCurrentVaultStats = () => {
     if (!vaultHistoricalData?.historical || vaultHistoricalData.historical.length === 0) {
@@ -619,17 +643,7 @@ const XFundPage = () => {
         
         // 触发余额和持仓刷新
         setTimeout(async () => {
-          console.log('🔄 Refreshing balances and position...');
-          // Force refresh from blockchain
-          if (userWalletAddress) {
-            try {
-              await refreshUserPositions(userWalletAddress);
-              console.log('✅ Position refreshed from blockchain');
-            } catch (error) {
-              console.error('⚠️ Failed to refresh position from blockchain:', error);
-            }
-          }
-          setRefreshTrigger(prev => prev + 1);
+          await forceRefreshPositions();
         }, 2000); // 等待 2 秒确保链上数据更新
         
         setTimeout(() => {
@@ -712,17 +726,7 @@ const XFundPage = () => {
         
         // 触发余额和持仓刷新
         setTimeout(async () => {
-          console.log('🔄 Refreshing balances and position...');
-          // Force refresh from blockchain
-          if (userWalletAddress) {
-            try {
-              await refreshUserPositions(userWalletAddress);
-              console.log('✅ Position refreshed from blockchain');
-            } catch (error) {
-              console.error('⚠️ Failed to refresh position from blockchain:', error);
-            }
-          }
-          setRefreshTrigger(prev => prev + 1);
+          await forceRefreshPositions();
         }, 2000); // 等待 2 秒确保链上数据更新
         
         // Hide progress after 6 seconds
@@ -871,17 +875,7 @@ const XFundPage = () => {
       
       // 触发余额和持仓刷新
       setTimeout(async () => {
-        console.log('🔄 Refreshing balances and position...');
-        // Force refresh from blockchain
-        if (userWalletAddress) {
-          try {
-            await refreshUserPositions(userWalletAddress);
-            console.log('✅ Position refreshed from blockchain');
-          } catch (error) {
-            console.error('⚠️ Failed to refresh position from blockchain:', error);
-          }
-        }
-        setRefreshTrigger(prev => prev + 1);
+        await forceRefreshPositions();
       }, 2000); // 等待 2 秒确保链上数据更新
       
       // Hide progress after 6 seconds
@@ -940,22 +934,11 @@ const XFundPage = () => {
         
         // Force refresh position from blockchain
         setTimeout(async () => {
-          if (userWalletAddress) {
-            try {
-              await refreshUserPositions(userWalletAddress);
-              console.log('✅ Position refreshed from blockchain after claim');
-            } catch (error) {
-              console.error('⚠️ Failed to refresh position from blockchain:', error);
-            }
-          }
-          setRefreshTrigger(prev => prev + 1);
-        }, 2000);
-        
-        setTimeout(() => {
+          await forceRefreshPositions();
           setShowProgress(false);
           setTxSignature(undefined);
           setIsClaimingRewards(false);
-        }, 6000);
+        }, 2000);
       } else {
         throw new Error('No transaction signature received');
       }
