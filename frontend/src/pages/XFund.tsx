@@ -1435,69 +1435,67 @@ const XFundPage = () => {
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             }}>
               {/* Pending Rewards and Claim Rewards Button */}
-              {isWalletConnected && (
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {/* Pending Rewards Display */}
-                  <Box>
-                    <Typography variant="body2" sx={{ color: '#94a3b8', mb: 0.5 }}>
-                      Pending Rewards
-                    </Typography>
-                    {(() => {
-                      // 使用 Map 去重，按 rewardMint 分组
-                      const uniqueRewards = new Map<string, typeof userVaultPosition.rewards[0]>();
-                      userVaultPosition.rewards.forEach(reward => {
-                        if (reward.pendingBalance > 0) {
-                          const existing = uniqueRewards.get(reward.rewardMint);
-                          if (!existing || existing.pendingBalance < reward.pendingBalance) {
-                            uniqueRewards.set(reward.rewardMint, reward);
-                          }
-                        }
-                      });
-                      
-                      return uniqueRewards.size > 0 ? (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {Array.from(uniqueRewards.values()).map((reward) => (
-                            <Box key={reward.rewardMint} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Box
-                                component="img"
-                                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23003087' d='M20.905 9.5c.16 2.167-.77 3.66-2.661 4.78-2.128 1.287-4.784 1.64-7.152 1.578-1.186-.03-2.37-.185-3.538-.396-.238-.042-.394-.22-.448-.45l-1.092-5.203c-.086-.41.137-.645.536-.645h2.655c.325 0 .528.182.595.502l.52 2.488c.067.32.281.489.595.489 1.478 0 2.956-.038 4.408-.398 1.427-.354 2.533-1.116 2.952-2.59.368-1.293-.04-2.346-1.186-3.058-1.042-.648-2.225-.907-3.448-.99-2.188-.145-4.366.028-6.52.534-.253.06-.48.014-.604-.214-.182-.332-.358-.668-.537-1.002-.16-.298-.1-.536.214-.686 2.575-1.226 5.285-1.656 8.094-1.414 1.607.138 3.125.588 4.474 1.524 1.666 1.158 2.456 2.757 2.143 4.851z'/%3E%3Cpath fill='%23009cde' d='M11.5 14.5c-.234.026-.468.052-.703.071-1.186.094-2.375.107-3.564.044-.238-.013-.394-.157-.448-.387l-1.092-5.203c-.086-.41.137-.645.536-.645h2.655c.325 0 .528.182.595.502l.52 2.488c.067.32.281.489.595.489.469 0 .937-.013 1.406-.044z'/%3E%3C/svg%3E"
-                                sx={{ width: 20, height: 20 }}
-                              />
-                              <Typography variant="h6" fontWeight={600} sx={{ color: 'white' }}>
-                                {reward.pendingBalance.toFixed(4)}
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                ({reward.tokenName})
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      ) : (
-                        <Typography variant="h6" fontWeight={600} sx={{ color: '#94a3b8' }}>
-                          -
-                        </Typography>
-                      );
-                    })()}
-                  </Box>
-
-                  {/* Claim Rewards Button */}
-                  <Button
-                    variant="contained"
-                    disabled={
-                      isClaimingRewards || 
-                      !userVaultPosition.rewards.some(reward => reward.pendingBalance > 0)
+              {isWalletConnected && (() => {
+                // Calculate total pending rewards
+                const uniqueRewards = new Map<string, typeof userVaultPosition.rewards[0]>();
+                userVaultPosition.rewards.forEach(reward => {
+                  if (reward.pendingBalance > 0) {
+                    const existing = uniqueRewards.get(reward.rewardMint);
+                    if (!existing || existing.pendingBalance < reward.pendingBalance) {
+                      uniqueRewards.set(reward.rewardMint, reward);
                     }
-                    onClick={handleClaimRewards}
-                    sx={{
-                      backgroundColor: '#60a5fa',
-                      color: 'white',
-                      fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      minWidth: '140px',
-                      '&:hover': {
+                  }
+                });
+                
+                const totalPendingRewards = Array.from(uniqueRewards.values())
+                  .reduce((sum, reward) => sum + reward.pendingBalance, 0);
+                
+                // Only show if total pending rewards >= 0.01
+                if (totalPendingRewards < 0.01) {
+                  return null;
+                }
+                
+                return (
+                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {/* Pending Rewards Display */}
+                    <Box>
+                      <Typography variant="body2" sx={{ color: '#94a3b8', mb: 0.5 }}>
+                        Pending Rewards
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        {Array.from(uniqueRewards.values()).map((reward) => (
+                          <Box key={reward.rewardMint} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              component="img"
+                              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23003087' d='M20.905 9.5c.16 2.167-.77 3.66-2.661 4.78-2.128 1.287-4.784 1.64-7.152 1.578-1.186-.03-2.37-.185-3.538-.396-.238-.042-.394-.22-.448-.45l-1.092-5.203c-.086-.41.137-.645.536-.645h2.655c.325 0 .528.182.595.502l.52 2.488c.067.32.281.489.595.489 1.478 0 2.956-.038 4.408-.398 1.427-.354 2.533-1.116 2.952-2.59.368-1.293-.04-2.346-1.186-3.058-1.042-.648-2.225-.907-3.448-.99-2.188-.145-4.366.028-6.52.534-.253.06-.48.014-.604-.214-.182-.332-.358-.668-.537-1.002-.16-.298-.1-.536.214-.686 2.575-1.226 5.285-1.656 8.094-1.414 1.607.138 3.125.588 4.474 1.524 1.666 1.158 2.456 2.757 2.143 4.851z'/%3E%3Cpath fill='%23009cde' d='M11.5 14.5c-.234.026-.468.052-.703.071-1.186.094-2.375.107-3.564.044-.238-.013-.394-.157-.448-.387l-1.092-5.203c-.086-.41.137-.645.536-.645h2.655c.325 0 .528.182.595.502l.52 2.488c.067.32.281.489.595.489.469 0 .937-.013 1.406-.044z'/%3E%3C/svg%3E"
+                              sx={{ width: 20, height: 20 }}
+                            />
+                            <Typography variant="h6" fontWeight={600} sx={{ color: 'white' }}>
+                              {reward.pendingBalance.toFixed(4)}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                              ({reward.tokenName})
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+
+                    {/* Claim Rewards Button */}
+                    <Button
+                      variant="contained"
+                      disabled={isClaimingRewards}
+                      onClick={handleClaimRewards}
+                      sx={{
+                        backgroundColor: '#60a5fa',
+                        color: 'white',
+                        fontWeight: 600,
+                        px: 3,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        minWidth: '140px',
+                        '&:hover': {
                         backgroundColor: '#3b82f6',
                       },
                       '&:disabled': {
@@ -1516,7 +1514,8 @@ const XFundPage = () => {
                     )}
                   </Button>
                 </Box>
-              )}
+                );
+              })()}
 
               {/* Stats Cards Grid */}
               <Box sx={{ 
