@@ -256,7 +256,7 @@ export default {
 											${position.firstDepositTime}, ${position.lastActivityTime},
 											${position.lastFetchTime}, NOW()
 										)
-										ON CONFLICT (id) DO UPDATE SET
+										ON CONFLICT (user_address, vault_address) DO UPDATE SET
 											total_shares = EXCLUDED.total_shares,
 											total_deposited = EXCLUDED.total_deposited,
 											current_value = EXCLUDED.current_value,
