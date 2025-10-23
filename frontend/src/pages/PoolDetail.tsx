@@ -27,9 +27,18 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
+import { TransactionProgress } from '../components/TransactionProgress';
 
 // JitoSOL mint address
 const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
+
+// Format large numbers to human-readable format (e.g., 35514.41 -> 35.51K)
+function formatLargeNumber(num: number): string {
+  if (num === 0) return '0';
+  if (num < 1000) return num.toFixed(4);
+  if (num < 1000000) return (num / 1000).toFixed(2) + 'K';
+  return (num / 1000000).toFixed(2) + 'M';
+}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -107,6 +116,12 @@ export default function PoolDetail() {
   const [jitosolBalance, setJitosolBalance] = useState<number>(0);
   const [balancesLoading, setBalancesLoading] = useState(false);
 
+  // Transaction progress states
+  const [showProgress, setShowProgress] = useState(false);
+  const [txStatus, setTxStatus] = useState<'idle' | 'building' | 'signing' | 'sending' | 'confirming' | 'success' | 'error'>('idle');
+  const [txMessage, setTxMessage] = useState('');
+  const [txSignature, setTxSignature] = useState<string | undefined>();
+
   // Load user balances
   const loadBalances = useCallback(async () => {
     const userAddress = wallet.publicKey?.toString() || (solanaWallets.length > 0 ? solanaWallets[0].address : null);
@@ -153,18 +168,25 @@ export default function PoolDetail() {
     // Check if we have either direct wallet or Privy wallet
     const userAddress = wallet.publicKey?.toString() || (solanaWallets.length > 0 ? solanaWallets[0].address : null);
     
-    if (!userAddress) return;
+    console.log('[loadUserPosition] Called with userAddress:', userAddress);
+    
+    if (!userAddress) {
+      console.log('[loadUserPosition] No user address, skipping');
+      return;
+    }
     
     setPositionLoading(true);
     try {
+      console.log('[loadUserPosition] Fetching position for strategy:', poolData.address);
       const position = await getUserPosition(
         poolData.address,
         userAddress,
         connection
       );
+      console.log('[loadUserPosition] Position fetched:', position);
       setUserPosition(position);
     } catch (error) {
-      console.error('Error loading position:', error);
+      console.error('[loadUserPosition] Error loading position:', error);
     } finally {
       setPositionLoading(false);
     }
@@ -190,13 +212,17 @@ export default function PoolDetail() {
       setPool(foundPool || null);
       setLoading(false);
 
-      if (isWalletConnected && foundPool && wallet.publicKey) {
+      // Check if we have either direct wallet or Privy wallet
+      const hasWalletAddress = wallet.publicKey || solanaWallets.length > 0;
+      
+      if (isWalletConnected && foundPool && hasWalletAddress) {
+        console.log('[PoolDetail] Loading user position...');
         loadUserPosition(foundPool);
       }
     };
     
     loadPoolData();
-  }, [poolAddress, isWalletConnected, wallet.publicKey, loadUserPosition]);
+  }, [poolAddress, isWalletConnected, wallet.publicKey, solanaWallets, loadUserPosition]);
 
   // Load balances when wallet connects
   useEffect(() => {
@@ -219,12 +245,19 @@ export default function PoolDetail() {
     
     if (!hasWallet || !pool) {
       console.log('Early return: wallet or pool not available');
-      alert('Please connect your Solana wallet first');
+      setShowProgress(true);
+      setTxStatus('error');
+      setTxMessage('Please connect your Solana wallet first');
+      setTimeout(() => setShowProgress(false), 5000);
       return;
     }
 
     setDepositLoading(true);
     setDepositTxSignature('');
+    setShowProgress(true);
+    setTxStatus('building');
+    setTxMessage('Preparing transaction...');
+    setTxSignature(undefined);
 
     try {
       if (actionMode === 'deposit') {
@@ -235,7 +268,9 @@ export default function PoolDetail() {
         console.log('Parsed amounts - sol:', sol, 'jitosol:', jitosol);
 
         if (sol <= 0 && jitosol <= 0) {
-          alert('Please enter an amount to deposit');
+          setTxStatus('error');
+          setTxMessage('Please enter an amount to deposit');
+          setTimeout(() => setShowProgress(false), 5000);
           setDepositLoading(false);
           return;
         }
@@ -254,6 +289,9 @@ export default function PoolDetail() {
 
         console.log('Using wallet:', walletToUse);
 
+        setTxStatus('sending');
+        setTxMessage('Sending deposit transaction...');
+
         const signature = await depositAndStake({
           strategyAddress: pool.address,
           amountSOL: sol.toString(),
@@ -262,7 +300,10 @@ export default function PoolDetail() {
           connection
         });
 
+        setTxStatus('success');
+        setTxMessage('Deposit completed successfully!');
         setDepositTxSignature(signature);
+        setTxSignature(signature);
         setSolAmount('');
         setJitosolAmount('');
         
@@ -271,10 +312,17 @@ export default function PoolDetail() {
           loadBalances(),
           loadUserPosition(pool)
         ]);
+
+        // Auto-hide progress after 5 seconds
+        setTimeout(() => {
+          setShowProgress(false);
+        }, 5000);
       } else {
         // Withdraw logic
         if (!singleAssetDeposit && withdrawPercentage <= 0) {
-          alert('Please select a withdrawal percentage');
+          setTxStatus('error');
+          setTxMessage('Please select a withdrawal percentage');
+          setTimeout(() => setShowProgress(false), 5000);
           setDepositLoading(false);
           return;
         }
@@ -291,24 +339,51 @@ export default function PoolDetail() {
             }
           : wallet;
 
+        // Get withdraw amount
+        const withdrawSharesAmount = singleAssetDeposit
+          ? (selectedToken === 'SOL' ? solAmount : jitosolAmount)
+          : undefined; // For slider mode, withdraw all (handled by percentage slider)
+
+        console.log('[PoolDetail] Withdrawing shares:', withdrawSharesAmount);
+
+        setTxStatus('sending');
+        setTxMessage('Sending withdrawal transaction...');
+
         const signature = await unstakeAndWithdraw({
           strategyAddress: pool.address,
+          amountShares: withdrawSharesAmount || undefined,
           wallet: walletToUse,
           connection
         });
 
+        setTxStatus('success');
+        setTxMessage('Withdrawal completed successfully!');
         setDepositTxSignature(signature);
+        setTxSignature(signature);
         setWithdrawPercentage(0);
+        setSolAmount('');
+        setJitosolAmount('');
         
         // Reload balances and position after transaction
         await Promise.all([
           loadBalances(),
           loadUserPosition(pool)
         ]);
+
+        // Auto-hide progress after 5 seconds
+        setTimeout(() => {
+          setShowProgress(false);
+        }, 5000);
       }
     } catch (error: any) {
       console.error('Transaction error:', error);
-      alert(`Transaction failed: ${error.message}`);
+      setTxStatus('error');
+      setTxMessage(error.message || 'Transaction failed');
+      
+      // Auto-hide error after 8 seconds
+      setTimeout(() => {
+        setShowProgress(false);
+      }, 8000);
     } finally {
       setDepositLoading(false);
     }
@@ -734,7 +809,7 @@ export default function PoolDetail() {
                         ${userPosition?.stakeValue || '0.00'}
                       </Typography>
                       <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                        {userPosition?.stakeAmount || '0.00'} kJITOSOL-SOL
+                        {positionLoading ? '...' : formatLargeNumber(userPosition?.sharesStaked || 0)} kJITOSOL-SOL
                       </Typography>
                     </Box>
                     <Box>
@@ -1386,26 +1461,58 @@ export default function PoolDetail() {
                                 </Typography>
                                 <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>▼</Typography>
                               </Button>
-                              <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
-                                {selectedToken === 'SOL' ? (solAmount || '0') : (jitosolAmount || '0')}
-                              </Typography>
+                              <TextField
+                                value={selectedToken === 'SOL' ? solAmount : jitosolAmount}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const maxAmount = userPosition?.sharesStaked || 0;
+                                  if (value === '' || (parseFloat(value) <= maxAmount && !isNaN(parseFloat(value)))) {
+                                    if (selectedToken === 'SOL') {
+                                      setSolAmount(value);
+                                    } else {
+                                      setJitosolAmount(value);
+                                    }
+                                  }
+                                }}
+                                placeholder="0"
+                                variant="standard"
+                                type="number"
+                                InputProps={{
+                                  disableUnderline: true,
+                                  inputProps: {
+                                    style: { textAlign: 'right' }
+                                  }
+                                }}
+                                sx={{
+                                  '& .MuiInputBase-input': {
+                                    color: '#ffffff',
+                                    fontSize: '1.5rem',
+                                    fontWeight: 600,
+                                    textAlign: 'right',
+                                    padding: 0,
+                                  }
+                                }}
+                              />
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                                Staked: {wallet.publicKey 
-                                  ? (selectedToken === 'SOL' ? '0 SOL' : '0 JITOSOL')
-                                  : '0'}
+                                Staked: {positionLoading 
+                                  ? '...' 
+                                  : `${formatLargeNumber(userPosition?.sharesStaked || 0)} kJITOSOL-SOL`}
                               </Typography>
                               <Box sx={{ display: 'flex', gap: 1 }}>
                                 <Button 
                                   size="small" 
                                   onClick={() => {
+                                    const staked = userPosition?.sharesStaked || 0;
+                                    const halfAmount = (staked / 2).toFixed(9);
                                     if (selectedToken === 'SOL') {
-                                      setSolAmount('0');
+                                      setSolAmount(halfAmount);
                                     } else {
-                                      setJitosolAmount('0');
+                                      setJitosolAmount(halfAmount);
                                     }
                                   }}
+                                  disabled={!userPosition || userPosition.sharesStaked === 0}
                                   sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
                                 >
                                   Half
@@ -1413,12 +1520,15 @@ export default function PoolDetail() {
                                 <Button 
                                   size="small"
                                   onClick={() => {
+                                    const staked = userPosition?.sharesStaked || 0;
+                                    const maxAmount = staked.toFixed(9);
                                     if (selectedToken === 'SOL') {
-                                      setSolAmount('0');
+                                      setSolAmount(maxAmount);
                                     } else {
-                                      setJitosolAmount('0');
+                                      setJitosolAmount(maxAmount);
                                     }
                                   }}
+                                  disabled={!userPosition || userPosition.sharesStaked === 0}
                                   sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
                                 >
                                   Max
@@ -2268,6 +2378,15 @@ export default function PoolDetail() {
           </Box>
         </Box>
       </TabPanel>
+
+      {/* Transaction Progress Indicator */}
+      <TransactionProgress
+        open={showProgress}
+        status={txStatus}
+        title={actionMode === 'deposit' ? 'Deposit Transaction' : 'Withdraw Transaction'}
+        message={txMessage}
+        txSignature={txSignature}
+      />
     </Box>
   );
 }

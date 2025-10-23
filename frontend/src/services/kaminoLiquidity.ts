@@ -48,6 +48,10 @@ import {
 import {
   Farms,
   getUserStatePDA,
+  FarmState,
+  UserState,
+  lamportsToCollDecimal,
+  scaleDownWads,
 } from '@kamino-finance/farms-sdk';
 
 // Import new Solana types and compat utilities
@@ -259,6 +263,7 @@ export interface PositionInfo {
   lpTokens?: string;
   sharesStaked: number;
   stakedAmount?: string;
+  stakeValue?: string; // USD value of staked position
   tvlInPosition: number;
   pnl: number;
 }
@@ -739,10 +744,11 @@ export async function depositAndStake(params: {
  */
 export async function unstakeAndWithdraw(params: {
   strategyAddress: string;
+  amountShares?: string; // Optional: if not provided, withdraw all
   wallet: any; // WalletContextState
   connection: Connection;
 }): Promise<string> {
-  const { strategyAddress, wallet, connection } = params;
+  const { strategyAddress, amountShares, wallet, connection } = params;
   
   if (!wallet.publicKey || !wallet.signTransaction) {
     throw new Error('Wallet not connected');
@@ -805,11 +811,17 @@ export async function unstakeAndWithdraw(params: {
       if (userStateAccountInfo !== null) {
         console.log('User has staked tokens, creating unstake instructions...');
         
-        // Unstake all shares (U64_MAX means unstake all)
+        // Unstake shares - use specified amount or all (U64_MAX)
+        const unstakeAmount = amountShares 
+          ? new Decimal(amountShares)
+          : new Decimal(U64_MAX);
+        
+        console.log('[Kamino] Unstaking amount:', unstakeAmount.toString());
+        
         const unstakeIx = await farms.unstakeIx(
           ownerSigner as any,
           farmAddress,
-          new Decimal(U64_MAX),
+          unstakeAmount,
           none() // No scope prices
         );
         instructions.push(unstakeIx as any);
@@ -833,17 +845,26 @@ export async function unstakeAndWithdraw(params: {
     }
   }
 
-  // Step 2: Withdraw all LP shares from pool
-  // Get LP token balance
-  const sharesBalance = await connection.getTokenAccountBalance(sharesAta);
-  const sharesAmount = new Decimal(sharesBalance.value.amount).div(
-    new Decimal(10).pow(sharesBalance.value.decimals)
-  );
+  // Step 2: Withdraw LP shares from pool
+  // Determine withdraw amount - use specified amount or all available
+  let withdrawAmount: Decimal;
+  
+  if (amountShares) {
+    withdrawAmount = new Decimal(amountShares);
+    console.log('[Kamino] Withdrawing specified amount:', withdrawAmount.toString());
+  } else {
+    // Get LP token balance to withdraw all
+    const sharesBalance = await connection.getTokenAccountBalance(sharesAta);
+    withdrawAmount = new Decimal(sharesBalance.value.amount).div(
+      new Decimal(10).pow(sharesBalance.value.decimals)
+    );
+    console.log('[Kamino] Withdrawing all shares:', withdrawAmount.toString());
+  }
 
-  if (sharesAmount.gt(0)) {
+  if (withdrawAmount.gt(0)) {
     const withdrawIx = await kamino.withdrawShares(
       strategyWithAddress as any,
-      sharesAmount,
+      withdrawAmount,
       ownerSigner as any
     );
     instructions.push(withdrawIx as any);
@@ -929,33 +950,52 @@ export async function getUserPosition(
     const sharesMintPubkey = addressToPublicKey(sharesMint);
     const sharesAta = await getAssociatedTokenAddress(sharesMintPubkey, userPubkey);
     
+    let shares = new Decimal(0);
     try {
       const sharesBalance = await connection.getTokenAccountBalance(sharesAta);
-      const shares = new Decimal(sharesBalance.value.amount).div(
+      shares = new Decimal(sharesBalance.value.amount).div(
         new Decimal(10).pow(sharesBalance.value.decimals)
       );
-      
-      // Get staked shares
-      const staked = await getStakedShares(strategyAddress, userAddress, connection);
-      
-      return {
-        strategyAddress,
-        lpTokens: shares.toString(),
-        sharesStaked: parseFloat(staked.toString()),
-        stakedAmount: staked.toString(),
-        tvlInPosition: 0, // Would need price data to calculate
-        pnl: 0, // Would need historical data to calculate
-      };
-    } catch {
-      return {
-        strategyAddress,
-        lpTokens: '0',
-        sharesStaked: 0,
-        stakedAmount: '0',
-        tvlInPosition: 0,
-        pnl: 0,
-      };
+      console.log('[getUserPosition] LP token balance:', shares.toString());
+    } catch (error) {
+      console.log('[getUserPosition] No LP token account found (user may only have staked tokens)');
     }
+    
+    // Get staked shares (always check, even if no LP tokens in wallet)
+    const staked = await getStakedShares(strategyAddress, userAddress, connection);
+    console.log('[getUserPosition] Staked shares from getStakedShares:', staked);
+    
+    // Get share price from API to calculate USD value
+    let sharePrice = 0;
+    let stakeValue = 0;
+    try {
+      const metricsUrl = `https://api.hubbleprotocol.io/strategies/${strategyAddress}/metrics?env=mainnet-beta`;
+      const metricsResponse = await fetch(metricsUrl);
+      if (metricsResponse.ok) {
+        const metrics = await metricsResponse.json();
+        sharePrice = parseFloat(metrics.sharePrice || '0');
+        
+        // Calculate total staked value in USD
+        const totalShares = staked + parseFloat(shares.toString());
+        stakeValue = totalShares * sharePrice;
+        
+        console.log('[getUserPosition] Share price:', sharePrice);
+        console.log('[getUserPosition] Total shares (staked + wallet):', totalShares);
+        console.log('[getUserPosition] Stake value USD:', stakeValue);
+      }
+    } catch (error) {
+      console.warn('[getUserPosition] Could not fetch share price:', error);
+    }
+    
+    return {
+      strategyAddress,
+      lpTokens: shares.toString(),
+      sharesStaked: parseFloat(staked.toString()),
+      stakedAmount: staked.toString(),
+      stakeValue: stakeValue.toFixed(2),
+      tvlInPosition: stakeValue,
+      pnl: 0, // Would need historical data to calculate
+    };
   } catch (error) {
     console.error('Error getting user position:', error);
     return null;
@@ -963,21 +1003,18 @@ export async function getUserPosition(
 }
 
 /**
- * Get user's staked shares
+ * Get user's staked shares using the same method as the SDK example
  */
 export async function getStakedShares(
   strategyAddress: string,
   userAddress: string,
-  connection: Connection
+  _connection: Connection // Underscore prefix indicates intentionally unused
 ): Promise<number> {
   try {
     const rpc = createKaminoRpc();
-    const farms = new Farms(rpc as any);
-    const userPubkey = new PublicKey(userAddress);
-    
     const kamino = new Kamino('mainnet-beta', rpc as any);
     
-    // Try to get strategy with fewer retries
+    // Get strategy
     let strategy;
     try {
       strategy = await getStrategyWithRetry(kamino, strategyAddress, 2);
@@ -992,29 +1029,43 @@ export async function getStakedShares(
     
     const farmAddress = strategy.strategy.farm;
     if (!farmAddress || farmAddress.toString() === DEFAULT_PUBLIC_KEY.toString()) {
+      console.log('[getStakedShares] No farm address found');
       return 0;
     }
+
+    console.log('[getStakedShares] Fetching staked shares for user:', userAddress);
+    console.log('[getStakedShares] Farm address:', farmAddress.toString());
+
+    // Use the SDK's getStakedTokens method from examples
+    const farms = new Farms(rpc as any);
+    const farmsProgramId = farms.getProgramID();
     
-    // Get user farm state PDA
-    const farmAddressPubkey = addressToPublicKey(farmAddress);
-    const farmsProgramId = addressToPublicKey(farms.getProgramID());
-    const [userStatePDA] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('user'),
-        farmAddressPubkey.toBuffer(),
-        userPubkey.toBuffer(),
-      ],
-      farmsProgramId
+    // Get user state PDA
+    const userStatePDA = await getUserStatePDA(farmsProgramId, farmAddress, address(userAddress));
+    
+    // Fetch farm state
+    const farmState = await FarmState.fetch(rpc as any, farmAddress);
+    if (!farmState) {
+      console.log('[getStakedShares] Farm state not found');
+      return 0;
+    }
+
+    // Fetch user state
+    const userState = await UserState.fetch(rpc as any, userStatePDA);
+    if (!userState) {
+      console.log('[getStakedShares] User state not found');
+      return 0;
+    }
+
+    // Calculate staked shares using the SDK's method
+    const stakedShares = lamportsToCollDecimal(
+      new Decimal(scaleDownWads(userState.activeStakeScaled)),
+      farmState.token.decimals.toNumber()
     );
+
+    console.log('[getStakedShares] Staked shares:', stakedShares.toString());
     
-    const userStateInfo = await connection.getAccountInfo(userStatePDA);
-    if (!userStateInfo || userStateInfo.data.length === 0) {
-      return 0;
-    }
-    
-    // For now, return 0 - proper implementation would decode the farm user state
-    // to get the actual staked amount
-    return 0;
+    return stakedShares.toNumber();
   } catch (error) {
     console.error('Error getting staked shares:', error);
     return 0;
