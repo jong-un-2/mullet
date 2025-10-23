@@ -257,13 +257,8 @@ const XLiquidPage = () => {
                         cursor: 'pointer',
                         '&:hover': { 
                           backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                          transform: 'translateY(-2px)',
                         },
-                        '&:active': {
-                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                          transform: 'translateY(0px)',
-                        },
-                        transition: 'all 0.2s ease'
+                        transition: 'background-color 0.15s ease'
                       }}
                     >
                       <TableCell sx={{ borderBottom: '1px solid rgba(59, 130, 246, 0.05)', py: 2.5 }}>
@@ -328,12 +323,8 @@ const XLiquidPage = () => {
                             borderRadius: 2,
                             '&:hover': {
                               background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                              transform: 'scale(1.05)',
                             },
-                            '&:active': {
-                              transform: 'scale(0.98)',
-                            },
-                            transition: 'all 0.2s ease'
+                            transition: 'background 0.15s ease'
                           }}
                         >
                           Deposit

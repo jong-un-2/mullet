@@ -26,52 +26,63 @@ import {
 import CustomUserProfile from './CustomUserProfile';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const Navigation = () => {
+const Navigation = React.memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
-  const navigationItems = [
+  const navigationItems = React.useMemo(() => [
     { name: 'X Fund', path: '/xfund', icon: <XFundIcon /> },
     { name: 'X Stock', path: '/xstock', icon: <StockIcon /> },
     { name: 'X Liquid', path: '/xliquid', icon: <LiquidIcon /> },
     { name: 'Portfolio', path: '/portfolio', icon: <BusinessIcon /> },
     { name: 'More', path: '/more', icon: <ArrowDownIcon /> },
-  ];
+  ], []);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
+  // Check if current path is active for a navigation item
+  const isActiveRoute = React.useCallback((itemPath: string) => {
+    if (itemPath === '/xliquid') {
+      return location.pathname.startsWith('/xliquid');
+    }
+    return location.pathname === itemPath;
+  }, [location.pathname]);
+
   const drawer = (
     <Box sx={{ width: 250, pt: 2 }}>
       <List>
-        {navigationItems.map((item) => (
-          <ListItem key={item.name} disablePadding>
-            <ListItemButton
-              onClick={() => {
-                navigate(item.path);
-                setMobileOpen(false);
-              }}
-              sx={{
-                backgroundColor: location.pathname === item.path ? 'rgba(59, 130, 246, 0.8)' : 'transparent',
-                color: location.pathname === item.path ? '#ffffff' : '#94a3b8',
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
-                '&:hover': {
-                  backgroundColor: location.pathname === item.path ? 'rgba(59, 130, 246, 0.9)' : 'rgba(255, 255, 255, 0.1)',
-                  color: '#ffffff',
-                },
-              }}
-            >
-              {item.icon}
-              <ListItemText primary={item.name} sx={{ ml: 1 }} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+        {navigationItems.map((item) => {
+          const isActive = isActiveRoute(item.path);
+          return (
+            <ListItem key={item.name} disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  navigate(item.path);
+                  setMobileOpen(false);
+                }}
+                sx={{
+                  backgroundColor: isActive ? 'rgba(59, 130, 246, 0.8)' : 'transparent',
+                  color: isActive ? '#ffffff' : '#94a3b8',
+                  mx: 1,
+                  borderRadius: 2,
+                  mb: 0.5,
+                  '&:hover': {
+                    backgroundColor: isActive ? 'rgba(59, 130, 246, 0.9)' : 'rgba(255, 255, 255, 0.1)',
+                    color: '#ffffff',
+                  },
+                }}
+              >
+                {item.icon}
+                <ListItemText primary={item.name} sx={{ ml: 1 }} />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
       </List>
     </Box>
   );
@@ -160,34 +171,37 @@ const Navigation = () => {
 
               {!isMobile && (
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  {navigationItems.map((item) => (
-                    <Button
-                      key={item.name}
-                      startIcon={item.name !== 'More' ? item.icon : undefined}
-                      endIcon={item.name === 'More' ? item.icon : undefined}
-                      onClick={() => navigate(item.path)}
-                      variant={location.pathname === item.path ? 'contained' : 'text'}
-                      sx={{
-                        textTransform: 'none',
-                        fontWeight: 500,
-                        px: 2,
-                        py: 1,
-                        color: location.pathname === item.path ? '#ffffff' : '#94a3b8',
-                        backgroundColor: location.pathname === item.path 
-                          ? 'rgba(59, 130, 246, 0.8)' 
-                          : 'transparent',
-                        '&:hover': {
-                          backgroundColor: location.pathname === item.path 
-                            ? 'rgba(59, 130, 246, 0.9)' 
-                            : 'rgba(255, 255, 255, 0.1)',
-                          color: '#ffffff',
-                        },
-                        borderRadius: 2,
-                      }}
-                    >
-                      {item.name}
-                    </Button>
-                  ))}
+                  {navigationItems.map((item) => {
+                    const isActive = isActiveRoute(item.path);
+                    return (
+                      <Button
+                        key={item.name}
+                        startIcon={item.name !== 'More' ? item.icon : undefined}
+                        endIcon={item.name === 'More' ? item.icon : undefined}
+                        onClick={() => navigate(item.path)}
+                        variant={isActive ? 'contained' : 'text'}
+                        sx={{
+                          textTransform: 'none',
+                          fontWeight: 500,
+                          px: 2,
+                          py: 1,
+                          color: isActive ? '#ffffff' : '#94a3b8',
+                          backgroundColor: isActive 
+                            ? 'rgba(59, 130, 246, 0.8)' 
+                            : 'transparent',
+                          '&:hover': {
+                            backgroundColor: isActive 
+                              ? 'rgba(59, 130, 246, 0.9)' 
+                              : 'rgba(255, 255, 255, 0.1)',
+                            color: '#ffffff',
+                          },
+                          borderRadius: 2,
+                        }}
+                      >
+                        {item.name}
+                      </Button>
+                    );
+                  })}
                 </Box>
               )}
             </Box>
@@ -234,6 +248,6 @@ const Navigation = () => {
       )}
     </>
   );
-};
+});
 
 export default Navigation;
