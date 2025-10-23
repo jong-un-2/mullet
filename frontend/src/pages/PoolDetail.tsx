@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
+import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, claimFeesAndRewards, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
 import { TransactionProgress } from '../components/TransactionProgress';
 
 // JitoSOL mint address
@@ -121,6 +121,7 @@ export default function PoolDetail() {
   const [txStatus, setTxStatus] = useState<'idle' | 'building' | 'signing' | 'sending' | 'confirming' | 'success' | 'error'>('idle');
   const [txMessage, setTxMessage] = useState('');
   const [txSignature, setTxSignature] = useState<string | undefined>();
+  const [txType, setTxType] = useState<'deposit' | 'withdraw' | 'claim'>('deposit');
 
   // Load user balances
   const loadBalances = useCallback(async () => {
@@ -255,6 +256,7 @@ export default function PoolDetail() {
     setDepositLoading(true);
     setDepositTxSignature('');
     setShowProgress(true);
+    setTxType(actionMode); // Set transaction type
     setTxStatus('building');
     setTxMessage('Preparing transaction...');
     setTxSignature(undefined);
@@ -395,6 +397,81 @@ export default function PoolDetail() {
       console.error('Transaction error:', error);
       setTxStatus('error');
       setTxMessage(error.message || 'Transaction failed');
+      
+      // Auto-hide error after 8 seconds
+      setTimeout(() => {
+        setShowProgress(false);
+      }, 8000);
+    } finally {
+      setDepositLoading(false);
+    }
+  };
+
+  const handleClaimRewards = async () => {
+    console.log('handleClaimRewards called');
+    
+    // Check if we have either direct wallet or Privy wallet
+    const hasWallet = wallet.publicKey || solanaWallets.length > 0;
+    
+    if (!hasWallet || !pool) {
+      console.log('Early return: wallet or pool not available');
+      setShowProgress(true);
+      setTxStatus('error');
+      setTxMessage('Please connect your Solana wallet first');
+      setTimeout(() => setShowProgress(false), 5000);
+      return;
+    }
+
+    setDepositLoading(true);
+    setShowProgress(true);
+    setTxType('claim'); // Set transaction type to claim
+    setTxStatus('building');
+    setTxMessage('Preparing claim transaction...');
+    setTxSignature(undefined);
+
+    try {
+      // Use Privy wallet if available, otherwise use direct wallet
+      const walletToUse = solanaWallets.length > 0 
+        ? { 
+            publicKey: solanaWallets[0].address,
+            signTransaction: async (tx: any) => {
+              const serialized = tx.serialize({ requireAllSignatures: false });
+              const result = await solanaWallets[0].signTransaction({ transaction: serialized });
+              return result.signedTransaction;
+            }
+          }
+        : wallet;
+
+      setTxStatus('signing');
+      setTxMessage('Please approve the transaction in your wallet...');
+
+      // Call claim function
+      const signature = await claimFeesAndRewards({
+        strategyAddress: pool.address,
+        wallet: walletToUse,
+        connection,
+      });
+
+      console.log('Claim transaction signature:', signature);
+      setTxSignature(signature);
+      setTxStatus('success');
+      setTxMessage('Successfully claimed fees and rewards!');
+      
+      // Refresh position after claim
+      setTimeout(() => {
+        if (wallet.publicKey) {
+          loadUserPosition(wallet.publicKey.toString());
+        }
+      }, 2000);
+      
+      // Auto-hide after success
+      setTimeout(() => {
+        setShowProgress(false);
+      }, 8000);
+    } catch (error: any) {
+      console.error('Claim error:', error);
+      setTxStatus('error');
+      setTxMessage(error.message || 'Failed to claim rewards. Please try again.');
       
       // Auto-hide error after 8 seconds
       setTimeout(() => {
@@ -846,6 +923,8 @@ export default function PoolDetail() {
                     <Button 
                       variant="contained" 
                       size="medium"
+                      onClick={handleClaimRewards}
+                      disabled={depositLoading}
                       sx={{ 
                         background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
                         textTransform: 'none',
@@ -2435,7 +2514,13 @@ export default function PoolDetail() {
       <TransactionProgress
         open={showProgress}
         status={txStatus}
-        title={actionMode === 'deposit' ? 'Deposit Transaction' : 'Withdraw Transaction'}
+        title={
+          txType === 'claim' 
+            ? 'Claim Transaction'
+            : txType === 'deposit' 
+            ? 'Deposit Transaction' 
+            : 'Withdraw Transaction'
+        }
         message={txMessage}
         txSignature={txSignature}
       />

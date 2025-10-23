@@ -1439,3 +1439,116 @@ export async function fetchJitoSOLPools(): Promise<typeof JITOSOL_POOLS> {
     return [];
   }
 }
+
+/**
+ * Claim farm rewards from a Kamino strategy
+ * This is for liquidity providers to claim their farm rewards (e.g., JTO tokens)
+ * 
+ * @param strategyAddress - Strategy address
+ * @param wallet - Wallet with signTransaction method
+ * @param connection - Solana connection
+ * @returns Transaction signature
+ */
+export async function claimFeesAndRewards(params: {
+  strategyAddress: string;
+  wallet: any;
+  connection: Connection;
+}): Promise<string> {
+  const { strategyAddress, wallet, connection } = params;
+  
+  if (!wallet.publicKey || !wallet.signTransaction) {
+    throw new Error('Wallet not connected');
+  }
+
+  const userPublicKey = typeof wallet.publicKey === 'string' 
+    ? new PublicKey(wallet.publicKey) 
+    : wallet.publicKey;
+  
+  console.log('[Kamino] User public key:', userPublicKey.toString());
+  console.log('[Kamino] Claiming farm rewards from strategy:', strategyAddress);
+  
+  // Initialize SDKs with Helius RPC
+  const rpc = createKaminoRpc();
+  const kamino = new Kamino('mainnet-beta', rpc as any);
+  
+  // Get strategy state
+  const strategyState = await getStrategyWithRetry(kamino, strategyAddress);
+  
+  // Check if strategy has a farm
+  const stratHasFarm = strategyState.strategy.farm.toString() !== DEFAULT_PUBLIC_KEY.toString();
+  
+  if (!stratHasFarm) {
+    throw new Error('This strategy does not have a farm. No rewards to claim.');
+  }
+  
+  console.log('[Kamino] Strategy farm:', strategyState.strategy.farm.toString());
+  
+  // Create owner signer
+  const ownerSigner = createTransactionSigner(userPublicKey);
+
+  // Initialize Farms client
+  const farmClient = new Farms(rpc);
+  
+  // Build claim transaction
+  const tx = [createComputeUnitLimitIx(1_400_000)];
+  
+  console.log('[Kamino] Creating claim farm rewards instructions...');
+  
+  // Get claim instructions for all rewards in the farm
+  // isDelegated = false for direct user farm staking
+  const claimIxs = await farmClient.claimForUserForFarmAllRewardsIx(
+    ownerSigner,
+    strategyState.strategy.farm,
+    false // not delegated
+  );
+  
+  tx.push(...claimIxs);
+  
+  console.log('[Kamino] Claim instructions created:', claimIxs.length);
+  
+  // Convert to legacy instructions
+  const legacyInstructions = tx.map((ix: any) => {
+    if (ix.instructions) {
+      return ix.instructions;
+    }
+    return toLegacyInstruction(ix);
+  }).flat();
+
+  // Build and send transaction
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+  
+  const messageV0 = new TransactionMessage({
+    payerKey: userPublicKey,
+    recentBlockhash: blockhash,
+    instructions: legacyInstructions,
+  }).compileToV0Message([]);
+  
+  const versionedTx = new VersionedTransaction(messageV0);
+
+  console.log('[Kamino] Claim transaction created, requesting signature...');
+  const signedTx = await wallet.signTransaction(versionedTx);
+  
+  // Convert to VersionedTransaction if needed (for Privy wallet compatibility)
+  let txToSend = signedTx;
+  if (typeof signedTx.serialize !== 'function') {
+    txToSend = VersionedTransaction.deserialize(Buffer.from(signedTx as any));
+  }
+
+  console.log('[Kamino] Sending claim transaction...');
+  const signature = await connection.sendRawTransaction(txToSend.serialize(), {
+    skipPreflight: false,
+    maxRetries: 3,
+  });
+  
+  console.log('[Kamino] Claim transaction sent:', signature);
+  
+  await connection.confirmTransaction({
+    signature,
+    blockhash,
+    lastValidBlockHeight,
+  });
+  
+  console.log('[Kamino] ✅ Claim transaction confirmed!');
+  
+  return signature;
+}
