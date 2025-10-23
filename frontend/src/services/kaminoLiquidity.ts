@@ -1,3 +1,16 @@
+/**
+ * Kamino Liquidity Service
+ * 
+ * NOTE: This service bridges between legacy @solana/web3.js v1.x (used in frontend) 
+ * and the new @solana/kit types (used in Kamino SDK v8.5.3).
+ * 
+ * Key compatibility approach:
+ * - Use static ES6 imports to load Kamino SDK (CommonJS modules work with static imports in Vite)
+ * - Create new-style RPC from legacy Connection using @solana/kit
+ * - Convert between Address and PublicKey types using helper functions
+ * - Use type assertions (as any) where SDK types conflict with frontend types
+ */
+
 import { 
   Connection, 
   PublicKey, 
@@ -15,19 +28,49 @@ import {
   createCloseAccountInstruction,
 } from '@solana/spl-token';
 
-// Use CommonJS require for SDKs (they might not have proper ESM exports)
-// @ts-ignore
-const KaminoSDK = require('@kamino-finance/kliquidity-sdk');
-// @ts-ignore  
-const FarmsSDK = require('@kamino-finance/farms-sdk');
+// Static imports work with proper Vite CommonJS configuration
+import { 
+  Kamino,
+} from '@kamino-finance/kliquidity-sdk';
 
-const { Kamino } = KaminoSDK;
-const { Farms } = FarmsSDK;
+import {
+  Farms,
+} from '@kamino-finance/farms-sdk';
+
+// Import new Solana types and compat utilities
+import { address, Address } from '@solana/kit';
+import { fromLegacyPublicKey } from '@solana/compat';
+import {
+  createDefaultRpcTransport,
+  createRpc,
+  createSolanaRpcApi,
+  DEFAULT_RPC_CONFIG,
+  Rpc,
+  SolanaRpcApi,
+} from '@solana/kit';
 
 // Constants
 const WRAPPED_SOL_MINT = NATIVE_MINT; // wSOL is the native mint
 const U64_MAX = '18446744073709551615';
 const DEFAULT_PUBLIC_KEY = PublicKey.default;
+
+/**
+ * Helper function to create a new-style RPC from a legacy connection
+ */
+function createRpcFromConnection(connection: Connection): Rpc<SolanaRpcApi> {
+  const api = createSolanaRpcApi<SolanaRpcApi>({
+    ...DEFAULT_RPC_CONFIG,
+    defaultCommitment: 'confirmed',
+  });
+  return createRpc({ api, transport: createDefaultRpcTransport({ url: connection.rpcEndpoint }) });
+}
+
+/**
+ * Helper function to convert Address to PublicKey
+ */
+function addressToPublicKey(addr: Address): PublicKey {
+  return new PublicKey(addr.toString());
+}
 
 // JitoSOL and SOL mint addresses
 const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
@@ -93,12 +136,13 @@ export async function depositAndStake(params: {
   // Convert to lamports
   const solLamports = solAmount.mul(1e9).floor();
   
-  // Initialize Kamino SDK
-  const kamino = new Kamino('mainnet-beta', connection);
+  // Initialize Kamino SDK with new-style RPC
+  const rpc = createRpcFromConnection(connection);
+  const kamino = new Kamino('mainnet-beta', rpc as any);
   
-  // Get strategy (need to convert string to PublicKey for SDK)
-  const strategyPubkey = new PublicKey(strategyAddress);
-  const strategies = await kamino.getStrategiesWithAddresses([strategyPubkey]);
+  // Get strategy (need to convert string to Address for SDK)
+  const strategyAddress_ = address(strategyAddress);
+  const strategies = await kamino.getStrategiesWithAddresses([strategyAddress_]);
   const strategy = strategies[0];
   
   if (!strategy) {
@@ -149,8 +193,9 @@ export async function depositAndStake(params: {
 
   // Step 2: Ensure JitoSOL ATA exists
   const jitosolMint = strategy.strategy.tokenBMint; // Assuming tokenB is JitoSOL
+  const jitosolMintPubkey = addressToPublicKey(jitosolMint);
   const jitosolAta = await getAssociatedTokenAddress(
-    jitosolMint,
+    jitosolMintPubkey,
     userPublicKey
   );
   
@@ -161,15 +206,16 @@ export async function depositAndStake(params: {
         userPublicKey,
         jitosolAta,
         userPublicKey,
-        jitosolMint
+        jitosolMintPubkey
       )
     );
   }
 
   // Step 3: Ensure shares ATA exists (for LP tokens)
   const sharesMint = strategy.strategy.sharesMint;
+  const sharesMintPubkey = addressToPublicKey(sharesMint);
   const sharesAta = await getAssociatedTokenAddress(
-    sharesMint,
+    sharesMintPubkey,
     userPublicKey
   );
   
@@ -180,7 +226,7 @@ export async function depositAndStake(params: {
         userPublicKey,
         sharesAta,
         userPublicKey,
-        sharesMint
+        sharesMintPubkey
       )
     );
   }
@@ -188,29 +234,31 @@ export async function depositAndStake(params: {
   // Step 4: Deposit to Kamino pool
   const depositIx = await kamino.deposit(
     {
-      address: strategyPubkey,
+      address: strategyAddress_,
       strategy: strategy.strategy,
-    },
+    } as any,
     solAmount,
     jitosolAmount,
-    userPublicKey
+    { address: fromLegacyPublicKey(userPublicKey) } as any
   );
-  instructions.push(depositIx);
+  instructions.push(depositIx as any);
 
   // Step 5: Stake to farm if available
   const farmAddress = strategy.strategy.farm;
+  const farmAddressPubkey = addressToPublicKey(farmAddress);
   if (farmAddress && farmAddress.toString() !== DEFAULT_PUBLIC_KEY.toString()) {
     try {
-      const farms = new Farms(connection);
+      const farms = new Farms(rpc as any);
+      const farmsProgramId = addressToPublicKey(farms.getProgramID());
       
       // Check if user farm state exists
       const [userStatePDA] = PublicKey.findProgramAddressSync(
         [
           Buffer.from('user'),
-          farmAddress.toBuffer(),
+          farmAddressPubkey.toBuffer(),
           userPublicKey.toBuffer(),
         ],
-        farms.programId
+        farmsProgramId
       );
       
       const userStateInfo = await connection.getAccountInfo(userStatePDA);
@@ -218,23 +266,23 @@ export async function depositAndStake(params: {
       // Create farm state or deposit
       if (!userStateInfo || userStateInfo.data.length === 0) {
         // Need to create user state first
-        const createUserStateIxs = await farms.createUserStateAndDeposit(
+        const createUserStateIxs = await (farms as any).createUserStateAndDeposit(
           farmAddress,
-          userPublicKey,
-          sharesAta,
+          { address: fromLegacyPublicKey(userPublicKey) },
+          fromLegacyPublicKey(sharesAta),
           BigInt(U64_MAX),
-          DEFAULT_PUBLIC_KEY
+          address(DEFAULT_PUBLIC_KEY.toString())
         );
-        instructions.push(...createUserStateIxs);
+        instructions.push(...(createUserStateIxs as any));
       } else {
         // Just deposit to existing farm state
-        const depositFarmIx = await farms.deposit(
+        const depositFarmIx = await (farms as any).deposit(
           farmAddress,
-          userPublicKey,
-          sharesAta,
+          { address: fromLegacyPublicKey(userPublicKey) },
+          fromLegacyPublicKey(sharesAta),
           BigInt(U64_MAX)
         );
-        instructions.push(depositFarmIx);
+        instructions.push(depositFarmIx as any);
       }
     } catch (error) {
       console.warn('Farm staking failed, continuing without staking:', error);
@@ -288,13 +336,14 @@ export async function unstakeAndWithdraw(params: {
 
   const userPublicKey = wallet.publicKey;
   
-  // Initialize SDKs
-  const kamino = new Kamino('mainnet-beta', connection);
-  const farms = new Farms(connection);
+  // Initialize SDKs with new-style RPC
+  const rpc = createRpcFromConnection(connection);
+  const kamino = new Kamino('mainnet-beta', rpc as any);
+  const farms = new Farms(rpc as any);
   
   // Get strategy
-  const strategyPubkey = new PublicKey(strategyAddress);
-  const strategies = await kamino.getStrategiesWithAddresses([strategyPubkey]);
+  const strategyAddress_ = address(strategyAddress);
+  const strategies = await kamino.getStrategiesWithAddresses([strategyAddress_]);
   const strategy = strategies[0];
   
   if (!strategy) {
@@ -302,8 +351,9 @@ export async function unstakeAndWithdraw(params: {
   }
 
   const sharesMint = strategy.strategy.sharesMint;
+  const sharesMintPubkey = addressToPublicKey(sharesMint);
   const sharesAta = await getAssociatedTokenAddress(
-    sharesMint,
+    sharesMintPubkey,
     userPublicKey
   );
 
@@ -316,28 +366,30 @@ export async function unstakeAndWithdraw(params: {
 
   // Step 1: Unstake from farm if available
   const farmAddress = strategy.strategy.farm;
+  const farmAddressPubkey = addressToPublicKey(farmAddress);
   if (farmAddress && farmAddress.toString() !== DEFAULT_PUBLIC_KEY.toString()) {
     try {
       // Get user farm state PDA
+      const farmsProgramId = addressToPublicKey(farms.getProgramID());
       const [userStatePDA] = PublicKey.findProgramAddressSync(
         [
           Buffer.from('user'),
-          farmAddress.toBuffer(),
+          farmAddressPubkey.toBuffer(),
           userPublicKey.toBuffer(),
         ],
-        farms.programId
+        farmsProgramId
       );
       
       const userStateInfo = await connection.getAccountInfo(userStatePDA);
       
       if (userStateInfo && userStateInfo.data.length > 0) {
         // Unstake all shares from farm
-        const unstakeIxs = await farms.withdrawAndCloseUserState(
+        const unstakeIxs = await (farms as any).withdrawAndCloseUserState(
           farmAddress,
-          userPublicKey,
-          sharesAta
+          { address: fromLegacyPublicKey(userPublicKey) },
+          fromLegacyPublicKey(sharesAta)
         );
-        instructions.push(...unstakeIxs);
+        instructions.push(...(unstakeIxs as any));
       }
     } catch (error) {
       console.warn('Farm unstaking failed, continuing with withdraw:', error);
@@ -355,13 +407,13 @@ export async function unstakeAndWithdraw(params: {
   if (sharesAmount.gt(0)) {
     const withdrawIx = await kamino.withdrawShares(
       {
-        address: strategyPubkey,
+        address: strategyAddress_,
         strategy: strategy.strategy,
-      },
+      } as any,
       sharesAmount,
-      userPublicKey
+      { address: fromLegacyPublicKey(userPublicKey) } as any
     );
-    instructions.push(withdrawIx);
+    instructions.push(withdrawIx as any);
   }
 
   // Step 3: Close wSOL ATA to unwrap back to native SOL
@@ -422,10 +474,11 @@ export async function getUserPosition(
 ): Promise<PositionInfo | null> {
   try {
     const userPubkey = new PublicKey(userAddress);
-    const strategyPubkey = new PublicKey(strategyAddress);
+    const strategyAddress_ = address(strategyAddress);
     
-    const kamino = new Kamino('mainnet-beta', connection);
-    const strategies = await kamino.getStrategiesWithAddresses([strategyPubkey]);
+    const rpc = createRpcFromConnection(connection);
+    const kamino = new Kamino('mainnet-beta', rpc as any);
+    const strategies = await kamino.getStrategiesWithAddresses([strategyAddress_]);
     const strategy = strategies[0];
     
     if (!strategy) {
@@ -434,7 +487,8 @@ export async function getUserPosition(
     
     // Get user's LP token balance
     const sharesMint = strategy.strategy.sharesMint;
-    const sharesAta = await getAssociatedTokenAddress(sharesMint, userPubkey);
+    const sharesMintPubkey = addressToPublicKey(sharesMint);
+    const sharesAta = await getAssociatedTokenAddress(sharesMintPubkey, userPubkey);
     
     try {
       const sharesBalance = await connection.getTokenAccountBalance(sharesAta);
@@ -478,12 +532,13 @@ export async function getStakedShares(
   connection: Connection
 ): Promise<number> {
   try {
-    const farms = new Farms(connection);
-    const strategyPubkey = new PublicKey(strategyAddress);
+    const rpc = createRpcFromConnection(connection);
+    const farms = new Farms(rpc as any);
+    const strategyAddress_ = address(strategyAddress);
     const userPubkey = new PublicKey(userAddress);
     
-    const kamino = new Kamino('mainnet-beta', connection);
-    const strategies = await kamino.getStrategiesWithAddresses([strategyPubkey]);
+    const kamino = new Kamino('mainnet-beta', rpc as any);
+    const strategies = await kamino.getStrategiesWithAddresses([strategyAddress_]);
     const strategy = strategies[0];
     
     if (!strategy) {
@@ -496,13 +551,15 @@ export async function getStakedShares(
     }
     
     // Get user farm state PDA
+    const farmAddressPubkey = addressToPublicKey(farmAddress);
+    const farmsProgramId = addressToPublicKey(farms.getProgramID());
     const [userStatePDA] = PublicKey.findProgramAddressSync(
       [
         Buffer.from('user'),
-        farmAddress.toBuffer(),
+        farmAddressPubkey.toBuffer(),
         userPubkey.toBuffer(),
       ],
-      farms.programId
+      farmsProgramId
     );
     
     const userStateInfo = await connection.getAccountInfo(userStatePDA);

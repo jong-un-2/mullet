@@ -17,15 +17,22 @@ export default defineConfig({
       buffer: 'buffer',
       crypto: 'crypto-browserify',
       util: 'util',
+      assert: 'assert',
+      stream: 'stream-browserify',
     },
   },
   optimizeDeps: {
     esbuildOptions: {
       target: 'esnext',
+      // 支持 CommonJS 模块
+      mainFields: ['module', 'main'],
+      conditions: ['import', 'require', 'default'],
     },
     include: [
       'buffer', 
       'process',
+      'assert',
+      'stream-browserify',
       'eventemitter3', 
       'crypto-browserify',
       '@solana/web3.js',
@@ -36,12 +43,21 @@ export default defineConfig({
       '@solana/wallet-adapter-base',
       '@solana/wallet-adapter-phantom',
       '@solana/wallet-adapter-solflare',
-      '@solana/wallet-adapter-backpack'
+      '@solana/wallet-adapter-backpack',
+      // 预构建 Kamino SDK 包以正确处理 CommonJS 模块
+      '@kamino-finance/kliquidity-sdk',
+      '@kamino-finance/farms-sdk',
+      '@kamino-finance/klend-sdk',
     ],
     exclude: [
       '@orca-so/whirlpools-core',
       '@orca-so/whirlpools',
-      '@kamino-finance/kliquidity-sdk'
+    ],
+    // 强制使用 CommonJS 互操作
+    needsInterop: [
+      '@kamino-finance/kliquidity-sdk',
+      '@kamino-finance/farms-sdk',
+      '@kamino-finance/klend-sdk',
     ],
   },
   worker: {
@@ -63,8 +79,13 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     sourcemap: false,
     commonjsOptions: {
-      include: [/node_modules/],
+      include: [
+        /node_modules/,
+        /node_modules\/@kamino-finance/
+      ],
       transformMixedEsModules: true,
+      requireReturnsDefault: 'auto',
+      esmExternals: true,
     },
   },
 })
