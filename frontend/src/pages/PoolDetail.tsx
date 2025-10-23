@@ -339,19 +339,35 @@ export default function PoolDetail() {
             }
           : wallet;
 
-        // Get withdraw amount
-        const withdrawSharesAmount = singleAssetDeposit
-          ? (selectedToken === 'SOL' ? solAmount : jitosolAmount)
-          : undefined; // For slider mode, withdraw all (handled by percentage slider)
-
-        console.log('[PoolDetail] Withdrawing shares:', withdrawSharesAmount);
+        // Calculate LP shares needed for withdraw
+        let withdrawSharesAmount: number | undefined = undefined;
+        
+        if (singleAssetDeposit) {
+          // In single asset mode, convert token amount to LP shares
+          const desiredTokenAmount = parseFloat(selectedToken === 'SOL' ? solAmount : jitosolAmount);
+          const withdrawableTokenAmount = selectedToken === 'SOL' 
+            ? (userPosition?.withdrawableTokenA || 0)
+            : (userPosition?.withdrawableTokenB || 0);
+          const totalUserShares = userPosition?.sharesStaked || 0;
+          
+          // Calculate: (desiredTokenAmount / withdrawableTokenAmount) * totalUserShares
+          if (withdrawableTokenAmount > 0 && totalUserShares > 0) {
+            const ratio = desiredTokenAmount / withdrawableTokenAmount;
+            withdrawSharesAmount = ratio * totalUserShares;
+            console.log('[PoolDetail] Token amount:', desiredTokenAmount);
+            console.log('[PoolDetail] Withdrawable token:', withdrawableTokenAmount);
+            console.log('[PoolDetail] Total shares:', totalUserShares);
+            console.log('[PoolDetail] Calculated LP shares to withdraw:', withdrawSharesAmount);
+          }
+        }
+        // For slider mode (non-single asset), withdraw all shares (undefined = withdraw all)
 
         setTxStatus('sending');
         setTxMessage('Sending withdrawal transaction...');
 
         const signature = await unstakeAndWithdraw({
           strategyAddress: pool.address,
-          amountShares: withdrawSharesAmount || undefined,
+          amountShares: withdrawSharesAmount ? withdrawSharesAmount.toString() : undefined,
           wallet: walletToUse,
           connection
         });

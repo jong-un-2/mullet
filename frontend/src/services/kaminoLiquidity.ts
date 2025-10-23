@@ -16,21 +16,19 @@ import {
   PublicKey, 
   TransactionMessage,
   VersionedTransaction,
-  ComputeBudgetProgram,
   AddressLookupTableAccount,
 } from '@solana/web3.js';
 import Decimal from 'decimal.js';
 import { 
-  NATIVE_MINT,
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
-  createCloseAccountInstruction,
 } from '@solana/spl-token';
 
 // Import @solana-program packages for kit-compatible instructions
 import { 
   getSyncNativeInstruction,
   TOKEN_PROGRAM_ADDRESS,
+  getCloseAccountInstruction as getCloseAccountIx,
 } from '@solana-program/token';
 import { getTransferSolInstruction } from '@solana-program/system';
 
@@ -43,6 +41,7 @@ import {
   collToLamportsDecimal,
   DECIMALS_SOL,
   getAssociatedTokenAddress as getAtaKit,
+  getAssociatedTokenAddressAndAccount,
 } from '@kamino-finance/kliquidity-sdk';
 
 import {
@@ -68,7 +67,6 @@ import {
 import { none } from '@solana/options';
 
 // Constants
-const WRAPPED_SOL_MINT = NATIVE_MINT; // wSOL is the native mint
 const U64_MAX = '18446744073709551615';
 const DEFAULT_PUBLIC_KEY = PublicKey.default;
 
@@ -742,12 +740,108 @@ export async function depositAndStake(params: {
 }
 
 /**
- * Unstake from farm and withdraw liquidity from Kamino pool
+ * Helper function to safely multiply by WAD (10^18) using Decimal
+ * This avoids BN.js compatibility issues in the browser
+ */
+function multiplyByWad(amount: Decimal): string {
+  try {
+    // WAD is 10^18 = 1000000000000000000
+    const WAD_VALUE = new Decimal('1000000000000000000');
+    const result = amount.mul(WAD_VALUE);
+    // Return as integer string (no decimals)
+    return result.toFixed(0);
+  } catch (error) {
+    console.error('Error in multiplyByWad:', error);
+    throw new Error(`Failed to multiply ${amount.toString()} by WAD: ${error}`);
+  }
+}
+
+/**
+ * Helper function to get staked tokens amount from farm
+ */
+async function getStakedTokensAmount(
+  rpc: Rpc<SolanaRpcApi>,
+  user: Address,
+  farmAddress: Address
+): Promise<Decimal> {
+  if (farmAddress.toString() === DEFAULT_PUBLIC_KEY.toString()) {
+    return new Decimal(0);
+  }
+
+  const farmState = await FarmState.fetch(rpc, farmAddress);
+  if (!farmState) {
+    return new Decimal(0);
+  }
+
+  const farmClient = new Farms(rpc);
+  const userStateAddress = await getUserStatePDA(farmClient.getProgramID(), farmAddress, user);
+  const userState = await UserState.fetch(rpc, userStateAddress);
+  
+  if (!userState) {
+    return new Decimal(0);
+  }
+
+  return lamportsToCollDecimal(
+    new Decimal(scaleDownWads(userState.activeStakeScaled)),
+    farmState.token.decimals.toNumber()
+  );
+}
+
+/**
+ * Helper function to get farm unstake and withdraw instructions
+ */
+async function getFarmUnstakeAndWithdrawIxs(
+  rpc: Rpc<SolanaRpcApi>,
+  user: any, // TransactionSigner
+  farmAddress: Address,
+  sharesToUnstake: Decimal
+): Promise<any[]> {
+  const farmState = await FarmState.fetch(rpc, farmAddress);
+  if (!farmState) {
+    return [];
+  }
+
+  const farmClient = new Farms(rpc);
+  const userStateAddress = await getUserStatePDA(farmClient.getProgramID(), farmAddress, user.address);
+  const userState = await UserState.fetch(rpc, userStateAddress);
+
+  if (!userState) {
+    return [];
+  }
+
+  // Use multiplyByWad for safe large number arithmetic (following official example)
+  const unstakeAmountString = multiplyByWad(sharesToUnstake);
+
+  const unstakeIx = await farmClient.unstakeIx(user, farmAddress, new Decimal(unstakeAmountString), none());
+  const ixs: any[] = [unstakeIx];
+
+  if (sharesToUnstake.gt(new Decimal(0))) {
+    const withdrawIx = await farmClient.withdrawUnstakedDepositIx(
+      user,
+      userStateAddress,
+      farmAddress,
+      farmState.token.mint
+    );
+    ixs.push(withdrawIx);
+  }
+
+  return ixs;
+}
+
+/**
+ * Unstake from farm and withdraw LP shares
+ * Follows the official example: kliquidity-sdk/examples/example_unstake_and_withdraw.ts
+ * 
+ * @param strategyAddress - Strategy address
+ * @param amountShares - Optional amount of shares to withdraw (if not provided, withdraws all)
+ * @param wallet - Wallet with signTransaction method
+ * @param connection - Solana connection
+ * @returns Transaction signature
  */
 export async function unstakeAndWithdraw(params: {
   strategyAddress: string;
-  amountShares?: string; // Optional: if not provided, withdraw all
-  wallet: any; // WalletContextState
+  amountShares?: string;
+  wallet: any;
   connection: Connection;
 }): Promise<string> {
   const { strategyAddress, amountShares, wallet, connection } = params;
@@ -756,156 +850,216 @@ export async function unstakeAndWithdraw(params: {
     throw new Error('Wallet not connected');
   }
 
-  // Ensure userPublicKey is a PublicKey object (handle both string and PublicKey types)
   const userPublicKey = typeof wallet.publicKey === 'string' 
     ? new PublicKey(wallet.publicKey) 
     : wallet.publicKey;
   
   console.log('[Kamino] User public key:', userPublicKey.toString());
   
-  // Initialize SDKs with Helius RPC for better reliability
+  // Initialize SDKs with Helius RPC
   const rpc = createKaminoRpc();
   const kamino = new Kamino('mainnet-beta', rpc as any);
-  const farms = new Farms(rpc as any);
   
-  // Get strategy with retry logic (returns strategyState like in example)
+  // Get strategy state
   const strategyState = await getStrategyWithRetry(kamino, strategyAddress);
   
-  // Create strategyWithAddress object like in the example
+  // Create strategyWithAddress object
   const strategyWithAddress = {
     address: address(strategyAddress),
     strategy: strategyState.strategy,
   };
   
-  // Create owner signer for SDK calls
+  // Create owner signer
   const ownerSigner = createTransactionSigner(userPublicKey);
 
-  const sharesMint = strategyState.strategy.sharesMint;
-  const sharesMintPubkey = addressToPublicKey(sharesMint);
-  const sharesAta = await getAssociatedTokenAddress(
-    sharesMintPubkey,
-    userPublicKey
+  // Get staked shares from farm
+  const sharesStaked = await getStakedTokensAmount(
+    rpc,
+    ownerSigner.address,
+    strategyState.strategy.farm
   );
-
-  const instructions = [];
-
-  // Add compute budget
-  instructions.push(
-    ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 })
+  
+  console.log('[Kamino] Shares staked in farm:', sharesStaked.toString());
+  
+  // Determine shares to burn
+  const sharesToBurn = amountShares 
+    ? new Decimal(amountShares)
+    : sharesStaked;
+  
+  console.log('[Kamino] Shares to burn (withdraw):', sharesToBurn.toString());
+  
+  // Get shares ATA
+  const sharesMintPubkey = addressToPublicKey(strategyState.strategy.sharesMint);
+  const sharesAta = await getAssociatedTokenAddress(sharesMintPubkey, userPublicKey);
+  
+  console.log('Shares ATA: ', sharesAta.toString());
+  
+  // Get current shares balance in ATA
+  const sharesBalance = await kamino.getTokenAccountBalanceOrZero(
+    address(sharesAta.toString())
   );
-
-  // Step 1: Unstake from farm if available
-  const farmAddress = strategyState.strategy.farm;
-  if (farmAddress && farmAddress.toString() !== DEFAULT_PUBLIC_KEY.toString()) {
-    try {
-      console.log('📤 Unstaking from farm:', farmAddress.toString());
-      
-      const farmsProgramId = farms.getProgramID();
-      
-      // Get user state PDA
-      const userStatePDA = await getUserStatePDA(farmsProgramId, farmAddress, ownerSigner.address);
-      console.log('User state PDA:', userStatePDA.toString());
-      
-      // Use legacy connection to check account (avoids Base58 encoding issue)
-      const userStatePDALegacy = new PublicKey(userStatePDA.toString());
-      const userStateAccountInfo = await connection.getAccountInfo(userStatePDALegacy);
-      
-      if (userStateAccountInfo !== null) {
-        console.log('User has staked tokens, creating unstake instructions...');
-        
-        // Unstake shares - use specified amount or all (U64_MAX)
-        const unstakeAmount = amountShares 
-          ? new Decimal(amountShares)
-          : new Decimal(U64_MAX);
-        
-        console.log('[Kamino] Unstaking amount:', unstakeAmount.toString());
-        
-        const unstakeIx = await farms.unstakeIx(
-          ownerSigner as any,
-          farmAddress,
-          unstakeAmount,
-          none() // No scope prices
-        );
-        instructions.push(unstakeIx as any);
-        
-        // Withdraw unstaked deposit
-        const withdrawIx = await farms.withdrawUnstakedDepositIx(
-          ownerSigner as any,
-          userStatePDA,
-          farmAddress,
-          strategyState.strategy.sharesMint
-        );
-        instructions.push(withdrawIx as any);
-        
-        console.log('✅ Generated farm unstake instructions');
-      } else {
-        console.log('ℹ️ No active farm stake found, skipping unstake');
-      }
-    } catch (error) {
-      console.warn('Farm unstaking failed, continuing with withdraw:', error);
-      // Continue - user might have direct LP tokens without staking
+  
+  console.log('[Kamino] Current shares in ATA:', sharesBalance.toString());
+  
+  // Check if we need to unstake from farm first (Transaction 1)
+  const stratHasFarm = strategyState.strategy.farm.toString() !== DEFAULT_PUBLIC_KEY.toString();
+  
+  if (sharesBalance.lt(sharesToBurn) && stratHasFarm) {
+    console.log('[Kamino] Need to unstake from farm first');
+    const sharesToUnstake = sharesToBurn.sub(sharesBalance);
+    console.log('[Kamino] Shares to unstake (UI amount):', sharesToUnstake.toString());
+    
+    // Convert shares to lamports before passing to getFarmUnstakeAndWithdrawIxs
+    // This is critical! The function expects lamports, not UI amount
+    const shareLamportsToUnstake = collToLamportsDecimal(
+      sharesToUnstake,
+      strategyState.strategy.sharesMintDecimals.toNumber()
+    );
+    console.log('[Kamino] Shares to unstake (lamports):', shareLamportsToUnstake.toString());
+    
+    // Build unstake transaction
+    const unstakeIxs = await getFarmUnstakeAndWithdrawIxs(
+      rpc,
+      ownerSigner,
+      strategyState.strategy.farm,
+      shareLamportsToUnstake
+    );
+    
+    const unstakeTx = [createComputeUnitLimitIx(1_400_000)];
+    unstakeTx.push(...unstakeIxs);
+    
+    // Convert to legacy instructions using the same converter as deposit
+    const unstakeLegacyIxs = unstakeTx.map((ix: any) => {
+      if (ix.instructions) return ix.instructions;
+      return toLegacyInstruction(ix);
+    }).flat();
+    
+    const { blockhash: unstakeBlockhash, lastValidBlockHeight: unstakeLastValidBlockHeight } = 
+      await connection.getLatestBlockhash();
+    
+    const unstakeMessageV0 = new TransactionMessage({
+      payerKey: userPublicKey,
+      recentBlockhash: unstakeBlockhash,
+      instructions: unstakeLegacyIxs,
+    }).compileToV0Message([]);
+    
+    const unstakeVersionedTx = new VersionedTransaction(unstakeMessageV0);
+    
+    console.log('[Kamino] Unstake transaction created, requesting signature...');
+    const signedUnstakeTx = await wallet.signTransaction(unstakeVersionedTx);
+    
+    let unstakeTxToSend = signedUnstakeTx;
+    if (typeof signedUnstakeTx.serialize !== 'function') {
+      unstakeTxToSend = VersionedTransaction.deserialize(Buffer.from(signedUnstakeTx as any));
     }
+    
+    console.log('[Kamino] Sending unstake transaction...');
+    const unstakeSignature = await connection.sendRawTransaction(unstakeTxToSend.serialize(), {
+      skipPreflight: false,
+      maxRetries: 3,
+    });
+    
+    console.log('[Kamino] Unstake transaction sent:', unstakeSignature);
+    
+    await connection.confirmTransaction({
+      signature: unstakeSignature,
+      blockhash: unstakeBlockhash,
+      lastValidBlockHeight: unstakeLastValidBlockHeight,
+    });
+    
+    console.log('[Kamino] ✅ Unstake transaction confirmed!');
+    
+    // Wait a moment for shares to be available in ATA
+    console.log('[Kamino] Waiting for shares to be available in ATA...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }
-
-  // Step 2: Withdraw LP shares from pool
-  // Determine withdraw amount - use specified amount or all available
-  let withdrawAmount: Decimal;
   
-  if (amountShares) {
-    withdrawAmount = new Decimal(amountShares);
-    console.log('[Kamino] Withdrawing specified amount:', withdrawAmount.toString());
-  } else {
-    // Get LP token balance to withdraw all
-    const sharesBalance = await connection.getTokenAccountBalance(sharesAta);
-    withdrawAmount = new Decimal(sharesBalance.value.amount).div(
-      new Decimal(10).pow(sharesBalance.value.decimals)
-    );
-    console.log('[Kamino] Withdrawing all shares:', withdrawAmount.toString());
-  }
-
-  if (withdrawAmount.gt(0)) {
-    const withdrawIx = await kamino.withdrawShares(
-      strategyWithAddress as any,
-      withdrawAmount,
-      ownerSigner as any
-    );
-    instructions.push(withdrawIx as any);
-  }
-
-  // Step 3: Close wSOL ATA to unwrap back to native SOL
-  const wsolAta = await getAssociatedTokenAddress(
-    WRAPPED_SOL_MINT,
-    userPublicKey
+  // Transaction 2: Withdraw LP shares
+  console.log('[Kamino] Preparing withdraw transaction...');
+  const withdrawTx = [createComputeUnitLimitIx(1_400_000)];
+  
+  // Get token ATAs and account data using SDK helper
+  const [sharesAtaAddr, sharesMintData] = await getAssociatedTokenAddressAndAccount(
+    rpc,
+    strategyState.strategy.sharesMint,
+    ownerSigner.address
+  );
+  const [tokenAAta, tokenAData] = await getAssociatedTokenAddressAndAccount(
+    rpc,
+    strategyState.strategy.tokenAMint,
+    ownerSigner.address
+  );
+  const [tokenBAta, tokenBData] = await getAssociatedTokenAddressAndAccount(
+    rpc,
+    strategyState.strategy.tokenBMint,
+    ownerSigner.address
   );
   
-  // Check if wSOL ATA exists and has balance
-  const wsolAccountInfo = await connection.getAccountInfo(wsolAta);
-  if (wsolAccountInfo) {
-    instructions.push(
-      createCloseAccountInstruction(
-        wsolAta,         // account to close
-        userPublicKey,   // destination for remaining balance
-        userPublicKey    // owner
-      )
-    );
+  const createAtasIxs = await kamino.getCreateAssociatedTokenAccountInstructionsIfNotExist(
+    ownerSigner as any,
+    strategyWithAddress as any,
+    tokenAData,
+    tokenAAta,
+    tokenBData,
+    tokenBAta,
+    sharesMintData,
+    sharesAtaAddr
+  );
+  
+  withdrawTx.push(...createAtasIxs);
+  
+  // Withdraw shares from pool
+  const withdrawResult = await kamino.withdrawShares(
+    strategyWithAddress as any,
+    sharesToBurn,
+    ownerSigner as any
+  );
+  
+  withdrawTx.push(...withdrawResult.prerequisiteIxs);
+  withdrawTx.push(withdrawResult.withdrawIx);
+  if (withdrawResult.closeSharesAtaIx) {
+    withdrawTx.push(withdrawResult.closeSharesAtaIx);
   }
+  
+  // Close wSOL ATA to unwrap back to native SOL
+  const wsolAta = tokenAAta; // For JitoSOL-SOL pools, tokenA is wSOL
+  const closeWsolAtaIx = getCloseAccountIx({
+    owner: ownerSigner.address,
+    account: wsolAta,
+    destination: ownerSigner.address,
+  });
+  withdrawTx.push(closeWsolAtaIx);
+  
+  // Convert instructions to legacy format using the same converter as deposit
+  const legacyInstructions = withdrawTx.map((ix: any) => {
+    if (ix.instructions) {
+      return ix.instructions;
+    }
+    return toLegacyInstruction(ix);
+  }).flat();
 
-  // Step 4: Build and send transaction
+  // Build and send transaction
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
   
   const messageV0 = new TransactionMessage({
     payerKey: userPublicKey,
     recentBlockhash: blockhash,
-    instructions,
-  }).compileToV0Message();
+    instructions: legacyInstructions,
+  }).compileToV0Message([]);
   
-  const tx = new VersionedTransaction(messageV0);
+  const versionedTx = new VersionedTransaction(messageV0);
 
   // Sign transaction
-  const signedTx = await wallet.signTransaction(tx);
+  const signedTx = await wallet.signTransaction(versionedTx);
+  
+  // Convert to VersionedTransaction if needed (for Privy wallet compatibility)
+  let txToSend = signedTx;
+  if (typeof signedTx.serialize !== 'function') {
+    txToSend = VersionedTransaction.deserialize(Buffer.from(signedTx as any));
+  }
   
   // Send transaction
-  const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+  const signature = await connection.sendRawTransaction(txToSend.serialize(), {
     skipPreflight: false,
     maxRetries: 3,
   });
