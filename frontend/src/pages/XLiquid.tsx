@@ -1,15 +1,46 @@
 import { Box, Container, Typography, Button, Chip, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, InputAdornment, CircularProgress } from '@mui/material';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import SearchIcon from '@mui/icons-material/Search';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { useKaminoStrategies, DEX_ICONS } from '../hooks/useKaminoStrategies';
+import { JITOSOL_POOLS, fetchJitoSOLPools } from '../services/kaminoLiquidity';
+
+// DEX Icons mapping
+const DEX_ICONS: Record<string, string> = {
+  'Orca': '🌊',
+  'Meteora': '☄️',
+  'Raydium': '⚡',
+  'Kamino': 'K',
+};
 
 const XLiquidPage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const { strategies, loading, totalDeposits, feesGenerated } = useKaminoStrategies();
+  const [pools, setPools] = useState(JITOSOL_POOLS);
+  const [poolsLoading, setPoolsLoading] = useState(true);
+
+  // Fetch live pool data on mount
+  useEffect(() => {
+    const loadPools = async () => {
+      setPoolsLoading(true);
+      try {
+        const livePools = await fetchJitoSOLPools();
+        setPools(livePools);
+      } catch (error) {
+        console.error('Failed to fetch pools:', error);
+      } finally {
+        setPoolsLoading(false);
+      }
+    };
+    
+    loadPools();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(loadPools, 30000);
+    return () => clearInterval(interval);
+  }, []); // Remove connection dependency
 
   // 格式化金额
   const formatCurrency = (amount: number) => {
@@ -19,22 +50,23 @@ const XLiquidPage = () => {
     return `$${amount.toFixed(2)}`;
   };
 
-  // 过滤策略
-  const filteredStrategies = useMemo(() => {
-    if (!searchQuery) return strategies;
+  // 过滤策略 - 现在只显示JitoSOL池子
+  const filteredPools = useMemo(() => {
+    if (!searchQuery) return pools;
     const query = searchQuery.toLowerCase();
-    return strategies.filter(
-      (strategy) =>
-        strategy.name.toLowerCase().includes(query) ||
-        strategy.dex.toLowerCase().includes(query) ||
-        strategy.tokenA.symbol.toLowerCase().includes(query) ||
-        strategy.tokenB.symbol.toLowerCase().includes(query)
+    return pools.filter(
+      (pool) =>
+        pool.name.toLowerCase().includes(query) ||
+        pool.dex.toLowerCase().includes(query)
     );
-  }, [strategies, searchQuery]);
+  }, [searchQuery, pools]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setActiveTab(newValue);
   };
+
+  const totalTVL = JITOSOL_POOLS.reduce((sum, pool) => sum + pool.tvl, 0);
+  const avgAPY = JITOSOL_POOLS.reduce((sum, pool) => sum + pool.apy, 0) / JITOSOL_POOLS.length;
 
   return (
     <Box sx={{ 
@@ -77,25 +109,33 @@ const XLiquidPage = () => {
             <Box sx={{ display: 'flex', gap: 4, mb: 6, justifyContent: 'center' }}>
               <Box>
                 <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
-                  Total Deposits
+                  Total TVL
                 </Typography>
                 <Typography variant="h5" fontWeight={700} sx={{ color: '#ffffff' }}>
-                  {formatCurrency(totalDeposits)}
+                  {formatCurrency(totalTVL)}
                 </Typography>
               </Box>
               <Box>
                 <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
-                  Fees Generated
+                  Average APY
                 </Typography>
                 <Typography variant="h5" fontWeight={700} sx={{ color: '#ffffff' }}>
-                  {formatCurrency(feesGenerated)}
+                  {(avgAPY * 100).toFixed(2)}%
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
+                  Active Pools
+                </Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ color: '#ffffff' }}>
+                  {JITOSOL_POOLS.length}
                 </Typography>
               </Box>
             </Box>
           </Box>
 
-          {/* Loading & Error States */}
-          {loading && (
+          {/* Loading State */}
+          {poolsLoading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
               <CircularProgress sx={{ color: '#3b82f6' }} />
             </Box>
@@ -187,25 +227,41 @@ const XLiquidPage = () => {
                   <TableCell sx={{ color: '#64748b', borderBottom: '1px solid rgba(59, 130, 246, 0.1)', py: 2 }}>7D Volume</TableCell>
                   <TableCell sx={{ color: '#64748b', borderBottom: '1px solid rgba(59, 130, 246, 0.1)', py: 2 }}>TVL</TableCell>
                   <TableCell sx={{ color: '#64748b', borderBottom: '1px solid rgba(59, 130, 246, 0.1)', py: 2 }}>DEX</TableCell>
-                  <TableCell sx={{ color: '#64748b', borderBottom: '1px solid rgba(59, 130, 246, 0.1)', py: 2 }}></TableCell>
+                  <TableCell sx={{ borderBottom: '1px solid rgba(59, 130, 246, 0.1)', py: 2 }}></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {!loading && filteredStrategies.length === 0 && (
+                {poolsLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: '#64748b' }}>
-                      No strategies found
+                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                      <CircularProgress size={32} />
+                      <Typography sx={{ color: '#64748b', mt: 2 }}>
+                        Loading pools...
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                )}
-                {!loading && filteredStrategies.map((strategy) => {
-                  const dexIcon = DEX_ICONS[strategy.dex] || '🌊';
+                ) : filteredPools.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: '#64748b' }}>
+                      No pools found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPools.map((pool) => {
+                  const dexIcon = DEX_ICONS[pool.dex] || '🌊';
                   return (
                     <TableRow 
-                      key={strategy.address}
+                      key={pool.address}
+                      onClick={() => navigate(`/xliquid/${pool.address}`)}
                       sx={{ 
+                        cursor: 'pointer',
                         '&:hover': { 
-                          backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          transform: 'translateY(-2px)',
+                        },
+                        '&:active': {
+                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                          transform: 'translateY(0px)',
                         },
                         transition: 'all 0.2s ease'
                       }}
@@ -213,33 +269,38 @@ const XLiquidPage = () => {
                       <TableCell sx={{ borderBottom: '1px solid rgba(59, 130, 246, 0.05)', py: 2.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Typography sx={{ fontSize: 24 }}>{dexIcon}</Typography>
-                          <Typography sx={{ color: '#ffffff', fontWeight: 500 }}>
-                            {strategy.name}
-                          </Typography>
+                          <Box>
+                            <Typography sx={{ color: '#ffffff', fontWeight: 500 }}>
+                              {pool.name}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: '#64748b' }}>
+                              {pool.description}
+                            </Typography>
+                          </Box>
                         </Box>
                       </TableCell>
                       <TableCell sx={{ borderBottom: '1px solid rgba(59, 130, 246, 0.05)', py: 2.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {strategy.apy > 5 && (
+                          {pool.feesApy > 0.02 && (
                             <Box sx={{ 
                               color: '#fbbf24',
                               fontSize: 16
                             }}>⚡</Box>
                           )}
                           <Typography sx={{ color: '#3b82f6', fontWeight: 600 }}>
-                            {strategy.apy.toFixed(2)}%
+                            {(pool.feesApy * 100).toFixed(2)}%
                           </Typography>
                         </Box>
                       </TableCell>
                       <TableCell sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(59, 130, 246, 0.05)', py: 2.5 }}>
-                        {formatCurrency(strategy.volume24h)}
+                        {formatCurrency(pool.volume7d)}
                       </TableCell>
                       <TableCell sx={{ color: '#94a3b8', borderBottom: '1px solid rgba(59, 130, 246, 0.05)', py: 2.5 }}>
-                        {formatCurrency(strategy.tvl)}
+                        {formatCurrency(pool.tvl)}
                       </TableCell>
                       <TableCell sx={{ borderBottom: '1px solid rgba(59, 130, 246, 0.05)', py: 2.5 }}>
                         <Chip 
-                          label={strategy.dex}
+                          label={pool.dex}
                           size="small"
                           sx={{ 
                             backgroundColor: 'rgba(59, 130, 246, 0.15)',
@@ -250,21 +311,29 @@ const XLiquidPage = () => {
                         />
                       </TableCell>
                       <TableCell sx={{ borderBottom: '1px solid rgba(59, 130, 246, 0.05)', py: 2.5 }}>
-                        <Button 
+                        <Button
                           variant="contained"
                           size="small"
-                          sx={{ 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/xliquid/${pool.address}`);
+                          }}
+                          sx={{
                             background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                             color: '#ffffff',
                             textTransform: 'none',
                             fontWeight: 600,
                             px: 3,
+                            py: 1,
                             borderRadius: 2,
-                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
                             '&:hover': {
                               background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                              boxShadow: '0 6px 20px rgba(59, 130, 246, 0.4)',
-                            }
+                              transform: 'scale(1.05)',
+                            },
+                            '&:active': {
+                              transform: 'scale(0.98)',
+                            },
+                            transition: 'all 0.2s ease'
                           }}
                         >
                           Deposit
@@ -272,7 +341,8 @@ const XLiquidPage = () => {
                       </TableCell>
                     </TableRow>
                   );
-                })}
+                })
+                )}
               </TableBody>
             </Table>
           </TableContainer>

@@ -35,6 +35,7 @@ import AddLiquidityPage from "./pages/AddLiquidity";
 import XFundPage from "./pages/XFund";
 import XStockPage from "./pages/XStock";
 import XLiquidPage from "./pages/XLiquid";
+import PoolDetail from "./pages/PoolDetail";
 import MorePage from "./pages/More";
 
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
@@ -71,6 +72,10 @@ const router = createBrowserRouter([
   {
     path: "/xliquid",
     element: <XLiquidPage />,
+  },
+  {
+    path: "/xliquid/:poolAddress",
+    element: <PoolDetail />,
   },
   {
     path: "/portfolio",
