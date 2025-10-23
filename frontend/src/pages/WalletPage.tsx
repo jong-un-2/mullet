@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Container, Typography } from '@mui/material';
 import WalletManager from '../components/WalletManager';
-import MainNavigation from '../components/MainNavigation';
+import Navigation from '../components/Navigation';
 
 const WalletPage: React.FC = () => {
   return (
@@ -9,7 +9,7 @@ const WalletPage: React.FC = () => {
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
     }}>
-      <MainNavigation />
+      <Navigation />
       <Container maxWidth="md" sx={{ pt: 4 }}>
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h4" component="h1" sx={{ 

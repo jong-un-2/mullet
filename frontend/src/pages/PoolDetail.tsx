@@ -32,6 +32,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, claimFeesAndRewards, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
 import { TransactionProgress } from '../components/TransactionProgress';
+import Navigation from '../components/Navigation';
 
 // JitoSOL mint address
 const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
@@ -534,21 +535,31 @@ export default function PoolDetail() {
   const dexIcon = DEX_ICONS[pool.dex] || '🌊';
 
   return (
-    <Box sx={{ 
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-      p: 4
-    }}>
+    <>
+      {/* Navigation Bar */}
+      <Navigation />
+
+      {/* Main Content */}
+      <Box sx={{ 
+        minHeight: 'calc(100vh - 64px)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        p: 4,
+        pl: 8  // 增加左边距
+      }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <IconButton 
-          onClick={() => navigate('/xliquid')}
-          sx={{ color: '#94a3b8', mb: 2 }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
-
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <IconButton 
+            onClick={() => navigate('/xliquid')}
+            sx={{ 
+              color: '#94a3b8',
+              '&:hover': {
+                backgroundColor: 'rgba(148, 163, 184, 0.1)'
+              }
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
           <Typography sx={{ fontSize: 32 }}>{dexIcon}</Typography>
           <Box>
             <Typography variant="h4" sx={{ color: '#ffffff', fontWeight: 600 }}>
@@ -2470,7 +2481,7 @@ export default function PoolDetail() {
                     color: '#3b82f6',
                     textTransform: 'none',
                     fontSize: '0.85rem',
-                    justifyContent: 'flex-end',
+                    justifyContent: 'center',
                     '&:hover': {
                       backgroundColor: 'rgba(59, 130, 246, 0.1)'
                     }
@@ -2571,6 +2582,7 @@ export default function PoolDetail() {
         message={txMessage}
         txSignature={txSignature}
       />
-    </Box>
+      </Box>
+    </>
   );
 }
