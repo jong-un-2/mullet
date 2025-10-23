@@ -4,6 +4,8 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
 import { useWallets } from '@privy-io/react-auth/solana';
+import { PublicKey } from '@solana/web3.js';
+import { getAccount, getAssociatedTokenAddress } from '@solana/spl-token';
 import {
   Box,
   Typography,
@@ -25,6 +27,9 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
+
+// JitoSOL mint address
+const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -97,6 +102,53 @@ export default function PoolDetail() {
   const [userPosition, setUserPosition] = useState<any>(null);
   const [positionLoading, setPositionLoading] = useState(false);
 
+  // Balance states
+  const [solBalance, setSolBalance] = useState<number>(0);
+  const [jitosolBalance, setJitosolBalance] = useState<number>(0);
+  const [balancesLoading, setBalancesLoading] = useState(false);
+
+  // Load user balances
+  const loadBalances = useCallback(async () => {
+    const userAddress = wallet.publicKey?.toString() || (solanaWallets.length > 0 ? solanaWallets[0].address : null);
+    
+    if (!userAddress) {
+      setSolBalance(0);
+      setJitosolBalance(0);
+      return;
+    }
+    
+    setBalancesLoading(true);
+    try {
+      const publicKey = new PublicKey(userAddress);
+      
+      // Get SOL balance
+      const solBalanceLamports = await connection.getBalance(publicKey, 'confirmed');
+      const solBal = solBalanceLamports / 1e9;
+      setSolBalance(solBal);
+      console.log('[PoolDetail] SOL Balance:', solBal);
+      
+      // Get JitoSOL balance
+      try {
+        const jitosolMint = new PublicKey(JITOSOL_MINT);
+        const jitosolAta = await getAssociatedTokenAddress(jitosolMint, publicKey);
+        const jitosolAccount = await getAccount(connection, jitosolAta);
+        const jitosolBal = Number(jitosolAccount.amount) / 1e9;
+        setJitosolBalance(jitosolBal);
+        console.log('[PoolDetail] JitoSOL Balance:', jitosolBal);
+      } catch (error) {
+        // ATA doesn't exist, balance is 0
+        console.log('[PoolDetail] JitoSOL ATA not found, balance is 0');
+        setJitosolBalance(0);
+      }
+    } catch (error) {
+      console.error('[PoolDetail] Error loading balances:', error);
+      setSolBalance(0);
+      setJitosolBalance(0);
+    } finally {
+      setBalancesLoading(false);
+    }
+  }, [wallet.publicKey, solanaWallets, connection]);
+
   const loadUserPosition = useCallback(async (poolData: any) => {
     // Check if we have either direct wallet or Privy wallet
     const userAddress = wallet.publicKey?.toString() || (solanaWallets.length > 0 ? solanaWallets[0].address : null);
@@ -145,6 +197,13 @@ export default function PoolDetail() {
     
     loadPoolData();
   }, [poolAddress, isWalletConnected, wallet.publicKey, loadUserPosition]);
+
+  // Load balances when wallet connects
+  useEffect(() => {
+    if (isWalletConnected) {
+      loadBalances();
+    }
+  }, [isWalletConnected, loadBalances]);
 
   const handleDeposit = async () => {
     console.log('handleDeposit called');
@@ -206,6 +265,12 @@ export default function PoolDetail() {
         setDepositTxSignature(signature);
         setSolAmount('');
         setJitosolAmount('');
+        
+        // Reload balances and position after successful deposit
+        await Promise.all([
+          loadBalances(),
+          loadUserPosition(pool)
+        ]);
       } else {
         // Withdraw logic
         if (!singleAssetDeposit && withdrawPercentage <= 0) {
@@ -234,10 +299,13 @@ export default function PoolDetail() {
 
         setDepositTxSignature(signature);
         setWithdrawPercentage(0);
+        
+        // Reload balances and position after transaction
+        await Promise.all([
+          loadBalances(),
+          loadUserPosition(pool)
+        ]);
       }
-
-      // Reload position after transaction
-      await loadUserPosition(pool);
     } catch (error: any) {
       console.error('Transaction error:', error);
       alert(`Transaction failed: ${error.message}`);
@@ -1037,26 +1105,60 @@ export default function PoolDetail() {
                                 </Typography>
                                 <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>▼</Typography>
                               </Button>
-                              <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
-                                {selectedToken === 'SOL' ? (solAmount || '0') : (jitosolAmount || '0')}
-                              </Typography>
+                              <TextField
+                                value={selectedToken === 'SOL' ? solAmount : jitosolAmount}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const maxAmount = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                                  if (value === '' || (parseFloat(value) <= maxAmount && !isNaN(parseFloat(value)))) {
+                                    if (selectedToken === 'SOL') {
+                                      setSolAmount(value);
+                                    } else {
+                                      setJitosolAmount(value);
+                                    }
+                                  }
+                                }}
+                                placeholder="0"
+                                variant="standard"
+                                type="number"
+                                InputProps={{
+                                  disableUnderline: true,
+                                  inputProps: {
+                                    style: { textAlign: 'right' }
+                                  }
+                                }}
+                                sx={{
+                                  '& .MuiInputBase-input': {
+                                    color: '#ffffff',
+                                    fontSize: '1.5rem',
+                                    fontWeight: 600,
+                                    textAlign: 'right',
+                                    padding: 0,
+                                  }
+                                }}
+                              />
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                                Available: {wallet.publicKey 
-                                  ? (selectedToken === 'SOL' ? '0.241439641 SOL' : '0.080780416 JITOSOL')
-                                  : '0'}
+                                Available: {balancesLoading 
+                                  ? '...' 
+                                  : selectedToken === 'SOL' 
+                                    ? `${solBalance.toFixed(9)} SOL`
+                                    : `${jitosolBalance.toFixed(9)} JITOSOL`}
                               </Typography>
                               <Box sx={{ display: 'flex', gap: 1 }}>
                                 <Button 
                                   size="small" 
                                   onClick={() => {
+                                    const balance = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                                    const halfAmount = (balance / 2).toFixed(9);
                                     if (selectedToken === 'SOL') {
-                                      setSolAmount('0.120719821');
+                                      setSolAmount(halfAmount);
                                     } else {
-                                      setJitosolAmount('0.040390208');
+                                      setJitosolAmount(halfAmount);
                                     }
                                   }}
+                                  disabled={selectedToken === 'SOL' ? solBalance === 0 : jitosolBalance === 0}
                                   sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
                                 >
                                   Half
@@ -1064,12 +1166,15 @@ export default function PoolDetail() {
                                 <Button 
                                   size="small"
                                   onClick={() => {
+                                    const balance = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                                    const maxAmount = balance.toFixed(9);
                                     if (selectedToken === 'SOL') {
-                                      setSolAmount('0.241439641');
+                                      setSolAmount(maxAmount);
                                     } else {
-                                      setJitosolAmount('0.080780416');
+                                      setJitosolAmount(maxAmount);
                                     }
                                   }}
+                                  disabled={selectedToken === 'SOL' ? solBalance === 0 : jitosolBalance === 0}
                                   sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
                                 >
                                   Max
@@ -1134,20 +1239,22 @@ export default function PoolDetail() {
                               </Box>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                                  Available: {wallet.publicKey ? '0.241439641' : '0'} SOL
+                                  Available: {balancesLoading ? '...' : solBalance.toFixed(9)} SOL
                                 </Typography>
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                   <Button 
                                     size="small" 
-                                    onClick={() => setSolAmount('0.120719821')}
+                                    onClick={() => setSolAmount((solBalance / 2).toFixed(9))}
                                     sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                    disabled={solBalance === 0}
                                   >
                                     Half
                                   </Button>
                                   <Button 
                                     size="small"
-                                    onClick={() => setSolAmount('0.241439641')}
+                                    onClick={() => setSolAmount(solBalance.toFixed(9))}
                                     sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                    disabled={solBalance === 0}
                                   >
                                     Max
                                   </Button>
@@ -1210,20 +1317,22 @@ export default function PoolDetail() {
                               </Box>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                                  Available: {wallet.publicKey ? '0.080780416' : '0'} JITOSOL
+                                  Available: {balancesLoading ? '...' : jitosolBalance.toFixed(9)} JITOSOL
                                 </Typography>
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                   <Button 
                                     size="small"
-                                    onClick={() => setJitosolAmount('0.040390208')}
+                                    onClick={() => setJitosolAmount((jitosolBalance / 2).toFixed(9))}
                                     sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                    disabled={jitosolBalance === 0}
                                   >
                                     Half
                                   </Button>
                                   <Button 
                                     size="small"
-                                    onClick={() => setJitosolAmount('0.080780416')}
+                                    onClick={() => setJitosolAmount(jitosolBalance.toFixed(9))}
                                     sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                    disabled={jitosolBalance === 0}
                                   >
                                     Max
                                   </Button>

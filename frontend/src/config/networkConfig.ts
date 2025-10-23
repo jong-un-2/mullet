@@ -107,8 +107,8 @@ class NetworkConfigManager {
 
   // Get current Solana network based on environment
   getCurrentSolanaNetwork(): SolanaConfig {
-    const isDev = import.meta.env.DEV;
-    return isDev ? this.getSolanaDevnet() : this.getSolanaMainnet();
+    // Always use mainnet for now (strategy/farm are on mainnet)
+    return this.getSolanaMainnet();
   }
 }
 
