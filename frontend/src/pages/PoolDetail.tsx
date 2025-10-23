@@ -583,8 +583,16 @@ export default function PoolDetail() {
                 </Box>
               ) : (
                 <Box>
-                  {/* Top 3 Stats */}
-                  <Box sx={{ display: 'flex', gap: 4, mb: 4, flexWrap: 'wrap' }}>
+                  {/* Top Row - 4 sections in one line */}
+                  <Box sx={{ 
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr 1fr auto',
+                    gap: 4,
+                    alignItems: 'center',
+                    mb: 3,
+                    pb: 3,
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}>
                     <Box>
                       <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem', mb: 1 }}>Your Stake</Typography>
                       <Typography sx={{ color: '#ffffff', fontSize: '1.8rem', fontWeight: 600 }}>
@@ -608,24 +616,26 @@ export default function PoolDetail() {
                       <Typography sx={{ color: '#10b981', fontSize: '1.8rem', fontWeight: 600 }}>
                         4.93%
                       </Typography>
-                      <Button 
-                        variant="contained" 
-                        size="small"
-                        sx={{ 
-                          mt: 2,
-                          background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          px: 3
-                        }}
-                      >
-                        Claim All
-                      </Button>
                     </Box>
+                    <Button 
+                      variant="contained" 
+                      size="medium"
+                      sx={{ 
+                        background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        px: 3.5,
+                        py: 1.5,
+                        minWidth: 110,
+                        alignSelf: 'center'
+                      }}
+                    >
+                      Claim All
+                    </Button>
                   </Box>
 
-                  {/* Bottom 4 Stats Cards */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 2 }}>
+                  {/* Bottom Row - 4 Stats Cards */}
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2 }}>
                     <Card sx={{ 
                       p: 2.5, 
                       textAlign: 'center',
@@ -635,10 +645,10 @@ export default function PoolDetail() {
                       borderRadius: 2,
                       boxShadow: 'none',
                     }}>
-                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1 }}>Net Value</Typography>
-                      <Typography sx={{ color: '#ffffff', fontSize: '1.3rem', fontWeight: 600 }}>
+                      <Typography sx={{ color: '#ffffff', fontSize: '1.3rem', fontWeight: 600, mb: 0.5 }}>
                         {'<'}$0.01
                       </Typography>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>Net Value</Typography>
                     </Card>
                     <Card sx={{ 
                       p: 2.5, 
@@ -649,10 +659,10 @@ export default function PoolDetail() {
                       borderRadius: 2,
                       boxShadow: 'none',
                     }}>
-                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1 }}>PnL</Typography>
-                      <Typography sx={{ color: '#ef4444', fontSize: '1.3rem', fontWeight: 600 }}>
+                      <Typography sx={{ color: '#ef4444', fontSize: '1.3rem', fontWeight: 600, mb: 0.5 }}>
                         -$0.001
                       </Typography>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>PnL</Typography>
                     </Card>
                     <Card sx={{ 
                       p: 2.5, 
@@ -663,10 +673,10 @@ export default function PoolDetail() {
                       borderRadius: 2,
                       boxShadow: 'none',
                     }}>
-                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1 }}>Fees Earned</Typography>
-                      <Typography sx={{ color: '#10b981', fontSize: '1.3rem', fontWeight: 600 }}>
+                      <Typography sx={{ color: '#10b981', fontSize: '1.3rem', fontWeight: 600, mb: 0.5 }}>
                         {'<'}$0.01
                       </Typography>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>Fees Earned</Typography>
                     </Card>
                     <Card sx={{ 
                       p: 2.5, 
@@ -677,10 +687,10 @@ export default function PoolDetail() {
                       borderRadius: 2,
                       boxShadow: 'none',
                     }}>
-                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1 }}>My Asset Ratio</Typography>
-                      <Typography sx={{ color: '#ffffff', fontSize: '1.3rem', fontWeight: 600 }}>
+                      <Typography sx={{ color: '#ffffff', fontSize: '1.3rem', fontWeight: 600, mb: 0.5 }}>
                         <Box component="span" sx={{ fontSize: '1rem' }}>≈</Box> 0.00 / <Box component="span" sx={{ color: '#10b981' }}>🟢</Box> 0.00
                       </Typography>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>My Asset Ratio</Typography>
                     </Card>
                   </Box>
                 </Box>
