@@ -264,6 +264,8 @@ export interface PositionInfo {
   sharesStaked: number;
   stakedAmount?: string;
   stakeValue?: string; // USD value of staked position
+  withdrawableTokenA?: number; // Amount of token A (SOL) that can be withdrawn
+  withdrawableTokenB?: number; // Amount of token B (JitoSOL) that can be withdrawn
   tvlInPosition: number;
   pnl: number;
 }
@@ -965,6 +967,47 @@ export async function getUserPosition(
     const staked = await getStakedShares(strategyAddress, userAddress, connection);
     console.log('[getUserPosition] Staked shares from getStakedShares:', staked);
     
+    // Calculate withdrawable amounts using API vaultBalances
+    let withdrawableTokenA = 0;
+    let withdrawableTokenB = 0;
+    
+    try {
+      // Get vault balances from API - this is the most accurate source
+      const metricsUrl = `https://api.hubbleprotocol.io/strategies/${strategyAddress}/metrics?env=mainnet-beta`;
+      const metricsResponse = await fetch(metricsUrl);
+      
+      if (metricsResponse.ok) {
+        const metrics = await metricsResponse.json();
+        
+        // Use API's vaultBalances which includes both invested and available tokens
+        const totalSOL = new Decimal(metrics.vaultBalances.tokenA.total);
+        const totalJitoSOL = new Decimal(metrics.vaultBalances.tokenB.total);
+        const totalShares = new Decimal(metrics.sharesIssued);
+        
+        console.log('[getUserPosition] API vaultBalances:', {
+          totalSOL: totalSOL.toString(),
+          totalJitoSOL: totalJitoSOL.toString(),
+          totalShares: totalShares.toString()
+        });
+        
+        // Calculate per share amounts
+        const solPerShare = totalSOL.div(totalShares);
+        const jitosolPerShare = totalJitoSOL.div(totalShares);
+        
+        // Calculate user's withdrawable amounts
+        const userShares = new Decimal(staked);
+        withdrawableTokenA = userShares.mul(solPerShare).toNumber();
+        withdrawableTokenB = userShares.mul(jitosolPerShare).toNumber();
+        
+        console.log('[getUserPosition] Withdrawable amounts:', {
+          tokenA: withdrawableTokenA,
+          tokenB: withdrawableTokenB
+        });
+      }
+    } catch (error) {
+      console.error('[getUserPosition] Error calculating withdrawable amounts:', error);
+    }
+    
     // Get share price from API to calculate USD value
     let sharePrice = 0;
     let stakeValue = 0;
@@ -976,11 +1019,11 @@ export async function getUserPosition(
         sharePrice = parseFloat(metrics.sharePrice || '0');
         
         // Calculate total staked value in USD
-        const totalShares = staked + parseFloat(shares.toString());
-        stakeValue = totalShares * sharePrice;
+        const totalSharesValue = staked + parseFloat(shares.toString());
+        stakeValue = totalSharesValue * sharePrice;
         
         console.log('[getUserPosition] Share price:', sharePrice);
-        console.log('[getUserPosition] Total shares (staked + wallet):', totalShares);
+        console.log('[getUserPosition] Total shares (staked + wallet):', totalSharesValue);
         console.log('[getUserPosition] Stake value USD:', stakeValue);
       }
     } catch (error) {
@@ -993,6 +1036,8 @@ export async function getUserPosition(
       sharesStaked: parseFloat(staked.toString()),
       stakedAmount: staked.toString(),
       stakeValue: stakeValue.toFixed(2),
+      withdrawableTokenA,
+      withdrawableTokenB,
       tvlInPosition: stakeValue,
       pnl: 0, // Would need historical data to calculate
     };

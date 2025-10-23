@@ -1465,7 +1465,10 @@ export default function PoolDetail() {
                                 value={selectedToken === 'SOL' ? solAmount : jitosolAmount}
                                 onChange={(e) => {
                                   const value = e.target.value;
-                                  const maxAmount = userPosition?.sharesStaked || 0;
+                                  // Use withdrawable amounts as max limit
+                                  const maxAmount = selectedToken === 'SOL' 
+                                    ? (userPosition?.withdrawableTokenA || 0)
+                                    : (userPosition?.withdrawableTokenB || 0);
                                   if (value === '' || (parseFloat(value) <= maxAmount && !isNaN(parseFloat(value)))) {
                                     if (selectedToken === 'SOL') {
                                       setSolAmount(value);
@@ -1494,18 +1497,48 @@ export default function PoolDetail() {
                                 }}
                               />
                             </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                                Staked: {positionLoading 
-                                  ? '...' 
-                                  : `${formatLargeNumber(userPosition?.sharesStaked || 0)} kJITOSOL-SOL`}
+                            {/* Available to withdraw info - compact display */}
+                            <Box sx={{ mt: 1, mb: 1 }}>
+                              <Typography sx={{ color: '#64748b', fontSize: '0.75rem', mb: 0.5 }}>
+                                Available to withdraw:
                               </Typography>
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+                                {singleAssetDeposit ? (
+                                  // Single Asset Mode - only show selected token
+                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                                    {positionLoading 
+                                      ? '...' 
+                                      : selectedToken === 'SOL'
+                                        ? `${(userPosition?.withdrawableTokenA || 0).toFixed(9)} SOL`
+                                        : `${(userPosition?.withdrawableTokenB || 0).toFixed(9)} JitoSOL`}
+                                  </Typography>
+                                ) : (
+                                  // Normal Mode - show both tokens
+                                  <>
+                                    <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                                      {positionLoading 
+                                        ? '...' 
+                                        : `${(userPosition?.withdrawableTokenA || 0).toFixed(9)} SOL`}
+                                    </Typography>
+                                    <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                                      {positionLoading 
+                                        ? '...' 
+                                        : `${(userPosition?.withdrawableTokenB || 0).toFixed(9)} JitoSOL`}
+                                    </Typography>
+                                  </>
+                                )}
+                              </Box>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                               <Box sx={{ display: 'flex', gap: 1 }}>
                                 <Button 
                                   size="small" 
                                   onClick={() => {
-                                    const staked = userPosition?.sharesStaked || 0;
-                                    const halfAmount = (staked / 2).toFixed(9);
+                                    // Use withdrawable amounts instead of shares
+                                    const withdrawableAmount = selectedToken === 'SOL' 
+                                      ? (userPosition?.withdrawableTokenA || 0)
+                                      : (userPosition?.withdrawableTokenB || 0);
+                                    const halfAmount = (withdrawableAmount / 2).toFixed(9);
                                     if (selectedToken === 'SOL') {
                                       setSolAmount(halfAmount);
                                     } else {
@@ -1520,8 +1553,11 @@ export default function PoolDetail() {
                                 <Button 
                                   size="small"
                                   onClick={() => {
-                                    const staked = userPosition?.sharesStaked || 0;
-                                    const maxAmount = staked.toFixed(9);
+                                    // Use withdrawable amounts instead of shares
+                                    const withdrawableAmount = selectedToken === 'SOL' 
+                                      ? (userPosition?.withdrawableTokenA || 0)
+                                      : (userPosition?.withdrawableTokenB || 0);
+                                    const maxAmount = withdrawableAmount.toFixed(9);
                                     if (selectedToken === 'SOL') {
                                       setSolAmount(maxAmount);
                                     } else {
