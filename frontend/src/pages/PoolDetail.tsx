@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { usePrivy } from '@privy-io/react-auth';
+import { useAccount } from 'wagmi';
+import { useWallets } from '@privy-io/react-auth/solana';
 import {
   Box,
   Typography,
@@ -14,10 +17,13 @@ import {
   Alert,
   IconButton,
   Chip,
+  Menu,
+  MenuItem,
+  Slider,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { JITOSOL_POOLS, depositAndStake, getUserPosition } from '../services/kaminoLiquidity';
+import { JITOSOL_POOLS, depositAndStake, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -53,6 +59,24 @@ export default function PoolDetail() {
   const wallet = useWallet();
   const { connection } = useConnection();
 
+  // Privy hooks for multi-chain wallet support
+  const { authenticated } = usePrivy();
+  const { isConnected: ethConnected } = useAccount();
+  const { wallets: solanaWallets } = useWallets();
+  
+  // Check Solana wallet connection (both Privy and direct wallet adapter)
+  let directSolanaConnected = false;
+  try {
+    directSolanaConnected = wallet.connected;
+  } catch (error) {
+    console.warn('⚠️ Solana wallet adapter not available:', error);
+  }
+  
+  const solConnected = solanaWallets.length > 0 || directSolanaConnected;
+  
+  // Check if ANY wallet is connected (Privy auth, ETH external, or Solana external)
+  const isWalletConnected = authenticated || ethConnected || solConnected;
+
   const [activeTab, setActiveTab] = useState(0);
   const [pool, setPool] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +85,10 @@ export default function PoolDetail() {
   const [solAmount, setSolAmount] = useState('');
   const [jitosolAmount, setJitosolAmount] = useState('');
   const [singleAssetDeposit, setSingleAssetDeposit] = useState(true);
+  const [selectedToken, setSelectedToken] = useState<'SOL' | 'JITOSOL'>('SOL'); // For single asset mode
+  const [actionMode, setActionMode] = useState<'deposit' | 'withdraw'>('deposit'); // Deposit or Withdraw mode
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null); // Menu anchor
+  const [withdrawPercentage, setWithdrawPercentage] = useState<number>(0); // Withdrawal percentage (0-100)
   const [depositLoading, setDepositLoading] = useState(false);
   const [depositTxSignature, setDepositTxSignature] = useState('');
 
@@ -68,17 +96,7 @@ export default function PoolDetail() {
   const [userPosition, setUserPosition] = useState<any>(null);
   const [positionLoading, setPositionLoading] = useState(false);
 
-  useEffect(() => {
-    const foundPool = JITOSOL_POOLS.find(p => p.address === poolAddress);
-    setPool(foundPool);
-    setLoading(false);
-
-    if (wallet.connected && foundPool) {
-      loadUserPosition(foundPool);
-    }
-  }, [poolAddress, wallet.connected]);
-
-  const loadUserPosition = async (poolData: any) => {
+  const loadUserPosition = useCallback(async (poolData: any) => {
     if (!wallet.publicKey) return;
     
     setPositionLoading(true);
@@ -94,7 +112,35 @@ export default function PoolDetail() {
     } finally {
       setPositionLoading(false);
     }
-  };
+  }, [wallet.publicKey, connection]);
+
+  useEffect(() => {
+    const loadPoolData = async () => {
+      if (!poolAddress) {
+        setLoading(false);
+        return;
+      }
+      
+      // First try to find pool in existing data
+      let foundPool = JITOSOL_POOLS.find(p => p.address === poolAddress);
+      
+      // If not found, fetch fresh data from API
+      if (!foundPool) {
+        console.log('Pool not found in cache, fetching from API...');
+        await fetchJitoSOLPools();
+        foundPool = JITOSOL_POOLS.find(p => p.address === poolAddress);
+      }
+      
+      setPool(foundPool || null);
+      setLoading(false);
+
+      if (isWalletConnected && foundPool && wallet.publicKey) {
+        loadUserPosition(foundPool);
+      }
+    };
+    
+    loadPoolData();
+  }, [poolAddress, isWalletConnected, wallet.publicKey, loadUserPosition]);
 
   const handleDeposit = async () => {
     if (!wallet.publicKey || !pool) return;
@@ -141,11 +187,38 @@ export default function PoolDetail() {
     );
   }
 
+  if (loading) {
+    return (
+      <Box sx={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <CircularProgress sx={{ color: '#3b82f6' }} />
+      </Box>
+    );
+  }
+
   if (!pool) {
     return (
-      <Box sx={{ p: 4 }}>
-        <Typography>Pool not found</Typography>
-        <Button onClick={() => navigate('/xliquid')}>Back to Liquidity</Button>
+      <Box sx={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        p: 4
+      }}>
+        <Typography sx={{ color: '#ffffff', mb: 2 }}>Pool not found</Typography>
+        <Button 
+          variant="contained"
+          onClick={() => navigate('/xliquid')}
+          sx={{ 
+            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            textTransform: 'none'
+          }}
+        >
+          Back to Liquidity
+        </Button>
       </Box>
     );
   }
@@ -751,7 +824,7 @@ export default function PoolDetail() {
                 </Box>
               ))}
 
-              {wallet.connected && (
+              {isWalletConnected && (
                 <Box sx={{ mt: 2, textAlign: 'center' }}>
                   <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
                     No activity yet
@@ -775,90 +848,447 @@ export default function PoolDetail() {
             }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ color: '#ffffff' }}>Manage Position</Typography>
-                <Button 
-                  size="small"
-                  sx={{ 
-                    color: '#3b82f6',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
-                  }}
-                >
-                  Deposit ▼
-                </Button>
+                <Box>
+                  <Button 
+                    size="small"
+                    onClick={(e) => setActionMenuAnchor(e.currentTarget)}
+                    sx={{ 
+                      color: '#3b82f6',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                    }}
+                  >
+                    {actionMode === 'deposit' ? 'Deposit' : 'Withdraw'} ▼
+                  </Button>
+                  <Menu
+                    anchorEl={actionMenuAnchor}
+                    open={Boolean(actionMenuAnchor)}
+                    onClose={() => setActionMenuAnchor(null)}
+                    PaperProps={{
+                      sx: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        mt: 1,
+                        minWidth: 120
+                      }
+                    }}
+                  >
+                    <MenuItem 
+                      onClick={() => {
+                        setActionMode('deposit');
+                        setActionMenuAnchor(null);
+                      }}
+                      sx={{ 
+                        color: actionMode === 'deposit' ? '#3b82f6' : '#94a3b8',
+                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                      }}
+                    >
+                      Deposit
+                    </MenuItem>
+                    <MenuItem 
+                      onClick={() => {
+                        setActionMode('withdraw');
+                        setActionMenuAnchor(null);
+                      }}
+                      sx={{ 
+                        color: actionMode === 'withdraw' ? '#3b82f6' : '#94a3b8',
+                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                      }}
+                    >
+                      Withdraw
+                    </MenuItem>
+                  </Menu>
+                </Box>
               </Box>
 
-              {!wallet.connected ? (
+              {!isWalletConnected ? (
                 <Alert severity="warning">
                   Please connect your wallet to manage your position
                 </Alert>
               ) : (
                 <>
-                  {/* You Deposit */}
+                  {/* You Deposit/Withdraw */}
                   <Box sx={{ mb: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>You Deposit</Typography>
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>
+                        {actionMode === 'deposit' ? 'You Deposit' : 'You Withdraw'}
+                      </Typography>
                       <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>~$0.00</Typography>
                     </Box>
                     
-                    <Box sx={{ 
-                      backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)',
-                      borderRadius: 2,
-                      p: 2,
-                      mb: 1
-                    }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Chip 
-                          label="≈ SOL"
-                          size="small"
-                          icon={<Box sx={{ fontSize: '1rem', ml: 1 }}>▼</Box>}
-                          sx={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', fontWeight: 600 }}
-                        />
-                        <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
-                          0
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                          Available: 0.241439641 SOL
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button size="small" sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}>
-                            Half
-                          </Button>
-                          <Button size="small" sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}>
-                            Max
-                          </Button>
-                        </Box>
-                      </Box>
-                    </Box>
+                    {actionMode === 'deposit' ? (
+                      /* DEPOSIT MODE */
+                      <>
+                        {singleAssetDeposit ? (
+                          /* Single Asset Mode - Show one input with token selector */
+                          <Box sx={{ 
+                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                            borderRadius: 2,
+                            p: 2,
+                            mb: 2
+                          }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                              <Button
+                                onClick={() => setSelectedToken(selectedToken === 'SOL' ? 'JITOSOL' : 'SOL')}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1,
+                                  textTransform: 'none',
+                                  color: '#3b82f6',
+                                  '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                                }}
+                              >
+                                <Box sx={{ 
+                                  width: 24, 
+                                  height: 24, 
+                                  borderRadius: '50%', 
+                                  background: selectedToken === 'SOL' 
+                                    ? 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)'
+                                    : '#10b981',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.7rem',
+                                  color: '#ffffff'
+                                }}>
+                                  {selectedToken === 'SOL' ? '◎' : 'J'}
+                                </Box>
+                                <Typography sx={{ color: selectedToken === 'SOL' ? '#3b82f6' : '#10b981', fontWeight: 600 }}>
+                                  {selectedToken}
+                                </Typography>
+                                <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>▼</Typography>
+                              </Button>
+                              <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
+                                {selectedToken === 'SOL' ? (solAmount || '0') : (jitosolAmount || '0')}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                Available: {wallet.publicKey 
+                                  ? (selectedToken === 'SOL' ? '0.241439641 SOL' : '0.080780416 JITOSOL')
+                                  : '0'}
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Button 
+                                  size="small" 
+                                  onClick={() => {
+                                    if (selectedToken === 'SOL') {
+                                      setSolAmount('0.120719821');
+                                    } else {
+                                      setJitosolAmount('0.040390208');
+                                    }
+                                  }}
+                                  sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                >
+                                  Half
+                                </Button>
+                                <Button 
+                                  size="small"
+                                  onClick={() => {
+                                    if (selectedToken === 'SOL') {
+                                      setSolAmount('0.241439641');
+                                    } else {
+                                      setJitosolAmount('0.080780416');
+                                    }
+                                  }}
+                                  sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                >
+                                  Max
+                                </Button>
+                              </Box>
+                            </Box>
+                          </Box>
+                        ) : (
+                          /* Dual Asset Mode - Show both inputs */
+                          <>
+                            {/* SOL Input */}
+                            <Box sx={{ 
+                              backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                              border: '1px solid rgba(59, 130, 246, 0.2)',
+                              borderRadius: 2,
+                              p: 2,
+                              mb: 2
+                            }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Box sx={{ 
+                                    width: 24, 
+                                    height: 24, 
+                                    borderRadius: '50%', 
+                                    background: 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '0.7rem'
+                                  }}>
+                                    ◎
+                                  </Box>
+                                  <Typography sx={{ color: '#3b82f6', fontWeight: 600 }}>SOL</Typography>
+                                </Box>
+                                <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
+                                  {solAmount || '0'}
+                                </Typography>
+                              </Box>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                  Available: {wallet.publicKey ? '0.241439641' : '0'} SOL
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <Button 
+                                    size="small" 
+                                    onClick={() => setSolAmount('0.120719821')}
+                                    sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                  >
+                                    Half
+                                  </Button>
+                                  <Button 
+                                    size="small"
+                                    onClick={() => setSolAmount('0.241439641')}
+                                    sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                  >
+                                    Max
+                                  </Button>
+                                </Box>
+                              </Box>
+                            </Box>
 
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={singleAssetDeposit}
-                          onChange={(e) => setSingleAssetDeposit(e.target.checked)}
-                          sx={{ 
-                            color: '#3b82f6',
-                            '&.Mui-checked': { color: '#3b82f6' }
-                          }}
-                        />
-                      }
-                      label={
-                        <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-                          Single Asset Deposit
-                        </Typography>
-                      }
-                    />
+                            {/* JITOSOL Input */}
+                            <Box sx={{ 
+                              backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                              border: '1px solid rgba(59, 130, 246, 0.2)',
+                              borderRadius: 2,
+                              p: 2,
+                              mb: 2
+                            }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Box sx={{ 
+                                    width: 24, 
+                                    height: 24, 
+                                    borderRadius: '50%', 
+                                    backgroundColor: '#10b981',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '0.7rem',
+                                    color: '#ffffff'
+                                  }}>
+                                    J
+                                  </Box>
+                                  <Typography sx={{ color: '#10b981', fontWeight: 600 }}>JITOSOL</Typography>
+                                </Box>
+                                <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
+                                  {jitosolAmount || '0'}
+                                </Typography>
+                              </Box>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                  Available: {wallet.publicKey ? '0.080780416' : '0'} JITOSOL
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <Button 
+                                    size="small"
+                                    onClick={() => setJitosolAmount('0.040390208')}
+                                    sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                  >
+                                    Half
+                                  </Button>
+                                  <Button 
+                                    size="small"
+                                    onClick={() => setJitosolAmount('0.080780416')}
+                                    sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                  >
+                                    Max
+                                  </Button>
+                                </Box>
+                              </Box>
+                            </Box>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      /* WITHDRAW MODE */
+                      <>
+                        {singleAssetDeposit ? (
+                          /* Single Asset Withdrawal - Show token selector with input */
+                          <Box sx={{ 
+                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                            borderRadius: 2,
+                            p: 2,
+                            mb: 2
+                          }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                              <Button
+                                onClick={() => setSelectedToken(selectedToken === 'SOL' ? 'JITOSOL' : 'SOL')}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1,
+                                  textTransform: 'none',
+                                  color: '#3b82f6',
+                                  '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                                }}
+                              >
+                                <Box sx={{ 
+                                  width: 24, 
+                                  height: 24, 
+                                  borderRadius: '50%', 
+                                  background: selectedToken === 'SOL' 
+                                    ? 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)'
+                                    : '#10b981',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.7rem',
+                                  color: '#ffffff'
+                                }}>
+                                  {selectedToken === 'SOL' ? '◎' : 'J'}
+                                </Box>
+                                <Typography sx={{ color: selectedToken === 'SOL' ? '#3b82f6' : '#10b981', fontWeight: 600 }}>
+                                  {selectedToken}
+                                </Typography>
+                                <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>▼</Typography>
+                              </Button>
+                              <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
+                                {selectedToken === 'SOL' ? (solAmount || '0') : (jitosolAmount || '0')}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                Staked: {wallet.publicKey 
+                                  ? (selectedToken === 'SOL' ? '0 SOL' : '0 JITOSOL')
+                                  : '0'}
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Button 
+                                  size="small" 
+                                  onClick={() => {
+                                    if (selectedToken === 'SOL') {
+                                      setSolAmount('0');
+                                    } else {
+                                      setJitosolAmount('0');
+                                    }
+                                  }}
+                                  sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                >
+                                  Half
+                                </Button>
+                                <Button 
+                                  size="small"
+                                  onClick={() => {
+                                    if (selectedToken === 'SOL') {
+                                      setSolAmount('0');
+                                    } else {
+                                      setJitosolAmount('0');
+                                    }
+                                  }}
+                                  sx={{ color: '#3b82f6', textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                >
+                                  Max
+                                </Button>
+                              </Box>
+                            </Box>
+                          </Box>
+                        ) : (
+                          /* Percentage Slider Withdrawal */
+                          <Box sx={{ 
+                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                            borderRadius: 2,
+                            p: 3,
+                            mb: 2
+                          }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                              <Typography sx={{ color: '#94a3b8', fontSize: '1rem' }}>
+                                {withdrawPercentage}%
+                              </Typography>
+                              <Typography sx={{ color: '#ffffff', fontSize: '1rem', fontWeight: 600 }}>
+                                100%
+                              </Typography>
+                            </Box>
+                            <Slider
+                              value={withdrawPercentage}
+                              onChange={(_, newValue) => setWithdrawPercentage(newValue as number)}
+                              min={0}
+                              max={100}
+                              sx={{
+                                color: '#3b82f6',
+                                '& .MuiSlider-thumb': {
+                                  width: 24,
+                                  height: 24,
+                                  backgroundColor: '#ffffff',
+                                  border: '2px solid #3b82f6',
+                                  '&:hover, &.Mui-focusVisible': {
+                                    boxShadow: '0 0 0 8px rgba(59, 130, 246, 0.16)',
+                                  },
+                                },
+                                '& .MuiSlider-track': {
+                                  height: 6,
+                                  border: 'none',
+                                },
+                                '& .MuiSlider-rail': {
+                                  height: 6,
+                                  opacity: 0.3,
+                                  backgroundColor: '#64748b',
+                                },
+                              }}
+                            />
+                          </Box>
+                        )}
+                      </>
+                    )}
+
+                    {/* Single Asset checkbox */}
+                    {actionMode === 'deposit' ? (
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={singleAssetDeposit}
+                            onChange={(e) => setSingleAssetDeposit(e.target.checked)}
+                            sx={{ 
+                              color: '#3b82f6',
+                              '&.Mui-checked': { color: '#3b82f6' }
+                            }}
+                          />
+                        }
+                        label={
+                          <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                            Single Asset Deposit
+                          </Typography>
+                        }
+                      />
+                    ) : (
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={singleAssetDeposit}
+                            onChange={(e) => setSingleAssetDeposit(e.target.checked)}
+                            sx={{ 
+                              color: '#3b82f6',
+                              '&.Mui-checked': { color: '#3b82f6' }
+                            }}
+                          />
+                        }
+                        label={
+                          <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                            Single Asset Withdrawal
+                          </Typography>
+                        }
+                      />
+                    )}
                   </Box>
 
-                  {/* Deposit Button */}
+                  {/* Action Button */}
                   <Button
                     fullWidth
                     variant="contained"
                     onClick={handleDeposit}
-                    disabled={depositLoading || !wallet.connected}
+                    disabled={depositLoading || !isWalletConnected}
                     sx={{
                       background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                       color: '#ffffff',
@@ -874,7 +1304,11 @@ export default function PoolDetail() {
                       }
                     }}
                   >
-                    {depositLoading ? <CircularProgress size={24} /> : 'Deposit and Stake'}
+                    {depositLoading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      actionMode === 'deposit' ? 'Deposit and Stake' : 'Unstake and Withdraw'
+                    )}
                   </Button>
 
                   {depositTxSignature && (
