@@ -23,9 +23,13 @@ import {
   MenuItem,
   Slider,
   TextField,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, claimFeesAndRewards, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
 import { TransactionProgress } from '../components/TransactionProgress';
 
@@ -95,6 +99,7 @@ export default function PoolDetail() {
   const [activeTab, setActiveTab] = useState(0);
   const [pool, setPool] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedFaq, setExpandedFaq] = useState<number | false>(false);
 
   // Deposit states
   const [solAmount, setSolAmount] = useState('');
@@ -2284,7 +2289,7 @@ export default function PoolDetail() {
               {[
                 {
                   question: 'What does this vault do?',
-                  answer: 'This vault automatically manages a concentrated liquidity position on Kamino Finance, optimizing yield through strategic rebalancing and fee collection.'
+                  answer: 'This vault automatically manages a concentrated liquidity position on Mars Finance, optimizing yield through strategic rebalancing and fee collection.'
                 },
                 {
                   question: 'Where does the yield (APY) come from?',
@@ -2327,35 +2332,61 @@ export default function PoolDetail() {
                   answer: 'Main risks include impermanent loss, smart contract risk, and potential losses if prices move outside the liquidity range. Always DYOR before investing.'
                 }
               ].map((faq, idx) => (
-                <Box
+                <Accordion
                   key={idx}
+                  expanded={expandedFaq === idx}
+                  onChange={(_, isExpanded) => setExpandedFaq(isExpanded ? idx : false)}
                   sx={{
+                    background: 'transparent',
+                    boxShadow: 'none',
                     borderBottom: idx < 10 ? '1px solid rgba(59, 130, 246, 0.1)' : 'none',
+                    '&:before': {
+                      display: 'none'
+                    },
+                    '&.Mui-expanded': {
+                      margin: 0
+                    },
                     '&:hover': {
                       backgroundColor: 'rgba(59, 130, 246, 0.05)'
                     }
                   }}
                 >
-                  <Button
-                    fullWidth
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreIcon sx={{ color: '#64748b' }} />}
                     sx={{
-                      justifyContent: 'flex-start',
-                      textAlign: 'left',
                       color: '#ffffff',
-                      textTransform: 'none',
-                      py: 2.5,
+                      py: 1.5,
                       px: 3,
-                      fontSize: '0.95rem',
-                      fontWeight: 400,
+                      flexDirection: 'row-reverse',
+                      '& .MuiAccordionSummary-expandIconWrapper': {
+                        marginRight: 2,
+                        marginLeft: -1
+                      },
+                      '& .MuiAccordionSummary-content': {
+                        margin: '12px 0'
+                      },
                       '&:hover': {
                         backgroundColor: 'transparent'
                       }
                     }}
                   >
-                    <Box component="span" sx={{ mr: 2, color: '#64748b', fontSize: '1.2rem' }}>›</Box>
-                    {faq.question}
-                  </Button>
-                </Box>
+                    <Typography sx={{ fontSize: '0.95rem', fontWeight: 400 }}>
+                      {faq.question}
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails
+                    sx={{
+                      px: 3,
+                      pb: 3,
+                      pt: 0,
+                      color: '#94a3b8',
+                      fontSize: '0.9rem',
+                      lineHeight: 1.6
+                    }}
+                  >
+                    {faq.answer}
+                  </AccordionDetails>
+                </Accordion>
               ))}
             </Card>
           </Box>
@@ -2377,6 +2408,10 @@ export default function PoolDetail() {
               <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
                 <Button
                   size="small"
+                  component="a"
+                  href={`https://solscan.io/account/${pool?.address || poolAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   sx={{
                     color: '#3b82f6',
                     textTransform: 'none',
@@ -2391,6 +2426,10 @@ export default function PoolDetail() {
                 </Button>
                 <Button
                   size="small"
+                  component="a"
+                  href={`https://solscan.io/account/${pool?.poolAddress || ''}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   sx={{
                     color: '#3b82f6',
                     textTransform: 'none',
@@ -2460,6 +2499,10 @@ export default function PoolDetail() {
 
               <Button
                 size="small"
+                component="a"
+                href="https://solana.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 sx={{
                   color: '#3b82f6',
                   textTransform: 'none',
@@ -2486,6 +2529,10 @@ export default function PoolDetail() {
 
                 <Button
                   size="small"
+                  component="a"
+                  href="https://www.jito.network"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   sx={{
                     color: '#3b82f6',
                     textTransform: 'none',

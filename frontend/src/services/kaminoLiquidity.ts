@@ -233,6 +233,7 @@ const SOL_MINT = 'So11111111111111111111111111111111111111112';
 // This will be populated dynamically
 export let JITOSOL_POOLS: Array<{
   address: string;
+  poolAddress?: string; // Pool address (underlying DEX pool)
   name: string;
   dex: string;
   tvl: number;
@@ -1355,6 +1356,18 @@ export async function fetchJitoSOLPools(): Promise<typeof JITOSOL_POOLS> {
 
           if (tvl <= 0) return null; // Skip pools with no TVL
 
+          // Fetch strategy details from SDK to get the actual pool address
+          let poolAddress = '';
+          try {
+            const rpc = createKaminoRpc();
+            const kamino = new Kamino('mainnet-beta', rpc as any);
+            const strategyState = await getStrategyWithRetry(kamino, strategy.address, 1);
+            poolAddress = strategyState.strategy.pool?.toString() || '';
+            console.log(`✅ Strategy ${strategy.address} pool from SDK:`, poolAddress);
+          } catch (error) {
+            console.warn(`Failed to fetch pool address for ${strategy.address}:`, error);
+          }
+
           // Identify DEX - we need to fetch strategy details from SDK or infer from address
           // For now, use address prefixes (not ideal but works)
           let dexName = 'Unknown';
@@ -1406,7 +1419,7 @@ export async function fetchJitoSOLPools(): Promise<typeof JITOSOL_POOLS> {
 
           return {
             address: strategy.address,
-            poolAddress: strategy.shareMint,
+            poolAddress: poolAddress,
             name: tokenPair,
             dex: dexName,
             tvl: tvl,
