@@ -20,10 +20,11 @@ import {
   Menu,
   MenuItem,
   Slider,
+  TextField,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { JITOSOL_POOLS, depositAndStake, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
+import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -97,13 +98,16 @@ export default function PoolDetail() {
   const [positionLoading, setPositionLoading] = useState(false);
 
   const loadUserPosition = useCallback(async (poolData: any) => {
-    if (!wallet.publicKey) return;
+    // Check if we have either direct wallet or Privy wallet
+    const userAddress = wallet.publicKey?.toString() || (solanaWallets.length > 0 ? solanaWallets[0].address : null);
+    
+    if (!userAddress) return;
     
     setPositionLoading(true);
     try {
       const position = await getUserPosition(
         poolData.address,
-        wallet.publicKey.toString(),
+        userAddress,
         connection
       );
       setUserPosition(position);
@@ -112,7 +116,7 @@ export default function PoolDetail() {
     } finally {
       setPositionLoading(false);
     }
-  }, [wallet.publicKey, connection]);
+  }, [wallet.publicKey, solanaWallets, connection]);
 
   useEffect(() => {
     const loadPoolData = async () => {
@@ -143,37 +147,100 @@ export default function PoolDetail() {
   }, [poolAddress, isWalletConnected, wallet.publicKey, loadUserPosition]);
 
   const handleDeposit = async () => {
-    if (!wallet.publicKey || !pool) return;
+    console.log('handleDeposit called');
+    console.log('wallet.publicKey:', wallet.publicKey?.toString());
+    console.log('solanaWallets:', solanaWallets);
+    console.log('pool:', pool);
+    console.log('actionMode:', actionMode);
+    console.log('solAmount:', solAmount);
+    console.log('jitosolAmount:', jitosolAmount);
+
+    // Check if we have either direct wallet or Privy wallet
+    const hasWallet = wallet.publicKey || solanaWallets.length > 0;
+    
+    if (!hasWallet || !pool) {
+      console.log('Early return: wallet or pool not available');
+      alert('Please connect your Solana wallet first');
+      return;
+    }
 
     setDepositLoading(true);
     setDepositTxSignature('');
 
     try {
-      const sol = parseFloat(solAmount) || 0;
-      const jitosol = parseFloat(jitosolAmount) || 0;
+      if (actionMode === 'deposit') {
+        // Deposit logic
+        const sol = parseFloat(solAmount) || 0;
+        const jitosol = parseFloat(jitosolAmount) || 0;
 
-      if (sol <= 0 && jitosol <= 0) {
-        alert('Please enter an amount to deposit');
-        return;
+        console.log('Parsed amounts - sol:', sol, 'jitosol:', jitosol);
+
+        if (sol <= 0 && jitosol <= 0) {
+          alert('Please enter an amount to deposit');
+          setDepositLoading(false);
+          return;
+        }
+
+        // Use Privy wallet if available, otherwise use direct wallet
+        const walletToUse = solanaWallets.length > 0 
+          ? { 
+              publicKey: solanaWallets[0].address,
+              signTransaction: async (tx: any) => {
+                const serialized = tx.serialize({ requireAllSignatures: false });
+                const result = await solanaWallets[0].signTransaction({ transaction: serialized });
+                return result.signedTransaction;
+              }
+            }
+          : wallet;
+
+        console.log('Using wallet:', walletToUse);
+
+        const signature = await depositAndStake({
+          strategyAddress: pool.address,
+          amountSOL: sol.toString(),
+          amountJitoSOL: jitosol.toString(),
+          wallet: walletToUse,
+          connection
+        });
+
+        setDepositTxSignature(signature);
+        setSolAmount('');
+        setJitosolAmount('');
+      } else {
+        // Withdraw logic
+        if (!singleAssetDeposit && withdrawPercentage <= 0) {
+          alert('Please select a withdrawal percentage');
+          setDepositLoading(false);
+          return;
+        }
+
+        // Use Privy wallet if available, otherwise use direct wallet
+        const walletToUse = solanaWallets.length > 0 
+          ? { 
+              publicKey: solanaWallets[0].address,
+              signTransaction: async (tx: any) => {
+                const serialized = tx.serialize({ requireAllSignatures: false });
+                const result = await solanaWallets[0].signTransaction({ transaction: serialized });
+                return result.signedTransaction;
+              }
+            }
+          : wallet;
+
+        const signature = await unstakeAndWithdraw({
+          strategyAddress: pool.address,
+          wallet: walletToUse,
+          connection
+        });
+
+        setDepositTxSignature(signature);
+        setWithdrawPercentage(0);
       }
 
-      const signature = await depositAndStake({
-        strategyAddress: pool.address,
-        amountSOL: sol.toString(),
-        amountJitoSOL: jitosol.toString(),
-        wallet,
-        connection
-      });
-
-      setDepositTxSignature(signature);
-      setSolAmount('');
-      setJitosolAmount('');
-
-      // Reload position
+      // Reload position after transaction
       await loadUserPosition(pool);
     } catch (error: any) {
-      console.error('Deposit error:', error);
-      alert(`Deposit failed: ${error.message}`);
+      console.error('Transaction error:', error);
+      alert(`Transaction failed: ${error.message}`);
     } finally {
       setDepositLoading(false);
     }
@@ -847,9 +914,7 @@ export default function PoolDetail() {
           {/* Manage Position - Right Side */}
           <Box sx={{ flex: '0 1 400px', minWidth: 320 }}>
             <Card sx={{ 
-              p: 3, 
-              position: 'sticky', 
-              top: 20,
+              p: 3,
               background: 'rgba(255, 255, 255, 0.05)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1039,9 +1104,33 @@ export default function PoolDetail() {
                                   </Box>
                                   <Typography sx={{ color: '#3b82f6', fontWeight: 600 }}>SOL</Typography>
                                 </Box>
-                                <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
-                                  {solAmount || '0'}
-                                </Typography>
+                                <TextField
+                                  value={solAmount}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    const maxAmount = 0.241439641;
+                                    if (value === '' || (parseFloat(value) <= maxAmount && !isNaN(parseFloat(value)))) {
+                                      setSolAmount(value);
+                                    }
+                                  }}
+                                  placeholder="0.0"
+                                  variant="standard"
+                                  InputProps={{
+                                    disableUnderline: true,
+                                    inputProps: {
+                                      style: { textAlign: 'right' }
+                                    }
+                                  }}
+                                  sx={{
+                                    '& .MuiInputBase-input': {
+                                      color: '#ffffff',
+                                      fontSize: '1.5rem',
+                                      fontWeight: 600,
+                                      textAlign: 'right',
+                                      padding: 0,
+                                    }
+                                  }}
+                                />
                               </Box>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
@@ -1091,9 +1180,33 @@ export default function PoolDetail() {
                                   </Box>
                                   <Typography sx={{ color: '#10b981', fontWeight: 600 }}>JITOSOL</Typography>
                                 </Box>
-                                <Typography sx={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 600 }}>
-                                  {jitosolAmount || '0'}
-                                </Typography>
+                                <TextField
+                                  value={jitosolAmount}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    const maxAmount = 0.080780416;
+                                    if (value === '' || (parseFloat(value) <= maxAmount && !isNaN(parseFloat(value)))) {
+                                      setJitosolAmount(value);
+                                    }
+                                  }}
+                                  placeholder="0.0"
+                                  variant="standard"
+                                  InputProps={{
+                                    disableUnderline: true,
+                                    inputProps: {
+                                      style: { textAlign: 'right' }
+                                    }
+                                  }}
+                                  sx={{
+                                    '& .MuiInputBase-input': {
+                                      color: '#ffffff',
+                                      fontSize: '1.5rem',
+                                      fontWeight: 600,
+                                      textAlign: 'right',
+                                      padding: 0,
+                                    }
+                                  }}
+                                />
                               </Box>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
