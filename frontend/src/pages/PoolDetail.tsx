@@ -30,6 +30,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, claimFeesAndRewards, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
 import { TransactionProgress } from '../components/TransactionProgress';
 import Navigation from '../components/Navigation';
@@ -208,7 +209,7 @@ export default function PoolDetail() {
     try {
       // Fetch transaction history for this user and strategy
       const response = await fetch(
-        `https://api.marsliquid.xyz/v1/api/mars/liquidity/transactions/${userAddress}?strategyAddress=${poolAddress}`,
+        `https://api.marsliquidity.com/v1/api/mars/liquidity/transactions/${userAddress}?strategyAddress=${poolAddress}`,
         {
           method: 'GET',
           headers: {
@@ -1269,7 +1270,7 @@ export default function PoolDetail() {
                           ${totalValue.toFixed(2)}
                         </Typography>
                         <IconButton size="small" sx={{ color: '#64748b' }}>
-                          <Box sx={{ fontSize: '1rem' }}>🔗</Box>
+                          <OpenInNewIcon sx={{ fontSize: '1rem' }} />
                         </IconButton>
                       </Box>
                     </Box>
