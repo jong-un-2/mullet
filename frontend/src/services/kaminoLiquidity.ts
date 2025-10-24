@@ -1393,8 +1393,8 @@ export async function fetchJitoSOLPools(): Promise<typeof JITOSOL_POOLS> {
             return null;
           }
 
-          // Get token symbols from metrics
-          const tokenPair = `${metrics.tokenA}-${metrics.tokenB}`;
+          // Normalize token pair name to always be "JITOSOL-SOL"
+          const tokenPair = 'JITOSOL-SOL';
 
           // Simple fixed APY values with ±1% random variation
           // Based on Kamino UI: Orca 6.86%, Meteora 8.60%, Raydium 8.24%

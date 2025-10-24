@@ -6,14 +6,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { JITOSOL_POOLS, fetchJitoSOLPools } from '../services/kaminoLiquidity';
 
-// DEX Icons mapping
-const DEX_ICONS: Record<string, string> = {
-  'Orca': '🌊',
-  'Meteora': '☄️',
-  'Raydium': '⚡',
-  'Kamino': 'K',
-};
-
 const XLiquidPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
@@ -248,7 +240,6 @@ const XLiquidPage = () => {
                   </TableRow>
                 ) : (
                   filteredPools.map((pool) => {
-                  const dexIcon = DEX_ICONS[pool.dex] || '🌊';
                   return (
                     <TableRow 
                       key={pool.address}
@@ -263,7 +254,34 @@ const XLiquidPage = () => {
                     >
                       <TableCell sx={{ borderBottom: '1px solid rgba(59, 130, 246, 0.05)', py: 2.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Typography sx={{ fontSize: 24 }}>{dexIcon}</Typography>
+                          {/* Token Pair Icons */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                            <Box
+                              component="img"
+                              src="https://storage.googleapis.com/token-metadata/JitoSOL-256.png"
+                              alt="JitoSOL"
+                              sx={{ 
+                                width: 32, 
+                                height: 32, 
+                                borderRadius: '50%',
+                                border: '2px solid #0f172a',
+                                zIndex: 2
+                              }}
+                            />
+                            <Box
+                              component="img"
+                              src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+                              alt="SOL"
+                              sx={{ 
+                                width: 32, 
+                                height: 32, 
+                                borderRadius: '50%',
+                                border: '2px solid #0f172a',
+                                marginLeft: '-12px',
+                                zIndex: 1
+                              }}
+                            />
+                          </Box>
                           <Box>
                             <Typography sx={{ color: '#ffffff', fontWeight: 500 }}>
                               {pool.name}

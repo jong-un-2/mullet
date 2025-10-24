@@ -66,13 +66,6 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const DEX_ICONS: Record<string, string> = {
-  Orca: '🌊',
-  Meteora: '☄️',
-  Raydium: '⚡',
-  Kamino: 'K',
-};
-
 export default function PoolDetail() {
   const { poolAddress } = useParams<{ poolAddress: string }>();
   const navigate = useNavigate();
@@ -532,8 +525,6 @@ export default function PoolDetail() {
     );
   }
 
-  const dexIcon = DEX_ICONS[pool.dex] || '🌊';
-
   return (
     <>
       {/* Navigation Bar */}
@@ -560,11 +551,43 @@ export default function PoolDetail() {
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography sx={{ fontSize: 32 }}>{dexIcon}</Typography>
+          
+          {/* Token Pair Icons */}
+          <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+            <Box
+              component="img"
+              src="https://storage.googleapis.com/token-metadata/JitoSOL-256.png"
+              alt="JitoSOL"
+              sx={{ 
+                width: 48, 
+                height: 48, 
+                borderRadius: '50%',
+                border: '3px solid #0f172a',
+                zIndex: 2
+              }}
+            />
+            <Box
+              component="img"
+              src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+              alt="SOL"
+              sx={{ 
+                width: 48, 
+                height: 48, 
+                borderRadius: '50%',
+                border: '3px solid #0f172a',
+                marginLeft: '-16px',
+                zIndex: 1
+              }}
+            />
+          </Box>
+          
           <Box>
-            <Typography variant="h4" sx={{ color: '#ffffff', fontWeight: 600 }}>
-              {pool.name} Liquidity ⚡
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h4" sx={{ color: '#ffffff', fontWeight: 600 }}>
+                {pool.name} Liquidity
+              </Typography>
+              <Typography sx={{ fontSize: 32 }}>⚡</Typography>
+            </Box>
             <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
               <Chip 
                 label={`DEX: ${pool.dex}`}
@@ -957,6 +980,7 @@ export default function PoolDetail() {
 
                   {/* Bottom Row - 4 Stats Cards */}
                   <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2 }}>
+                    {/* Net Value */}
                     <Card sx={{ 
                       p: 2.5, 
                       textAlign: 'center',
@@ -967,10 +991,12 @@ export default function PoolDetail() {
                       boxShadow: 'none',
                     }}>
                       <Typography sx={{ color: '#ffffff', fontSize: '1.3rem', fontWeight: 600, mb: 0.5 }}>
-                        {'<'}$0.01
+                        ${userPosition?.stakeValue || '0.00'}
                       </Typography>
                       <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>Net Value</Typography>
                     </Card>
+                    
+                    {/* PnL - Need historical cost basis to calculate */}
                     <Card sx={{ 
                       p: 2.5, 
                       textAlign: 'center',
@@ -980,11 +1006,18 @@ export default function PoolDetail() {
                       borderRadius: 2,
                       boxShadow: 'none',
                     }}>
-                      <Typography sx={{ color: '#ef4444', fontSize: '1.3rem', fontWeight: 600, mb: 0.5 }}>
-                        -$0.001
+                      <Typography sx={{ 
+                        color: (userPosition?.pnl || 0) >= 0 ? '#10b981' : '#ef4444', 
+                        fontSize: '1.3rem', 
+                        fontWeight: 600, 
+                        mb: 0.5 
+                      }}>
+                        {(userPosition?.pnl || 0) >= 0 ? '+' : ''}${(userPosition?.pnl || 0).toFixed(2)}
                       </Typography>
                       <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>PnL</Typography>
                     </Card>
+                    
+                    {/* Fees Earned - From pool's fee earnings */}
                     <Card sx={{ 
                       p: 2.5, 
                       textAlign: 'center',
@@ -999,6 +1032,8 @@ export default function PoolDetail() {
                       </Typography>
                       <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>Fees Earned</Typography>
                     </Card>
+                    
+                    {/* Asset Ratio - SOL vs JitoSOL */}
                     <Card sx={{ 
                       p: 2.5, 
                       textAlign: 'center',
@@ -1008,9 +1043,35 @@ export default function PoolDetail() {
                       borderRadius: 2,
                       boxShadow: 'none',
                     }}>
-                      <Typography sx={{ color: '#ffffff', fontSize: '1.3rem', fontWeight: 600, mb: 0.5 }}>
-                        <Box component="span" sx={{ fontSize: '1rem' }}>≈</Box> 0.00 / <Box component="span" sx={{ color: '#10b981' }}>🟢</Box> 0.00
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 0.5 }}>
+                        {/* SOL amount with icon */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Box
+                            component="img"
+                            src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+                            alt="SOL"
+                            sx={{ width: 20, height: 20, borderRadius: '50%' }}
+                          />
+                          <Typography sx={{ color: '#ffffff', fontSize: '1.3rem', fontWeight: 600 }}>
+                            {(userPosition?.withdrawableTokenA || 0).toFixed(2)}
+                          </Typography>
+                        </Box>
+                        
+                        <Typography sx={{ color: '#64748b', fontSize: '1.3rem', fontWeight: 600 }}>/</Typography>
+                        
+                        {/* JitoSOL amount with icon */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Box
+                            component="img"
+                            src="https://storage.googleapis.com/token-metadata/JitoSOL-256.png"
+                            alt="JitoSOL"
+                            sx={{ width: 20, height: 20, borderRadius: '50%' }}
+                          />
+                          <Typography sx={{ color: '#ffffff', fontSize: '1.3rem', fontWeight: 600 }}>
+                            {(userPosition?.withdrawableTokenB || 0).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      </Box>
                       <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>My Asset Ratio</Typography>
                     </Card>
                   </Box>
