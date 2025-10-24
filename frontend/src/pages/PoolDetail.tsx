@@ -126,6 +126,15 @@ export default function PoolDetail() {
   const [activityLog, setActivityLog] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
+  // Performance chart states
+  const [perfCurrency, setPerfCurrency] = useState<'USD' | 'SOL'>('SOL');
+  const [perfTimePeriod, setPerfTimePeriod] = useState<'7D' | '30D' | '3M' | '6M' | '1Y'>('7D');
+  const [perfMenuAnchor, setPerfMenuAnchor] = useState<null | HTMLElement>(null);
+  const [perfData, setPerfData] = useState<any>(null);
+  const [perfLoading, setPerfLoading] = useState(false);
+  const [showPositionValue, setShowPositionValue] = useState(true);
+  const [showCostBasis, setShowCostBasis] = useState(true);
+
   // Load user balances
   const loadBalances = useCallback(async () => {
     const userAddress = wallet.publicKey?.toString() || (solanaWallets.length > 0 ? solanaWallets[0].address : null);
@@ -232,6 +241,54 @@ export default function PoolDetail() {
       setActivityLoading(false);
     }
   }, [wallet.publicKey, solanaWallets, poolAddress]);
+
+  // Load performance chart data
+  const loadPerformanceData = useCallback(async () => {
+    const userAddress = wallet.publicKey?.toString() || (solanaWallets.length > 0 ? solanaWallets[0].address : null);
+    
+    if (!userAddress || !poolAddress) {
+      setPerfData(null);
+      return;
+    }
+
+    setPerfLoading(true);
+    try {
+      // Calculate time range based on selected period
+      const now = Date.now();
+      const ranges = {
+        '7D': 7 * 24 * 60 * 60 * 1000,
+        '30D': 30 * 24 * 60 * 60 * 1000,
+        '3M': 90 * 24 * 60 * 60 * 1000,
+        '6M': 180 * 24 * 60 * 60 * 1000,
+        '1Y': 365 * 24 * 60 * 60 * 1000,
+      };
+      const start = now - ranges[perfTimePeriod];
+
+      // Fetch PnL history from Kamino API
+      const response = await fetch(
+        `https://api.kamino.finance/kvaults/users/${userAddress}/vaults/${poolAddress}/pnl/history?start=${start}&end=${now}`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setPerfData(data);
+        console.log('[PoolDetail] Performance data loaded:', data.history?.length || 0, 'points');
+      } else {
+        console.warn('[PoolDetail] Performance API returned:', response.status);
+        setPerfData(null);
+      }
+    } catch (error) {
+      console.error('[PoolDetail] Error loading performance data:', error);
+      setPerfData(null);
+    } finally {
+      setPerfLoading(false);
+    }
+  }, [wallet.publicKey, solanaWallets, poolAddress, perfTimePeriod]);
+
+  // Reload performance data when currency or time period changes
+  useEffect(() => {
+    loadPerformanceData();
+  }, [loadPerformanceData]);
 
   useEffect(() => {
     const loadPoolData = async () => {
@@ -1133,55 +1190,248 @@ export default function PoolDetail() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ color: '#ffffff' }}>Performance</Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Chip label="USD" size="small" sx={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#64748b' }} />
-                  <Chip label="SOL" size="small" sx={{ backgroundColor: 'rgba(59, 130, 246, 0.3)', color: '#3b82f6' }} />
-                  <Chip label="7D" size="small" sx={{ backgroundColor: 'rgba(59, 130, 246, 0.3)', color: '#3b82f6' }} />
-                  <Chip label="30D" size="small" sx={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#64748b' }} />
-                  <Chip label="3M" size="small" sx={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#64748b' }} />
+                  {/* Currency Toggle */}
+                  <Chip 
+                    label="USD" 
+                    size="small" 
+                    onClick={() => setPerfCurrency('USD')}
+                    sx={{ 
+                      backgroundColor: perfCurrency === 'USD' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.15)', 
+                      color: perfCurrency === 'USD' ? '#3b82f6' : '#64748b',
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.25)' }
+                    }} 
+                  />
+                  <Chip 
+                    label="SOL" 
+                    size="small" 
+                    onClick={() => setPerfCurrency('SOL')}
+                    sx={{ 
+                      backgroundColor: perfCurrency === 'SOL' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.15)', 
+                      color: perfCurrency === 'SOL' ? '#3b82f6' : '#64748b',
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.25)' }
+                    }} 
+                  />
+                  
+                  {/* Time Period Toggle - 7D, 30D, 3M (with dropdown) */}
+                  <Chip 
+                    label="7D" 
+                    size="small" 
+                    onClick={() => setPerfTimePeriod('7D')}
+                    sx={{ 
+                      backgroundColor: perfTimePeriod === '7D' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.15)', 
+                      color: perfTimePeriod === '7D' ? '#3b82f6' : '#64748b',
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.25)' }
+                    }} 
+                  />
+                  <Chip 
+                    label="30D" 
+                    size="small" 
+                    onClick={() => setPerfTimePeriod('30D')}
+                    sx={{ 
+                      backgroundColor: perfTimePeriod === '30D' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.15)', 
+                      color: perfTimePeriod === '30D' ? '#3b82f6' : '#64748b',
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.25)' }
+                    }} 
+                  />
+                  
+                  {/* 3M with dropdown menu */}
+                  <Chip 
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <span>{['3M', '6M', '1Y'].includes(perfTimePeriod) ? perfTimePeriod : '3M'}</span>
+                        <ExpandMoreIcon sx={{ fontSize: '1rem' }} />
+                      </Box>
+                    }
+                    size="small" 
+                    onClick={(e) => setPerfMenuAnchor(e.currentTarget)}
+                    sx={{ 
+                      backgroundColor: ['3M', '6M', '1Y'].includes(perfTimePeriod) ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.15)',
+                      color: ['3M', '6M', '1Y'].includes(perfTimePeriod) ? '#3b82f6' : '#64748b',
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.25)' }
+                    }} 
+                  />
+                  <Menu
+                    anchorEl={perfMenuAnchor}
+                    open={Boolean(perfMenuAnchor)}
+                    onClose={() => setPerfMenuAnchor(null)}
+                    PaperProps={{
+                      sx: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        mt: 1,
+                        minWidth: 80
+                      }
+                    }}
+                  >
+                    <MenuItem 
+                      onClick={() => {
+                        setPerfTimePeriod('3M');
+                        setPerfMenuAnchor(null);
+                      }}
+                      sx={{ 
+                        color: perfTimePeriod === '3M' ? '#3b82f6' : '#94a3b8',
+                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                      }}
+                    >
+                      3M
+                    </MenuItem>
+                    <MenuItem 
+                      onClick={() => {
+                        setPerfTimePeriod('6M');
+                        setPerfMenuAnchor(null);
+                      }}
+                      sx={{ 
+                        color: perfTimePeriod === '6M' ? '#3b82f6' : '#94a3b8',
+                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                      }}
+                    >
+                      6M
+                    </MenuItem>
+                    <MenuItem 
+                      onClick={() => {
+                        setPerfTimePeriod('1Y');
+                        setPerfMenuAnchor(null);
+                      }}
+                      sx={{ 
+                        color: perfTimePeriod === '1Y' ? '#3b82f6' : '#94a3b8',
+                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                      }}
+                    >
+                      1Y
+                    </MenuItem>
+                  </Menu>
                 </Box>
               </Box>
               
-              {/* Simple Chart Placeholder */}
+              {/* Performance Chart */}
               <Box sx={{ 
                 height: 250, 
                 display: 'flex', 
                 alignItems: 'flex-end',
                 justifyContent: 'space-between',
                 px: 2,
-                borderBottom: '1px solid rgba(59, 130, 246, 0.1)'
+                borderBottom: '1px solid rgba(59, 130, 246, 0.1)',
+                position: 'relative'
               }}>
-                {/* Simulated chart line */}
-                <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
-                  <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', bottom: 0 }}>
-                    <polyline
-                      fill="none"
-                      stroke="#06b6d4"
-                      strokeWidth="2"
-                      points="0,20 10,18 20,22 30,19 40,21 50,18 60,20 70,17 80,19 90,16 100,15"
-                    />
-                    <polyline
-                      fill="url(#gradient)"
-                      stroke="none"
-                      points="0,20 10,18 20,22 30,19 40,21 50,18 60,20 70,17 80,19 90,16 100,15 100,100 0,100"
-                    />
-                    <defs>
-                      <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.3" />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </Box>
+                {perfLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' }}>
+                    <CircularProgress size={24} sx={{ color: '#3b82f6' }} />
+                  </Box>
+                ) : perfData && perfData.history && perfData.history.length > 0 ? (
+                  <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+                    {(() => {
+                      // Extract data based on selected currency
+                      const currency = perfCurrency.toLowerCase() as 'usd' | 'sol';
+                      const history = perfData.history;
+                      
+                      // Find min and max values for scaling
+                      const positionValues = showPositionValue ? history.map((d: any) => parseFloat(d.positionValue[currency])) : [];
+                      const costBasisValues = showCostBasis ? history.map((d: any) => parseFloat(d.costBasis[currency])) : [];
+                      const allValues = [...positionValues, ...costBasisValues].filter(v => !isNaN(v));
+                      
+                      if (allValues.length === 0) {
+                        return <Typography sx={{ color: '#64748b', textAlign: 'center', py: 8 }}>No data available</Typography>;
+                      }
+                      
+                      const minValue = Math.min(...allValues);
+                      const maxValue = Math.max(...allValues);
+                      const range = maxValue - minValue || 1;
+                      
+                      // Generate SVG points (0-100 scale)
+                      const generatePoints = (values: number[]) => {
+                        return values.map((value, index) => {
+                          const x = (index / (values.length - 1)) * 100;
+                          const y = 100 - ((value - minValue) / range) * 90; // Leave 10% padding
+                          return `${x},${y}`;
+                        }).join(' ');
+                      };
+                      
+                      const positionPoints = showPositionValue ? generatePoints(positionValues) : '';
+                      const costBasisPoints = showCostBasis ? generatePoints(costBasisValues) : '';
+                      
+                      return (
+                        <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="positionGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                            </linearGradient>
+                            <linearGradient id="costBasisGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          
+                          {/* Cost Basis (green) - draw first so it's behind */}
+                          {showCostBasis && costBasisPoints && (
+                            <>
+                              <polyline
+                                fill="url(#costBasisGradient)"
+                                stroke="none"
+                                points={`${costBasisPoints} 100,100 0,100`}
+                              />
+                              <polyline
+                                fill="none"
+                                stroke="#10b981"
+                                strokeWidth="2"
+                                points={costBasisPoints}
+                              />
+                            </>
+                          )}
+                          
+                          {/* Position Value (blue) - draw second so it's on top */}
+                          {showPositionValue && positionPoints && (
+                            <>
+                              <polyline
+                                fill="url(#positionGradient)"
+                                stroke="none"
+                                points={`${positionPoints} 100,100 0,100`}
+                              />
+                              <polyline
+                                fill="none"
+                                stroke="#3b82f6"
+                                strokeWidth="2"
+                                points={positionPoints}
+                              />
+                            </>
+                          )}
+                        </svg>
+                      );
+                    })()}
+                  </Box>
+                ) : (
+                  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+                    <Typography sx={{ color: '#64748b' }}>
+                      {isWalletConnected ? 'No performance data available' : 'Connect wallet to view performance'}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
               
               {/* Chart Legend */}
               <Box sx={{ display: 'flex', gap: 3, mt: 2, justifyContent: 'center' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Checkbox defaultChecked size="small" sx={{ color: '#3b82f6' }} />
+                  <Checkbox 
+                    checked={showPositionValue}
+                    onChange={(e) => setShowPositionValue(e.target.checked)}
+                    size="small" 
+                    sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#3b82f6' } }} 
+                  />
                   <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>Position Value</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Checkbox defaultChecked size="small" sx={{ color: '#10b981' }} />
+                  <Checkbox 
+                    checked={showCostBasis}
+                    onChange={(e) => setShowCostBasis(e.target.checked)}
+                    size="small" 
+                    sx={{ color: '#10b981', '&.Mui-checked': { color: '#10b981' } }} 
+                  />
                   <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>Deposited (Cost Basis)</Typography>
                 </Box>
               </Box>

@@ -116,6 +116,47 @@ export interface LiquidityTransactionResponse {
   message?: string;
 }
 
+// Kamino API interfaces
+export interface KaminoMultiValue {
+  usd: string;
+  sol: string;
+  token: string;
+}
+
+export interface KaminoPnLTimeseriesValue {
+  timestamp: number;  // Unix timestamp in milliseconds
+  type: 'buy' | 'sell' | 'mark-to-market';
+  position: string;  // Current position value
+  quantity: string;  // Quantity involved in transaction
+  tokenPrice: KaminoMultiValue;
+  sharePrice: KaminoMultiValue;
+  costBasis: KaminoMultiValue;  // Cost basis for position
+  realizedPnl: KaminoMultiValue;  // Realized profit/loss
+  pnl: KaminoMultiValue;  // Total profit/loss
+  positionValue: KaminoMultiValue;  // Value of the position
+  investment: KaminoMultiValue;  // Total invested value
+}
+
+export interface KaminoVaultPnLHistory {
+  history: KaminoPnLTimeseriesValue[];
+  totalPnl: KaminoMultiValue;
+  totalCostBasis: KaminoMultiValue;
+}
+
+export interface KaminoUserVaultMetrics {
+  createdOn: string;  // ISO 8601 timestamp
+  sharesAmount: string;
+  usdAmount: string;
+  solAmount: string;
+  apy: string;
+  cumulativeInterestEarned: string;
+  cumulativeInterestEarnedUsd: string;
+  cumulativeInterestEarnedSol: string;
+  interestEarnedPerSecond: string;
+  interestEarnedPerSecondUsd: string;
+  interestEarnedPerSecondSol: string;
+}
+
 export interface MarsEarningDetail {
   id: string;
   date: string;
@@ -638,6 +679,62 @@ class MarsApiService {
       return result.data;
     } catch (error) {
       console.error('Record liquidity transaction error:', error);
+      throw error;
+    }
+  }
+
+  // Get Kamino vault PnL history for user
+  async getKaminoVaultPnLHistory(params: {
+    userAddress: string;
+    vaultAddress: string;
+    start?: number | string; // epoch ms or ISO string
+    end?: number | string;
+  }): Promise<KaminoVaultPnLHistory> {
+    try {
+      const { userAddress, vaultAddress, start, end } = params;
+      const queryParams = new URLSearchParams();
+      if (start) queryParams.append('start', start.toString());
+      if (end) queryParams.append('end', end.toString());
+      
+      const url = `https://api.kamino.finance/kvaults/users/${userAddress}/vaults/${vaultAddress}/pnl/history${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Kamino API Error: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get Kamino vault PnL history error:', error);
+      throw error;
+    }
+  }
+
+  // Get Kamino user vault metrics history
+  async getKaminoUserVaultMetricsHistory(params: {
+    userAddress: string;
+    vaultAddress: string;
+    start?: number | string;
+    end?: number | string;
+  }): Promise<KaminoUserVaultMetrics[]> {
+    try {
+      const { userAddress, vaultAddress, start, end } = params;
+      const queryParams = new URLSearchParams();
+      if (start) queryParams.append('start', start.toString());
+      if (end) queryParams.append('end', end.toString());
+      
+      const url = `https://api.kamino.finance/kvaults/users/${userAddress}/vaults/${vaultAddress}/metrics/history${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Kamino API Error: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get Kamino user vault metrics history error:', error);
       throw error;
     }
   }
