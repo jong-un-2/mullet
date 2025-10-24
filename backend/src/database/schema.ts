@@ -730,3 +730,126 @@ export type MarsApyData = typeof marsApyData.$inferSelect;
 export type MarsUserDailyEarnings = typeof marsUserDailyEarnings.$inferSelect;
 export type MarsProtocolPerformance = typeof marsProtocolPerformance.$inferSelect;
 export type MarsUserMonthlySummary = typeof marsUserMonthlySummary.$inferSelect;
+
+// ==================== Kamino 流动性池交易表 ====================
+
+/**
+ * Kamino 流动性池交易记录表
+ * 追踪每笔存取款，用于计算真实成本基础和准确的 PnL
+ */
+export const kaminoLiquidityTransactions = sqliteTable("kamino_liquidity_transactions", {
+  id: text("id").$defaultFn(() => nanoid()).primaryKey(),
+  userAddress: text("user_address").notNull(),
+  strategyAddress: text("strategy_address").notNull(),
+  poolName: text("pool_name"), // 如 "JITOSOL-SOL"
+  
+  // 交易类型
+  transactionType: text("transaction_type", { enum: ["deposit", "withdraw"] }).notNull(),
+  
+  // Token A (通常是 SOL/wSOL)
+  tokenAMint: text("token_a_mint").notNull(),
+  tokenASymbol: text("token_a_symbol").notNull(),
+  tokenAAmount: text("token_a_amount").notNull(), // UI amount
+  tokenAAmountUsd: real("token_a_amount_usd").notNull(),
+  
+  // Token B (通常是 JitoSOL)
+  tokenBMint: text("token_b_mint").notNull(),
+  tokenBSymbol: text("token_b_symbol").notNull(),
+  tokenBAmount: text("token_b_amount").notNull(), // UI amount
+  tokenBAmountUsd: real("token_b_amount_usd").notNull(),
+  
+  // LP Shares
+  shares: text("shares").notNull(), // LP shares amount
+  
+  // 交易信息
+  txHash: text("tx_hash").notNull().unique(),
+  status: text("status", { enum: ["pending", "confirmed", "failed"] }).default("confirmed"),
+  
+  // APY 信息
+  apy: real("apy"), // 存款时的 APY 或取款时的实际 APY
+  
+  // 时间戳
+  timestamp: integer("timestamp", { mode: "timestamp_ms" }).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("kamino_tx_user_idx").on(table.userAddress),
+  index("kamino_tx_strategy_idx").on(table.strategyAddress),
+  index("kamino_tx_type_idx").on(table.transactionType),
+  index("kamino_tx_timestamp_idx").on(table.timestamp),
+  index("kamino_tx_hash_idx").on(table.txHash),
+  index("kamino_tx_user_strategy_idx").on(table.userAddress, table.strategyAddress),
+]);
+
+/**
+ * Kamino 用户仓位汇总表
+ * 追踪用户在每个策略的成本基础和 PnL
+ */
+export const kaminoUserPositionSummary = sqliteTable("kamino_user_position_summary", {
+  id: text("id").$defaultFn(() => nanoid()).primaryKey(),
+  userAddress: text("user_address").notNull(),
+  strategyAddress: text("strategy_address").notNull(),
+  poolName: text("pool_name"),
+  
+  // 成本基础 (Cost Basis)
+  totalDepositsUsd: real("total_deposits_usd").notNull().default(0), // 总存款 USD
+  totalWithdrawalsUsd: real("total_withdrawals_usd").notNull().default(0), // 总取款 USD
+  costBasis: real("cost_basis").notNull().default(0), // 成本基础 = 总存款 - 总取款
+  
+  // Token 数量追踪
+  totalTokenADeposited: text("total_token_a_deposited").notNull().default("0"),
+  totalTokenBDeposited: text("total_token_b_deposited").notNull().default("0"),
+  totalTokenAWithdrawn: text("total_token_a_withdrawn").notNull().default("0"),
+  totalTokenBWithdrawn: text("total_token_b_withdrawn").notNull().default("0"),
+  
+  // LP Shares 追踪
+  totalSharesReceived: text("total_shares_received").notNull().default("0"), // 存款获得的总 shares
+  totalSharesBurned: text("total_shares_burned").notNull().default("0"), // 取款销毁的总 shares
+  currentShares: text("current_shares").notNull().default("0"), // 当前持有的 shares
+  
+  // PnL 信息
+  currentValueUsd: real("current_value_usd").default(0), // 当前价值 USD
+  realizedPnL: real("realized_pnl").default(0), // 已实现损益 = 总取款 - (总存款 * 取款比例)
+  unrealizedPnL: real("unrealized_pnl").default(0), // 未实现损益 = 当前价值 - 剩余成本基础
+  totalPnL: real("total_pnl").default(0), // 总损益 = 已实现 + 未实现
+  
+  // 统计信息
+  transactionCount: integer("transaction_count").notNull().default(0),
+  depositCount: integer("deposit_count").notNull().default(0),
+  withdrawCount: integer("withdraw_count").notNull().default(0),
+  
+  // 时间信息
+  firstDepositAt: integer("first_deposit_at", { mode: "timestamp_ms" }),
+  lastTransactionAt: integer("last_transaction_at", { mode: "timestamp_ms" }),
+  
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("kamino_summary_user_idx").on(table.userAddress),
+  index("kamino_summary_strategy_idx").on(table.strategyAddress),
+  index("kamino_summary_user_strategy_idx").on(table.userAddress, table.strategyAddress),
+]);
+
+// Relations
+export const kaminoLiquidityTransactionsRelations = relations(kaminoLiquidityTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [kaminoLiquidityTransactions.userAddress],
+    references: [users.walletAddress],
+  }),
+  positionSummary: one(kaminoUserPositionSummary, {
+    fields: [kaminoLiquidityTransactions.userAddress, kaminoLiquidityTransactions.strategyAddress],
+    references: [kaminoUserPositionSummary.userAddress, kaminoUserPositionSummary.strategyAddress],
+  }),
+}));
+
+export const kaminoUserPositionSummaryRelations = relations(kaminoUserPositionSummary, ({ one, many }) => ({
+  user: one(users, {
+    fields: [kaminoUserPositionSummary.userAddress],
+    references: [users.walletAddress],
+  }),
+  transactions: many(kaminoLiquidityTransactions),
+}));
+
+// Types
+export type KaminoLiquidityTransaction = typeof kaminoLiquidityTransactions.$inferSelect;
+export type KaminoUserPositionSummary = typeof kaminoUserPositionSummary.$inferSelect;

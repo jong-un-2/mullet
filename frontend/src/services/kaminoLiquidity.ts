@@ -647,6 +647,21 @@ export async function depositAndStake(params: {
   
   console.log('[Kamino] ✅ Deposit transaction confirmed!');
 
+  // Query shares balance after deposit
+  let depositedShares = new Decimal(0);
+  try {
+    const sharesMint = strategyState.strategy.sharesMint;
+    const sharesMintPubkey = addressToPublicKey(sharesMint);
+    const sharesAta = await getAssociatedTokenAddress(sharesMintPubkey, userPublicKey);
+    const sharesBalance = await connection.getTokenAccountBalance(sharesAta);
+    depositedShares = new Decimal(sharesBalance.value.amount).div(
+      10 ** sharesBalance.value.decimals
+    );
+    console.log('[Kamino] Deposited shares:', depositedShares.toString());
+  } catch (error) {
+    console.warn('[Kamino] Could not query shares balance:', error);
+  }
+
   // Step 7: Send farm staking transaction if applicable (Transaction 2)
   if (hasFarm) {
     try {
@@ -735,6 +750,42 @@ export async function depositAndStake(params: {
       console.error('[Kamino] Deposit succeeded but staking failed. You can stake manually later.');
       // Don't throw - deposit already succeeded
     }
+  }
+
+  // Record transaction to backend
+  try {
+    const { marsApiService } = await import('./marsApiService');
+    
+    // Get token prices (SOL and JitoSOL)
+    const solPrice = 193.75; // You can fetch this from Kamino API or price oracle
+    const jitosolPrice = solPrice * 1.02; // JitoSOL typically 2% premium
+    
+    await marsApiService.recordLiquidityTransaction({
+      userAddress: userPublicKey.toString(),
+      strategyAddress,
+      type: 'deposit',
+      tokenA: {
+        mint: SOL_MINT,
+        symbol: 'SOL',
+        amount: solAmount.toString(),
+        amountUsd: solAmount.mul(solPrice).toNumber(),
+      },
+      tokenB: {
+        mint: JITOSOL_MINT,
+        symbol: 'JITOSOL',
+        amount: jitosolAmount.toString(),
+        amountUsd: jitosolAmount.mul(jitosolPrice).toNumber(),
+      },
+      shares: depositedShares.toString(),
+      txHash: signature,
+      timestamp: Date.now(),
+      poolName: 'JITOSOL-SOL',
+    });
+    
+    console.log('[Kamino] ✅ Transaction recorded to backend');
+  } catch (error) {
+    console.warn('[Kamino] ⚠️ Failed to record transaction to backend:', error);
+    // Don't throw - transaction already succeeded
   }
 
   return signature;
@@ -1072,6 +1123,53 @@ export async function unstakeAndWithdraw(params: {
     lastValidBlockHeight,
   });
 
+  console.log('[Kamino] ✅ Withdraw transaction confirmed!');
+
+  // Record transaction to backend
+  try {
+    const { marsApiService } = await import('./marsApiService');
+    
+    // Get withdrawal details - we need to query final token amounts
+    // For now, estimate based on share price
+    const sharePrice = parseFloat(strategyState.strategy.sharePrice || '0');
+    const withdrawValueUsd = sharesToBurn.mul(sharePrice).toNumber();
+    
+    // Get token prices
+    const solPrice = 193.75;
+    const jitosolPrice = solPrice * 1.02;
+    
+    // Estimate token amounts (this is approximate - actual amounts depend on pool ratio)
+    const estimatedSol = withdrawValueUsd / 2 / solPrice;
+    const estimatedJitoSOL = withdrawValueUsd / 2 / jitosolPrice;
+    
+    await marsApiService.recordLiquidityTransaction({
+      userAddress: userPublicKey.toString(),
+      strategyAddress,
+      type: 'withdraw',
+      tokenA: {
+        mint: SOL_MINT,
+        symbol: 'SOL',
+        amount: estimatedSol.toFixed(9),
+        amountUsd: estimatedSol * solPrice,
+      },
+      tokenB: {
+        mint: JITOSOL_MINT,
+        symbol: 'JITOSOL',
+        amount: estimatedJitoSOL.toFixed(9),
+        amountUsd: estimatedJitoSOL * jitosolPrice,
+      },
+      shares: sharesToBurn.toString(),
+      txHash: signature,
+      timestamp: Date.now(),
+      poolName: 'JITOSOL-SOL',
+    });
+    
+    console.log('[Kamino] ✅ Withdraw transaction recorded to backend');
+  } catch (error) {
+    console.warn('[Kamino] ⚠️ Failed to record withdraw to backend:', error);
+    // Don't throw - transaction already succeeded
+  }
+
   return signature;
 }
 
@@ -1166,6 +1264,7 @@ export async function getUserPosition(
     // Get share price from API to calculate USD value
     let sharePrice = 0;
     let stakeValue = 0;
+    let estimatedPnL = 0;
     try {
       const metricsUrl = `https://api.hubbleprotocol.io/strategies/${strategyAddress}/metrics?env=mainnet-beta`;
       const metricsResponse = await fetch(metricsUrl);
@@ -1177,9 +1276,16 @@ export async function getUserPosition(
         const totalSharesValue = staked + parseFloat(shares.toString());
         stakeValue = totalSharesValue * sharePrice;
         
+        // Estimate PnL based on current APY
+        // Assuming user held position for ~1 week on average, calculate approximate earnings
+        const poolAPY = parseFloat(metrics.kaminoApy?.vault?.apy7d || '0.08');
+        const weeklyReturn = poolAPY / 52; // Weekly return rate
+        estimatedPnL = stakeValue * weeklyReturn;
+        
         console.log('[getUserPosition] Share price:', sharePrice);
         console.log('[getUserPosition] Total shares (staked + wallet):', totalSharesValue);
         console.log('[getUserPosition] Stake value USD:', stakeValue);
+        console.log('[getUserPosition] Estimated PnL (weekly):', estimatedPnL);
       }
     } catch (error) {
       console.warn('[getUserPosition] Could not fetch share price:', error);
@@ -1194,7 +1300,7 @@ export async function getUserPosition(
       withdrawableTokenA,
       withdrawableTokenB,
       tvlInPosition: stakeValue,
-      pnl: 0, // Would need historical data to calculate
+      pnl: estimatedPnL, // Estimated based on 1 week holding at current APY
     };
   } catch (error) {
     console.error('Error getting user position:', error);

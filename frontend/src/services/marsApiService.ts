@@ -86,6 +86,36 @@ export interface MarsTransactionHistory {
   apy: number;
 }
 
+// Liquidity pool transaction request
+export interface LiquidityTransactionRequest {
+  userAddress: string;
+  strategyAddress: string;
+  type: 'deposit' | 'withdraw';
+  tokenA: {
+    mint: string;
+    symbol: string;
+    amount: string; // UI amount
+    amountUsd: number;
+  };
+  tokenB: {
+    mint: string;
+    symbol: string;
+    amount: string; // UI amount
+    amountUsd: number;
+  };
+  shares: string; // LP shares amount
+  txHash: string;
+  timestamp: number;
+  apy?: number;
+  poolName?: string;
+}
+
+export interface LiquidityTransactionResponse {
+  success: boolean;
+  transactionId: string;
+  message?: string;
+}
+
 export interface MarsEarningDetail {
   id: string;
   date: string;
@@ -248,7 +278,6 @@ export interface ApiResponse<T> extends BaseApiResponse<T> {}
 
 class MarsApiService {
   private baseUrl = API_CONFIG.BASE_URL;
-  private dataApiUrl = API_CONFIG.BASE_URL;
 
   // ==================== 通用HTTP方法 ====================
   private getHeaders(): HeadersInit {
@@ -274,7 +303,7 @@ class MarsApiService {
   // 数据API专用请求方法
   private async fetchDataApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
     try {
-      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/data${endpoint}`, {
+      const response = await fetch(`${this.baseUrl}/v1/api/mars/data${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
           ...options?.headers,
@@ -413,7 +442,7 @@ class MarsApiService {
     limit: number;
   }> {
     try {
-      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/transactions`, {
+      const response = await fetch(`${this.baseUrl}/v1/api/mars/vault/transactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -451,7 +480,7 @@ class MarsApiService {
     vaultAddress?: string
   ): Promise<MarsCalendarData> {
     try {
-      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/calendar`, {
+      const response = await fetch(`${this.baseUrl}/v1/api/mars/vault/calendar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -479,7 +508,7 @@ class MarsApiService {
   // 从 Neon 数据库获取真实的收益数据
   async getVaultEarnings(userAddress: string, vaultAddress?: string): Promise<MarsUserEarnings> {
     try {
-      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/earnings`, {
+      const response = await fetch(`${this.baseUrl}/v1/api/mars/vault/earnings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -512,7 +541,7 @@ class MarsApiService {
     limit: number;
   }> {
     try {
-      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/earning-details`, {
+      const response = await fetch(`${this.baseUrl}/v1/api/mars/vault/earning-details`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -553,7 +582,7 @@ class MarsApiService {
     historical: VaultHistoricalData[];
   }> {
     try {
-      const response = await fetch(`${this.dataApiUrl}/v1/api/mars/vault/historical`, {
+      const response = await fetch(`${this.baseUrl}/v1/api/mars/vault/historical`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -579,6 +608,36 @@ class MarsApiService {
       return result.data;
     } catch (error) {
       console.error('Vault historical data API Error:', error);
+      throw error;
+    }
+  }
+
+  // Record liquidity pool transaction (deposit/withdraw)
+  async recordLiquidityTransaction(
+    request: LiquidityTransactionRequest
+  ): Promise<LiquidityTransactionResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/v1/api/mars/liquidity/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result: ApiResponse<LiquidityTransactionResponse> = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error?.message || 'Failed to record transaction');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Record liquidity transaction error:', error);
       throw error;
     }
   }
