@@ -104,7 +104,6 @@ export default function PoolDetail() {
   const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null); // Menu anchor
   const [withdrawPercentage, setWithdrawPercentage] = useState<number>(0); // Withdrawal percentage (0-100)
   const [depositLoading, setDepositLoading] = useState(false);
-  const [depositTxSignature, setDepositTxSignature] = useState('');
 
   // Position states
   const [userPosition, setUserPosition] = useState<any>(null);
@@ -121,6 +120,10 @@ export default function PoolDetail() {
   const [txMessage, setTxMessage] = useState('');
   const [txSignature, setTxSignature] = useState<string | undefined>();
   const [txType, setTxType] = useState<'deposit' | 'withdraw' | 'claim'>('deposit');
+
+  // Activity Log states
+  const [activityLog, setActivityLog] = useState<any[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   // Load user balances
   const loadBalances = useCallback(async () => {
@@ -192,6 +195,43 @@ export default function PoolDetail() {
     }
   }, [wallet.publicKey, solanaWallets, connection]);
 
+  // Load activity log from backend
+  const loadActivityLog = useCallback(async () => {
+    const userAddress = wallet.publicKey?.toString() || (solanaWallets.length > 0 ? solanaWallets[0].address : null);
+    
+    if (!userAddress || !poolAddress) {
+      setActivityLog([]);
+      return;
+    }
+    
+    setActivityLoading(true);
+    try {
+      // Fetch transaction history for this user and strategy
+      const response = await fetch(
+        `https://api.marsliquid.xyz/v1/api/mars/liquidity/transactions/${userAddress}?strategyAddress=${poolAddress}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setActivityLog(result.data);
+          console.log('[PoolDetail] Activity log loaded:', result.data.length, 'transactions');
+        }
+      }
+    } catch (error) {
+      console.error('[PoolDetail] Error loading activity log:', error);
+      setActivityLog([]);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [wallet.publicKey, solanaWallets, poolAddress]);
+
   useEffect(() => {
     const loadPoolData = async () => {
       if (!poolAddress) {
@@ -216,13 +256,14 @@ export default function PoolDetail() {
       const hasWalletAddress = wallet.publicKey || solanaWallets.length > 0;
       
       if (isWalletConnected && foundPool && hasWalletAddress) {
-        console.log('[PoolDetail] Loading user position...');
+        console.log('[PoolDetail] Loading user position and activity log...');
         loadUserPosition(foundPool);
+        loadActivityLog();
       }
     };
     
     loadPoolData();
-  }, [poolAddress, isWalletConnected, wallet.publicKey, solanaWallets, loadUserPosition]);
+  }, [poolAddress, isWalletConnected, wallet.publicKey, solanaWallets, loadUserPosition, loadActivityLog]);
 
   // Load balances when wallet connects
   useEffect(() => {
@@ -253,7 +294,6 @@ export default function PoolDetail() {
     }
 
     setDepositLoading(true);
-    setDepositTxSignature('');
     setShowProgress(true);
     setTxType(actionMode); // Set transaction type
     setTxStatus('building');
@@ -303,15 +343,15 @@ export default function PoolDetail() {
 
         setTxStatus('success');
         setTxMessage('Deposit completed successfully!');
-        setDepositTxSignature(signature);
         setTxSignature(signature);
         setSolAmount('');
         setJitosolAmount('');
         
-        // Reload balances and position after successful deposit
+        // Reload balances, position, and activity log after successful deposit
         await Promise.all([
           loadBalances(),
-          loadUserPosition(pool)
+          loadUserPosition(pool),
+          loadActivityLog()
         ]);
 
         // Auto-hide progress after 5 seconds
@@ -375,16 +415,16 @@ export default function PoolDetail() {
 
         setTxStatus('success');
         setTxMessage('Withdrawal completed successfully!');
-        setDepositTxSignature(signature);
         setTxSignature(signature);
         setWithdrawPercentage(0);
         setSolAmount('');
         setJitosolAmount('');
         
-        // Reload balances and position after transaction
+        // Reload balances, position, and activity log after transaction
         await Promise.all([
           loadBalances(),
-          loadUserPosition(pool)
+          loadUserPosition(pool),
+          loadActivityLog()
         ]);
 
         // Auto-hide progress after 5 seconds
@@ -1173,53 +1213,72 @@ export default function PoolDetail() {
               </Box>
 
               {/* Activity Rows */}
-              {[
-                { date: 'Oct 22 22:35', type: 'Withdraw', token1: '0.01', token2: '0.00', value: '$2.86' },
-                { date: 'Oct 22 22:30', type: 'Deposit', token1: '0.01', token2: '0.00', value: '$2.86' },
-              ].map((activity, idx) => (
-                <Box 
-                  key={idx}
-                  sx={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: '1fr 1fr 2fr 1fr',
-                    gap: 2,
-                    py: 2.5,
-                    borderBottom: '1px solid rgba(59, 130, 246, 0.05)',
-                    '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.05)' },
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>{activity.date}</Typography>
-                  <Chip 
-                    label={activity.type}
-                    size="small"
-                    sx={{ 
-                      width: 'fit-content',
-                      backgroundColor: activity.type === 'Withdraw' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                      color: activity.type === 'Withdraw' ? '#fbbf24' : '#10b981'
-                    }}
-                  />
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>
-                      {activity.token1} <Box component="span" sx={{ color: '#3b82f6' }}>≈</Box>
-                    </Typography>
-                    <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>
-                      {activity.token2} <Box component="span" sx={{ color: '#10b981' }}>🟢</Box>
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
-                    <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>{activity.value}</Typography>
-                    <IconButton size="small" sx={{ color: '#64748b' }}>
-                      <Box sx={{ fontSize: '1rem' }}>🔗</Box>
-                    </IconButton>
-                  </Box>
+              {activityLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={24} sx={{ color: '#3b82f6' }} />
                 </Box>
-              ))}
-
-              {isWalletConnected && (
+              ) : activityLog.length > 0 ? (
+                activityLog.map((activity, idx) => {
+                  // Format date
+                  const date = new Date(activity.timestamp);
+                  const formattedDate = date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  });
+                  
+                  // Calculate total value
+                  const totalValue = activity.tokenAAmountUsd + activity.tokenBAmountUsd;
+                  
+                  return (
+                    <Box 
+                      key={idx}
+                      sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '1fr 1fr 2fr 1fr',
+                        gap: 2,
+                        py: 2.5,
+                        borderBottom: '1px solid rgba(59, 130, 246, 0.05)',
+                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.05)' },
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => window.open(`https://solscan.io/tx/${activity.txHash}`, '_blank')}
+                    >
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>{formattedDate}</Typography>
+                      <Chip 
+                        label={activity.transactionType === 'withdraw' ? 'Withdraw' : 'Deposit'}
+                        size="small"
+                        sx={{ 
+                          width: 'fit-content',
+                          backgroundColor: activity.transactionType === 'withdraw' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                          color: activity.transactionType === 'withdraw' ? '#fbbf24' : '#10b981'
+                        }}
+                      />
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>
+                          {parseFloat(activity.tokenAAmount).toFixed(4)} {activity.tokenASymbol}
+                        </Typography>
+                        <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>+</Typography>
+                        <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>
+                          {parseFloat(activity.tokenBAmount).toFixed(4)} {activity.tokenBSymbol}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
+                        <Typography sx={{ color: '#ffffff', fontSize: '0.9rem' }}>
+                          ${totalValue.toFixed(2)}
+                        </Typography>
+                        <IconButton size="small" sx={{ color: '#64748b' }}>
+                          <Box sx={{ fontSize: '1rem' }}>🔗</Box>
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  );
+                })
+              ) : (
                 <Box sx={{ mt: 2, textAlign: 'center' }}>
                   <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                    No activity yet
+                    {isWalletConnected ? 'No activity yet' : 'Connect wallet to view activity'}
                   </Typography>
                 </Box>
               )}
@@ -1860,20 +1919,6 @@ export default function PoolDetail() {
                       actionMode === 'deposit' ? 'Deposit and Stake' : 'Unstake and Withdraw'
                     )}
                   </Button>
-
-                  {depositTxSignature && (
-                    <Alert severity="success" sx={{ mb: 3 }}>
-                      Success!{' '}
-                      <a
-                        href={`https://solscan.io/tx/${depositTxSignature}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: '#3b82f6', textDecoration: 'underline' }}
-                      >
-                        View Transaction
-                      </a>
-                    </Alert>
-                  )}
 
                   {/* Transaction Settings */}
                   <Box sx={{ 

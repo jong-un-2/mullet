@@ -501,6 +501,164 @@ export function createMarsRoutes() {
     }
   });
 
+  // ==================== Kamino 流动性池交易端点 ====================
+  
+  /**
+   * POST /liquidity/transaction - 记录流动性池交易
+   */
+  app.post('/liquidity/transaction',
+    zValidator('json', z.object({
+      userAddress: z.string().min(1),
+      strategyAddress: z.string().min(1),
+      type: z.enum(['deposit', 'withdraw']),
+      tokenA: z.object({
+        mint: z.string(),
+        symbol: z.string(),
+        amount: z.string(),
+        amountUsd: z.number(),
+      }),
+      tokenB: z.object({
+        mint: z.string(),
+        symbol: z.string(),
+        amount: z.string(),
+        amountUsd: z.number(),
+      }),
+      shares: z.string(),
+      txHash: z.string(),
+      timestamp: z.number(),
+      apy: z.number().optional(),
+      poolName: z.string().optional(),
+    })),
+    async (c) => {
+      try {
+        const request = c.req.valid('json');
+        
+        // 动态导入 liquidity manager
+        const { createKaminoLiquidityManager } = await import('./kamino/liquidity');
+        const liquidityManager = createKaminoLiquidityManager(c.env.D1_DATABASE!);
+        
+        const result = await liquidityManager.recordTransaction(request);
+        
+        const response: ApiResponse<typeof result> = {
+          success: true,
+          data: result,
+          timestamp: new Date().toISOString(),
+        };
+        
+        return c.json(response);
+      } catch (error: any) {
+        console.error('[Kamino Liquidity] Record transaction failed:', error);
+        
+        const response: ApiResponse<never> = {
+          success: false,
+          error: {
+            code: 'LIQUIDITY_TRANSACTION_ERROR',
+            message: error.message || 'Failed to record transaction',
+          },
+          timestamp: new Date().toISOString(),
+        };
+        
+        return c.json(response, 500);
+      }
+    }
+  );
+
+  /**
+   * GET /liquidity/transactions/:userAddress - 获取用户交易历史
+   */
+  app.get('/liquidity/transactions/:userAddress',
+    zValidator('param', z.object({
+      userAddress: z.string().min(1),
+    })),
+    zValidator('query', z.object({
+      strategyAddress: z.string().optional(),
+      limit: z.string().optional(),
+    })),
+    async (c) => {
+      try {
+        const { userAddress } = c.req.valid('param');
+        const { strategyAddress, limit } = c.req.valid('query');
+        
+        const { createKaminoLiquidityManager } = await import('./kamino/liquidity');
+        const liquidityManager = createKaminoLiquidityManager(c.env.D1_DATABASE!);
+        
+        const transactions = await liquidityManager.getTransactionHistory(
+          userAddress,
+          strategyAddress,
+          limit ? parseInt(limit) : 50
+        );
+        
+        const response: ApiResponse<typeof transactions> = {
+          success: true,
+          data: transactions,
+          timestamp: new Date().toISOString(),
+        };
+        
+        return c.json(response);
+      } catch (error: any) {
+        console.error('[Kamino Liquidity] Get transactions failed:', error);
+        
+        const response: ApiResponse<never> = {
+          success: false,
+          error: {
+            code: 'GET_TRANSACTIONS_ERROR',
+            message: error.message || 'Failed to get transactions',
+          },
+          timestamp: new Date().toISOString(),
+        };
+        
+        return c.json(response, 500);
+      }
+    }
+  );
+
+  /**
+   * GET /liquidity/position/:userAddress - 获取用户仓位汇总
+   */
+  app.get('/liquidity/position/:userAddress',
+    zValidator('param', z.object({
+      userAddress: z.string().min(1),
+    })),
+    zValidator('query', z.object({
+      strategyAddress: z.string().optional(),
+    })),
+    async (c) => {
+      try {
+        const { userAddress } = c.req.valid('param');
+        const { strategyAddress } = c.req.valid('query');
+        
+        const { createKaminoLiquidityManager } = await import('./kamino/liquidity');
+        const liquidityManager = createKaminoLiquidityManager(c.env.D1_DATABASE!);
+        
+        const summaries = await liquidityManager.getPositionSummary(
+          userAddress,
+          strategyAddress
+        );
+        
+        const response: ApiResponse<typeof summaries> = {
+          success: true,
+          data: summaries,
+          timestamp: new Date().toISOString(),
+        };
+        
+        return c.json(response);
+      } catch (error: any) {
+        console.error('[Kamino Liquidity] Get position failed:', error);
+        
+        const response: ApiResponse<never> = {
+          success: false,
+          error: {
+            code: 'GET_POSITION_ERROR',
+            message: error.message || 'Failed to get position',
+          },
+          timestamp: new Date().toISOString(),
+        };
+        
+        return c.json(response, 500);
+      }
+    }
+  );
+
   // ==================== 数据API端点 ====================
   // 挂载Mars Vault API routes (real data from Neon PostgreSQL)
   app.route('/vault', marsVaultRoutes);

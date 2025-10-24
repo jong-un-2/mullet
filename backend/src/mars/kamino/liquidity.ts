@@ -188,10 +188,14 @@ export function createKaminoLiquidityManager(db: D1Database) {
           transactionCount: 1,
           depositCount: 1,
           withdrawCount: 0,
-          firstDepositAt: timestamp,
-          lastTransactionAt: timestamp,
+          firstDepositAt: new Date(timestamp),
+          lastTransactionAt: new Date(timestamp),
         })
         .returning();
+
+      if (!newSummary) {
+        throw new Error('Failed to create position summary');
+      }
 
       return newSummary;
     }
@@ -285,8 +289,8 @@ export function createKaminoLiquidityManager(db: D1Database) {
         transactionCount: existingSummary.transactionCount + 1,
         depositCount: newDepositCount,
         withdrawCount: newWithdrawCount,
-        lastTransactionAt: timestamp,
-        updatedAt: Date.now(),
+        lastTransactionAt: new Date(timestamp),
+        updatedAt: new Date(),
       })
       .where(
         and(
@@ -295,6 +299,10 @@ export function createKaminoLiquidityManager(db: D1Database) {
         )
       )
       .returning();
+
+    if (!updatedSummary) {
+      throw new Error('Failed to update position summary');
+    }
 
     return updatedSummary;
   }
@@ -369,7 +377,7 @@ export function createKaminoLiquidityManager(db: D1Database) {
 
     // 重新计算未实现 PnL
     const unrealizedPnL = currentValueUsd - summary.costBasis;
-    const totalPnL = summary.realizedPnL + unrealizedPnL;
+    const totalPnL = (summary.realizedPnL || 0) + unrealizedPnL;
 
     await drizzleDb
       .update(schema.kaminoUserPositionSummary)
@@ -377,7 +385,7 @@ export function createKaminoLiquidityManager(db: D1Database) {
         currentValueUsd,
         unrealizedPnL,
         totalPnL,
-        updatedAt: Date.now(),
+        updatedAt: new Date(),
       })
       .where(
         and(
