@@ -70,7 +70,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'TSLAx', 
     name: 'Tesla xStock', 
-    logo: '🚗',
+    logo: 'https://img.logo.dev/ticker/TSLA?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB', // Solana TSLAx 代币地址
     decimals: 8, // xStock tokens use 8 decimals
     description: 'Electric vehicles and clean energy'
@@ -78,7 +78,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'AAPLx', 
     name: 'Apple xStock', 
-    logo: '🍎',
+    logo: 'https://img.logo.dev/ticker/AAPL?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp', // Solana AAPLx 代币地址
     decimals: 8,
     description: 'Technology and consumer electronics'
@@ -86,7 +86,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'GOOGLx', 
     name: 'Alphabet xStock', 
-    logo: '🔍',
+    logo: 'https://img.logo.dev/ticker/GOOGL?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN', // Solana GOOGLx 代币地址
     decimals: 8,
     description: 'Search engine and cloud services'
@@ -94,7 +94,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'AMZNx', 
     name: 'Amazon xStock', 
-    logo: '📦',
+    logo: 'https://img.logo.dev/ticker/AMZN?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg', // Solana AMZNx 代币地址
     decimals: 8,
     description: 'E-commerce and cloud computing'
@@ -102,7 +102,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'MSFTx', 
     name: 'Microsoft xStock', 
-    logo: '💻',
+    logo: 'https://img.logo.dev/ticker/MSFT?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX', // Solana MSFTx 代币地址
     decimals: 8,
     description: 'Software and cloud services'
@@ -110,7 +110,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'NVDAx', 
     name: 'NVIDIA xStock', 
-    logo: '🎮',
+    logo: 'https://img.logo.dev/ticker/NVDA?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh', // Solana NVDAx 代币地址
     decimals: 8,
     description: 'Graphics processing and AI chips'
@@ -118,7 +118,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'CRCLx', 
     name: 'Circle xStock', 
-    logo: '⭕',
+    logo: 'https://img.logo.dev/ticker/CRCL?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1', // Solana CRCLx 代币地址
     decimals: 8,
     description: 'Digital currency and payment infrastructure'
@@ -126,7 +126,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'COINx', 
     name: 'Coinbase xStock', 
-    logo: '🪙',
+    logo: 'https://img.logo.dev/ticker/COIN?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu', // Solana COINx 代币地址
     decimals: 8,
     description: 'Cryptocurrency exchange platform'
@@ -134,7 +134,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'METAx', 
     name: 'Meta xStock', 
-    logo: '📱',
+    logo: 'https://img.logo.dev/ticker/META?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu', // Solana METAx 代币地址
     decimals: 8,
     description: 'Social media and virtual reality'
@@ -142,7 +142,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'MSTRx', 
     name: 'MicroStrategy xStock', 
-    logo: '₿',
+    logo: 'https://img.logo.dev/ticker/MSTR?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ', // Solana MSTRx 代币地址
     decimals: 8,
     description: 'Bitcoin treasury and business intelligence'
@@ -150,7 +150,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'QQQx', 
     name: 'Invesco QQQ xStock', 
-    logo: '📈',
+    logo: 'https://img.logo.dev/ticker/QQQ?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ', // Solana QQQx 代币地址
     decimals: 8,
     description: 'Nasdaq-100 Index ETF'
@@ -158,7 +158,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'SPYx', 
     name: 'SPDR S&P 500 xStock', 
-    logo: '🏛️',
+    logo: 'https://img.logo.dev/ticker/SPY?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W', // Solana SPYx 代币地址
     decimals: 8,
     description: 'S&P 500 Index ETF'
@@ -166,7 +166,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'GMEx', 
     name: 'GameStop xStock', 
-    logo: '🎮',
+    logo: 'https://img.logo.dev/ticker/GME?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xsf9mBktVB9BSU5kf4nHxPq5hCBJ2j2ui3ecFGxPRGc', // Solana GMEx 代币地址
     decimals: 8,
     description: 'Video game retailer'
@@ -174,7 +174,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'PMx', 
     name: 'Philip Morris xStock', 
-    logo: '🚬',
+    logo: 'https://img.logo.dev/ticker/PM?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xsba6tUnSjDae2VcopDB6FGGDaxRrewFCDa5hKn5vT3', // Solana PMx 代币地址
     decimals: 8,
     description: 'Tobacco and smoke-free products'
@@ -182,7 +182,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'MRVLx', 
     name: 'Marvell Technology xStock', 
-    logo: '🔧',
+    logo: 'https://img.logo.dev/ticker/MRVL?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsuxRGDzbLjnJ72v74b7p9VY6N66uYgTCyfwwRjVCJA', // Solana MRVLx 代币地址
     decimals: 8,
     description: 'Semiconductor and infrastructure solutions'
@@ -190,7 +190,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'INTCx', 
     name: 'Intel xStock', 
-    logo: '🖥️',
+    logo: 'https://img.logo.dev/ticker/INTC?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XshPgPdXFRWB8tP1j82rebb2Q9rPgGX37RuqzohmArM', // Solana INTCx 代币地址
     decimals: 8,
     description: 'Semiconductor chip manufacturer'
@@ -198,7 +198,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'IBMx', 
     name: 'IBM xStock', 
-    logo: '💼',
+    logo: 'https://img.logo.dev/ticker/IBM?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XspwhyYPdWVM8XBHZnpS9hgyag9MKjLRyE3tVfmCbSr', // Solana IBMx 代币地址
     decimals: 8,
     description: 'Cloud computing and enterprise solutions'
@@ -206,7 +206,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'NFLXx', 
     name: 'Netflix xStock', 
-    logo: '🎬',
+    logo: 'https://img.logo.dev/ticker/NFLX?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsEH7wWfJJu2ZT3UCFeVfALnVA6CP5ur7Ee11KmzVpL', // Solana NFLXx 代币地址
     decimals: 8,
     description: 'Streaming entertainment service'
@@ -214,7 +214,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'MCDx', 
     name: "McDonald's xStock", 
-    logo: '🍔',
+    logo: 'https://img.logo.dev/ticker/MCD?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsqE9cRRpzxcGKDXj1BJ7Xmg4GRhZoyY1KpmGSxAWT2', // Solana MCDx 代币地址
     decimals: 8,
     description: 'Fast food restaurant chain'
@@ -222,7 +222,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'ORCLx', 
     name: 'Oracle xStock', 
-    logo: '🗄️',
+    logo: 'https://img.logo.dev/ticker/ORCL?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsjFwUPiLofddX5cWFHW35GCbXcSu1BCUGfxoQAQjeL', // Solana ORCLx 代币地址
     decimals: 8,
     description: 'Database and enterprise software'
@@ -230,7 +230,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'KOx', 
     name: 'Coca-Cola xStock', 
-    logo: '🥤',
+    logo: 'https://img.logo.dev/ticker/KO?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'XsaBXg8dU5cPM6ehmVctMkVqoiRG2ZjMo1cyBJ3AykQ', // Solana KOx 代币地址
     decimals: 8,
     description: 'Beverage and soft drink manufacturer'
@@ -238,7 +238,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'WMTx', 
     name: 'Walmart xStock', 
-    logo: '🛒',
+    logo: 'https://img.logo.dev/ticker/WMT?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xs151QeqTCiuKtinzfRATnUESM2xTU6V9Wy8Vy538ci', // Solana WMTx 代币地址
     decimals: 8,
     description: 'Retail and supermarket chain'
@@ -246,7 +246,7 @@ const TOKENIZED_STOCKS = [
   { 
     symbol: 'PEPx', 
     name: 'PepsiCo xStock', 
-    logo: '🥤',
+    logo: 'https://img.logo.dev/ticker/PEP?token=pk_DW4DBmJtQn-9p3URXziq3Q',
     address: 'Xsv99frTRUeornyvCfvhnDesQDWuvns1M852Pez91vF', // Solana PEPx 代币地址
     decimals: 8,
     description: 'Beverage and snack food manufacturer'
@@ -968,19 +968,39 @@ const XStockPage = () => {
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Box sx={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: '8px',
-                        background: 'rgba(59, 130, 246, 0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mr: 1.5,
-                        fontSize: '20px'
-                      }}>
-                        {stock.logo}
-                      </Box>
+                      <Box
+                        component="img"
+                        src={stock.logo}
+                        alt={stock.name}
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: '8px',
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          mr: 1.5,
+                          objectFit: 'contain',
+                          padding: '4px'
+                        }}
+                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = document.createElement('div');
+                          fallback.textContent = stock.symbol.charAt(0);
+                          fallback.style.cssText = `
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 8px;
+                            background: rgba(59, 130, 246, 0.1);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin-right: 12px;
+                            font-size: 20px;
+                            font-weight: 700;
+                            color: #3b82f6;
+                          `;
+                          e.currentTarget.parentNode?.replaceChild(fallback, e.currentTarget);
+                        }}
+                      />
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography sx={{ 
                           color: 'white', 
@@ -1016,20 +1036,41 @@ const XStockPage = () => {
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Box sx={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: '14px',
-                    background: 'rgba(59, 130, 246, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    mr: 2,
-                    fontSize: '28px',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
-                  }}>
-                    {selectedStock.logo}
-                  </Box>
+                  <Box
+                    component="img"
+                    src={selectedStock.logo}
+                    alt={selectedStock.name}
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '14px',
+                      background: 'rgba(59, 130, 246, 0.15)',
+                      mr: 2,
+                      objectFit: 'contain',
+                      padding: '8px',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
+                    }}
+                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = document.createElement('div');
+                      fallback.textContent = selectedStock.symbol.charAt(0);
+                      fallback.style.cssText = `
+                        width: 56px;
+                        height: 56px;
+                        border-radius: 14px;
+                        background: rgba(59, 130, 246, 0.15);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-right: 16px;
+                        font-size: 28px;
+                        font-weight: 700;
+                        color: #3b82f6;
+                        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+                      `;
+                      e.currentTarget.parentNode?.replaceChild(fallback, e.currentTarget);
+                    }}
+                  />
                   <Box>
                     <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
                       Buy {selectedStock.symbol}
