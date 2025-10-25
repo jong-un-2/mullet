@@ -134,7 +134,7 @@ https://bafybeig3aqosybgurwdkvmsbc2jkf2qymie2cme3pwdfp3tjfv2ypg63he.ipfs.dweb.li
 
 ### 子域名格式 vs 路径格式
 
-**子域名格式（推荐）:**
+**子域名格式（推荐）:** 
 ```
 https://bafybei....ipfs.dweb.link/
 ```
@@ -232,19 +232,183 @@ CID (Content Identifier) 是 IPFS 中内容的唯一标识符：
 
 使用 DNSLink 将域名指向 IPFS 内容：
 
-1. **添加 DNS 记录**
+#### 什么是 DNSLink？
+
+DNSLink 是一种将人类可读的域名映射到 IPFS 内容的方法：
+- 无需记住复杂的 CID
+- 更新内容时只需更新 DNS 记录
+- 支持传统域名访问去中心化内容
+- 保持 IPFS 的所有优势（内容寻址、去中心化等）
+
+#### 配置步骤
+
+**1. 添加 DNS TXT 记录**
+
+在你的域名 DNS 设置中添加：
+
 ```
-TXT _dnslink.yourdomain.com dnslink=/ipfs/{YOUR_CID}
+类型: TXT
+名称: _dnslink.yourdomain.com
+值:     
+TTL: 3600 (或更短，方便更新)
 ```
 
-2. **访问**
+**示例（使用 Cloudflare）:**
 ```
-https://yourdomain.com
+TXT _dnslink.dapp.marsliquidity.com dnslink=/ipfs/bafybeig3aqosybgurwdkvmsbc2jkf2qymie2cme3pwdfp3tjfv2ypg63he
 ```
 
-3. **自动更新 DNSLink**
+**2. 验证 DNS 记录**
+
+```bash
+# macOS/Linux
+dig TXT _dnslink.yourdomain.com
+
+# Windows
+nslookup -type=TXT _dnslink.yourdomain.com
+
+# 或使用在线工具
+# https://dns.google.com/
+```
+
+**3. 访问你的网站**
+
+配置完成后，可以通过以下方式访问：
+
+```
+# 通过支持 DNSLink 的 Gateway
+https://yourdomain.com.ipns.dweb.link/
+
+# 或配置 CNAME 指向 Gateway
+https://yourdomain.com/
+```
+
+#### 自动更新 DNSLink
+
+使用 `update-dnslink.sh` 脚本自动更新：
+
+**配置环境变量 (`.env`):**
+```env
+需要在 `.env` 中配置：
+```env
+# Cloudflare DNSLink 配置
+CF_API_TOKEN=your_cloudflare_api_token
+CF_ZONE_ID=your_zone_id
+CF_DOMAIN=dapp.marsliquidity.com
+```
+```
+
+**获取 Cloudflare API Token:**
+1. 登录 Cloudflare Dashboard
+2. My Profile → API Tokens
+3. Create Token → Edit zone DNS (Use template)
+4. 权限：Zone.DNS.Edit
+5. 复制生成的 Token
+
+**运行更新脚本:**
 ```bash
 npm run ipfs:update-dns
+```
+
+脚本会自动：
+1. 读取 `.latest-cid` 文件
+2. 使用 Cloudflare API 更新 TXT 记录
+3. 验证更新成功
+
+#### DNSLink 优势
+
+✅ **用户友好**: 使用易记的域名而不是 CID  
+✅ **灵活更新**: 更新内容时只需更新 DNS，不影响 URL  
+✅ **去中心化**: 内容仍存储在 IPFS，保持去中心化特性  
+✅ **SEO 友好**: 稳定的 URL 有利于搜索引擎优化  
+✅ **证书支持**: 可以使用 SSL/TLS 证书  
+
+#### DNSLink 工作流程
+
+```mermaid
+graph LR
+    A[用户访问 mars.example.com] --> B[DNS 查询 _dnslink.mars.example.com]
+    B --> C[返回 dnslink=/ipfs/bafybei...]
+    C --> D[Gateway 解析 CID]
+    D --> E[从 IPFS 获取内容]
+    E --> F[显示网站]
+```
+
+#### 实际示例 - Mars Liquid 部署
+
+**场景**: 使用域名 `dapp.marsliquidity.com` 访问 IPFS 上的 Mars Liquid
+
+**步骤 1: 添加 DNS TXT 记录**
+
+在 Cloudflare DNS 管理中添加：
+```
+类型: TXT
+名称: _dnslink.dapp
+值: dnslink=/ipfs/bafybeig3aqosybgurwdkvmsbc2jkf2qymie2cme3pwdfp3tjfv2ypg63he
+TTL: 300 (5分钟)
+```
+
+**步骤 2: 验证 DNS 配置**
+```bash
+# 查询 DNS 记录
+dig TXT _dnslink.dapp.marsliquidity.com
+
+# 或使用 nslookup
+nslookup -type=TXT _dnslink.dapp.marsliquidity.com
+```
+
+**步骤 3: 通过 DNSLink 访问**
+```
+https://dapp.marsliquidity.com.ipns.dweb.link/
+```
+
+**步骤 4: (推荐) 配置 Cloudflare Workers 代理**
+
+为了让用户直接访问 `https://dapp.marsliquidity.com/`，可以使用 Cloudflare Workers：
+
+1. 在 Cloudflare 创建 Worker
+2. 使用以下代码代理 IPFS 请求：
+
+```javascript
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
+
+async function handleRequest(request) {
+  const url = new URL(request.url)
+  
+  // 构造 IPFS Gateway URL
+  const ipfsUrl = `https://dapp.marsliquidity.com.ipns.dweb.link${url.pathname}${url.search}`
+  
+  // 代理请求到 IPFS Gateway
+  const response = await fetch(ipfsUrl, {
+    method: request.method,
+    headers: request.headers
+  })
+  
+  return response
+}
+```
+
+3. 将 Worker 绑定到 `dapp.marsliquidity.com` 路由
+
+这样用户就可以直接访问：
+```
+https://dapp.marsliquidity.com/
+```
+
+#### 更新内容流程
+
+每次更新内容：
+```bash
+# 1. 重新部署到 IPFS
+npm run deploy:ipfs
+
+# 2. 自动更新 DNSLink
+npm run ipfs:update-dns
+
+# 3. 等待 DNS 传播（通常几分钟）
+# 4. 访问你的域名查看更新
 ```
 
 ## 🎯 最佳实践
@@ -330,16 +494,73 @@ PINATA_GATEWAY=your-custom-gateway.com
 
 配置 Cloudflare API 后，可以自动更新 DNSLink：
 
-```bash
-./update-dnslink.sh
-```
+**1. 配置环境变量**
 
-需要在 `.env` 中配置：
+在 `.env` 文件中添加：
+
 ```env
+# Cloudflare DNSLink 配置
 CF_API_TOKEN=your_cloudflare_api_token
 CF_ZONE_ID=your_zone_id
 CF_DOMAIN=yourdomain.com
 ```
+
+**获取这些值:**
+
+- **CF_API_TOKEN**: 
+  1. 登录 Cloudflare Dashboard
+  2. My Profile → API Tokens → Create Token
+  3. 使用 "Edit zone DNS" 模板
+  4. 选择你的域名
+  5. 复制生成的 Token
+
+- **CF_ZONE_ID**:
+  1. Cloudflare Dashboard → 选择你的域名
+  2. 页面右侧 "API" 部分可以找到 Zone ID
+
+- **CF_DOMAIN**: 你的域名（例如：dapp.marsliquidity.com）
+
+**2. 运行更新脚本**
+
+```bash
+./update-dnslink.sh
+# 或
+npm run ipfs:update-dns
+```
+
+**3. 脚本功能**
+
+`update-dnslink.sh` 会自动：
+- 读取最新的 CID（从 `.latest-cid`）
+- 查找现有的 `_dnslink` TXT 记录
+- 使用 Cloudflare API 更新或创建记录
+- 验证更新成功
+
+**4. 完整部署流程**
+
+```bash
+# 一键更新：构建 → 部署 IPFS → 更新 DNSLink
+npm run deploy:ipfs && npm run ipfs:update-dns
+```
+
+#### DNSLink 注意事项
+
+⚠️ **DNS 传播时间**
+- TTL 设置影响更新速度
+- 建议设置较短的 TTL（如 300 秒）
+- 全球 DNS 完全传播可能需要几分钟到几小时
+
+💡 **最佳实践**
+- 使用 `_dnslink.subdomain` 而不是根域名
+- 保留旧 CID 的 DNS 记录作为备份
+- 定期检查 DNS 记录是否正确
+- 使用监控工具检测 DNS 变更
+
+🔒 **安全建议**
+- API Token 只给必要的权限（DNS Edit）
+- 不要提交 `.env` 文件到 Git
+- 定期轮换 API Token
+- 使用 IP 白名单（如果可能）
 
 ## 📝 部署检查清单
 
