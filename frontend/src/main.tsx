@@ -17,6 +17,7 @@ import theme from './theme';
 
 import {
   createBrowserRouter,
+  createHashRouter,
   Navigate,
   RouterProvider,
 } from "react-router-dom";
@@ -56,7 +57,13 @@ import { SolanaWalletProvider } from "./config/solanaWalletConfig.tsx";
 console.log('Privy mounted with Solana connectors:', toSolanaWalletConnectors());
 console.log('Full Privy config:', privyConfig);
 
-const router = createBrowserRouter([
+// 检测是否为 IPFS 部署 - 如果 base 是相对路径，使用 HashRouter
+const isIPFS = import.meta.env.BASE_URL === './';
+const createRouter = isIPFS ? createHashRouter : createBrowserRouter;
+
+console.log('Router mode:', isIPFS ? 'Hash Router (IPFS)' : 'Browser Router');
+
+const router = createRouter([
   {
     path: "/",
     element: <Navigate to="/xfund" replace />,
