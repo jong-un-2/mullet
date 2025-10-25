@@ -12,6 +12,7 @@ import {
   createUnstakeAndWithdrawTransactions,
   createClaimRewardsTransaction,
   checkPyusdBalance,
+  checkSolBalance,
 } from '../services/marsContract';
 import { KaminoSDKHelper } from '../services/kaminoSdkHelper';
 
@@ -100,6 +101,13 @@ export const useMarsContract = () => {
       setStatus('building');
 
       console.log('🟢 [useMarsContract] 构建存款交易...', { amount, wallet: publicKey.toString() });
+
+      // 检查 SOL 余额
+      const solBalance = await checkSolBalance(publicKey, connection);
+      console.log('🟢 [useMarsContract] SOL Balance:', solBalance);
+      if (solBalance < 0.025) {
+        throw new Error(`Insufficient SOL balance! Need at least 0.025 SOL for transaction fees and account rent, but only have ${solBalance.toFixed(4)} SOL. Please deposit more SOL first.`);
+      }
 
       const balance = await checkPyusdBalance(publicKey, connection);
       console.log('🟢 [useMarsContract] PYUSD 余额:', balance);

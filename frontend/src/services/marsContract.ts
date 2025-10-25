@@ -419,6 +419,22 @@ export async function checkPyusdBalance(
 }
 
 /**
+ * 检查 SOL 余额
+ */
+export async function checkSolBalance(
+  userPublicKey: PublicKey,
+  connection: Connection
+): Promise<number> {
+  try {
+    const balance = await connection.getBalance(userPublicKey);
+    return balance / 1e9; // 转换为 SOL
+  } catch (error) {
+    console.error('获取 SOL 余额失败:', error);
+    return 0;
+  }
+}
+
+/**
  * 创建存款并质押交易
  */
 export async function createDepositAndStakeTransaction(
@@ -427,6 +443,24 @@ export async function createDepositAndStakeTransaction(
   connection: Connection
 ): Promise<Transaction> {
   console.log('🏗️ 构建存款交易...', { amount, user: userPublicKey.toString() });
+
+  // ⚠️ 关键：检查用户的 SOL 余额（用于支付交易费用）
+  const solBalance = await connection.getBalance(userPublicKey);
+  const solBalanceInSol = solBalance / 1e9;
+  console.log(`💰 SOL Balance: ${solBalanceInSol.toFixed(4)} SOL (${solBalance} lamports)`);
+  
+  // 计算所需的最小 SOL：
+  // - 创建 ATA 账户租金: ~0.00203928 SOL
+  // - 交易费用: ~0.00001 SOL
+  // - 保持账户租金豁免: ~0.00089088 SOL
+  // 总计至少需要: 0.025 SOL（留有余量）
+  const minRequiredSol = 0.025;
+  if (solBalanceInSol < minRequiredSol) {
+    const errorMsg = `Insufficient SOL balance! Need at least ${minRequiredSol} SOL for transaction fees and account rent, but only have ${solBalanceInSol.toFixed(4)} SOL. Please deposit more SOL to your wallet first.`;
+    console.error('❌', errorMsg);
+    throw new Error(errorMsg);
+  }
+  console.log('✅ SOL balance sufficient');
 
   // 初始化 SDK
   const rpcUrl = connection.rpcEndpoint;
@@ -467,23 +501,34 @@ export async function createDepositAndStakeTransaction(
   // 创建交易
   const transaction = new Transaction();
 
-  // 1. 添加 Compute Budget
+  // 1. 添加 Compute Budget（增加到 500K，确保足够）
   transaction.add(
-    ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 })
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 })
   );
 
   // 2. 检查并创建 Shares ATA（如果需要）
   const sharesAtaInfo = await connection.getAccountInfo(vaultAccounts.userSharesAta);
   if (!sharesAtaInfo) {
     console.log('⚠️ Shares ATA 不存在，创建中...');
+    
+    // 检查 shares mint 使用的 token program
+    const sharesMintInfo = await connection.getAccountInfo(vaultAccounts.sharesMint);
+    const sharesTokenProgram = sharesMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+    
+    console.log(`  - Shares Token Program: ${sharesTokenProgram.toString()}`);
+    
     const createAtaIx = createAssociatedTokenAccountInstruction(
       userPublicKey,
       vaultAccounts.userSharesAta,
       userPublicKey,
       vaultAccounts.sharesMint,
-      TOKEN_PROGRAM_ID
+      sharesTokenProgram
     );
     transaction.add(createAtaIx);
+  } else {
+    console.log('✅ Shares ATA 已存在');
   }
 
   // 2.5 🔥 添加 Farm setup 指令（如果有的话，通常是 InitializeFarm）
