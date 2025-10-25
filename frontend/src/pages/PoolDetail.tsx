@@ -99,7 +99,7 @@ export default function PoolDetail() {
   // Check if ANY wallet is connected (Privy auth, ETH external, or Solana external)
   const isWalletConnected = authenticated || ethConnected || solConnected;
 
-  const [activeTab, setActiveTab] = useState(1); // Default to "My Position" tab
+  const [activeTab, setActiveTab] = useState(0);
   const [pool, setPool] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedFaq, setExpandedFaq] = useState<number | false>(false);
@@ -345,6 +345,13 @@ export default function PoolDetail() {
       loadBalances();
     }
   }, [isWalletConnected, loadBalances]);
+
+  // Reset to deposit mode when switching to My Position tab
+  useEffect(() => {
+    if (activeTab === 1) {
+      setActionMode('deposit');
+    }
+  }, [activeTab]);
 
   const handleDeposit = async () => {
     console.log('handleDeposit called');
