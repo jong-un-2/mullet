@@ -10,6 +10,7 @@
   "scripts": {
     "dev": " vite",
     "build": "tsc -b && VITE_BUILD_ID=$(date +%s) NODE_OPTIONS='--max-old-space-size=8192' vite build",
+    "build:ipfs": "tsc -b && DEPLOY_TARGET=ipfs VITE_BUILD_ID=$(date +%s) NODE_OPTIONS='--max-old-space-size=8192' vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "version:patch": "npm version patch",
@@ -19,7 +20,7 @@
     "release:prepare": "npm run lint && npm run build",
     "release:check": "npm audit --audit-level=moderate",
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name mars",
-    "deploy:ipfs": "npm run build && node ./deploy-to-ipfs.mjs",
+    "deploy:ipfs": "npm run build:ipfs && node ./deploy-to-ipfs.mjs",
     "ipfs:verify": "./verify-ipfs.sh",
     "ipfs:update-dns": "./update-dnslink.sh"
   },

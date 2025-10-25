@@ -6,8 +6,10 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), wasm(), topLevelAwait()],
-  // 使用相对路径，支持 IPFS 部署
-  base: './',
+  // 根据环境变量决定使用相对路径(IPFS)还是绝对路径(Cloudflare Pages)
+  // 构建时: DEPLOY_TARGET=ipfs npm run build 使用相对路径
+  // 默认: npm run build 使用绝对路径
+  base: process.env.DEPLOY_TARGET === 'ipfs' ? './' : '/',
   define: {
     global: 'globalThis',
     'process.env': {},
