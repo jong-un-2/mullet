@@ -288,7 +288,7 @@ export default {
 					}
 					break;
 
-				case "0 */2 * * *": // Every 2 hours - Collect vault historical data
+				case "*/30 * * * *": // Every 30 minutes - Collect vault historical data
 					console.log("📊 Collecting vault historical data...");
 					try {
 						// 使用环境变量中的 Solana RPC URL
