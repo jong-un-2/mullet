@@ -1,7 +1,7 @@
 import { mainnet, sepolia } from 'wagmi/chains';
 import type { PrivyClientConfig } from '@privy-io/react-auth';
 import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
-import { networkConfig } from './networkConfig';
+import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 
 export const privyConfig = {
   appId: import.meta.env.VITE_PRIVY_APP_ID || 'cmfw7skmh00lfjx0cg4zompxp', // Your actual Privy App ID
@@ -25,23 +25,37 @@ export const privyConfig = {
       disableWalletConnect: false,
     },
     
-    // Solana configuration
-    solana: {
-      rpcs: {
-        'solana:mainnet': {
-          rpc: networkConfig.getSolanaMainnet().rpcUrl,
-          rpcSubscriptions: networkConfig.getSolanaMainnet().wsUrl || ''
-        },
-        'solana:devnet': {
-          rpc: networkConfig.getSolanaDevnet().rpcUrl,
-          rpcSubscriptions: networkConfig.getSolanaDevnet().wsUrl || ''
-        }
-      }
-    },
-    
     // MFA configuration
     mfaConfig: {
       noPromptOnMfaRequired: true, // Simplified flow
+    },
+    
+    // Solana RPC configuration
+    solana: {
+      rpcs: {
+        'solana:mainnet': {
+          rpc: createSolanaRpc(
+            import.meta.env.VITE_SOLANA_MAINNET_RPC || 
+            'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3'
+          ),
+          rpcSubscriptions: createSolanaRpcSubscriptions(
+            import.meta.env.VITE_SOLANA_MAINNET_WS || 
+            'wss://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3'
+          ),
+          blockExplorerUrl: 'https://explorer.solana.com',
+        },
+        'solana:devnet': {
+          rpc: createSolanaRpc(
+            import.meta.env.VITE_SOLANA_DEVNET_RPC || 
+            'https://api.devnet.solana.com'
+          ),
+          rpcSubscriptions: createSolanaRpcSubscriptions(
+            import.meta.env.VITE_SOLANA_DEVNET_WS || 
+            'wss://api.devnet.solana.com'
+          ),
+          blockExplorerUrl: 'https://explorer.solana.com/?cluster=devnet',
+        },
+      },
     },
     
     // External wallet configuration - Essential wallets only
