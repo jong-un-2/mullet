@@ -5,6 +5,7 @@ import Navigation from '../components/Navigation';
 import SearchIcon from '@mui/icons-material/Search';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { JITOSOL_POOLS, fetchJitoSOLPools } from '../services/kaminoLiquidity';
+import { TOKEN_ICONS } from '../config/tokenIcons';
 
 const XLiquidPage = () => {
   const navigate = useNavigate();
@@ -270,7 +271,7 @@ const XLiquidPage = () => {
                             />
                             <Box
                               component="img"
-                              src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+                              src={TOKEN_ICONS.SOL}
                               alt="SOL"
                               sx={{ 
                                 width: 32, 

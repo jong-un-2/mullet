@@ -41,6 +41,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { JITOSOL_POOLS, depositAndStake, unstakeAndWithdraw, claimFeesAndRewards, getUserPosition, fetchJitoSOLPools } from '../services/kaminoLiquidity';
 import { TransactionProgress } from '../components/TransactionProgress';
 import Navigation from '../components/Navigation';
+import { TOKEN_ICONS } from '../config/tokenIcons';
 
 // JitoSOL mint address
 const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
@@ -980,9 +981,35 @@ export default function PoolDetail() {
                 <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1.5, fontWeight: 400 }}>
                   Asset Ratio
                 </Typography>
-                <Typography sx={{ color: '#ffffff', fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}>
-                  76.09% / 23.91%
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {/* SOL */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box
+                      component="img"
+                      src={TOKEN_ICONS.SOL}
+                      alt="SOL"
+                      sx={{ width: 20, height: 20, borderRadius: '50%' }}
+                    />
+                    <Typography sx={{ color: '#ffffff', fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}>
+                      76.09%
+                    </Typography>
+                  </Box>
+                  
+                  <Typography sx={{ color: '#64748b', fontSize: '1.75rem', fontWeight: 700 }}>/</Typography>
+                  
+                  {/* JitoSOL */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box
+                      component="img"
+                      src="https://storage.googleapis.com/token-metadata/JitoSOL-256.png"
+                      alt="JitoSOL"
+                      sx={{ width: 20, height: 20, borderRadius: '50%' }}
+                    />
+                    <Typography sx={{ color: '#ffffff', fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}>
+                      23.91%
+                    </Typography>
+                  </Box>
+                </Box>
               </Box>
             </Card>
           </Box>
@@ -1093,21 +1120,17 @@ export default function PoolDetail() {
                             '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
                           }}
                         >
-                          <Box sx={{ 
-                            width: 22, 
-                            height: 22, 
-                            borderRadius: '50%', 
-                            background: selectedToken === 'SOL' 
-                              ? 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)'
-                              : '#10b981',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.65rem',
-                            color: '#ffffff'
-                          }}>
-                            {selectedToken === 'SOL' ? '◎' : 'J'}
-                          </Box>
+                          <Box
+                            component="img"
+                            src={selectedToken === 'SOL' ? TOKEN_ICONS.SOL : 'https://storage.googleapis.com/token-metadata/JitoSOL-256.png'}
+                            alt={selectedToken}
+                            sx={{ 
+                              width: 22, 
+                              height: 22, 
+                              borderRadius: '50%',
+                              objectFit: 'cover'
+                            }}
+                          />
                           <Typography sx={{ color: selectedToken === 'SOL' ? '#3b82f6' : '#10b981', fontWeight: 600, fontSize: '0.95rem' }}>
                             {selectedToken}
                           </Typography>
@@ -1458,7 +1481,7 @@ export default function PoolDetail() {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <Box
                             component="img"
-                            src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+                            src={TOKEN_ICONS.SOL}
                             alt="SOL"
                             sx={{ width: 20, height: 20, borderRadius: '50%' }}
                           />
@@ -1952,21 +1975,17 @@ export default function PoolDetail() {
                                   '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
                                 }}
                               >
-                                <Box sx={{ 
-                                  width: 24, 
-                                  height: 24, 
-                                  borderRadius: '50%', 
-                                  background: selectedToken === 'SOL' 
-                                    ? 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)'
-                                    : '#10b981',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '0.7rem',
-                                  color: '#ffffff'
-                                }}>
-                                  {selectedToken === 'SOL' ? '◎' : 'J'}
-                                </Box>
+                                <Box
+                                  component="img"
+                                  src={selectedToken === 'SOL' ? TOKEN_ICONS.SOL : 'https://storage.googleapis.com/token-metadata/JitoSOL-256.png'}
+                                  alt={selectedToken}
+                                  sx={{ 
+                                    width: 24, 
+                                    height: 24, 
+                                    borderRadius: '50%',
+                                    objectFit: 'cover'
+                                  }}
+                                />
                                 <Typography sx={{ color: selectedToken === 'SOL' ? '#3b82f6' : '#10b981', fontWeight: 600 }}>
                                   {selectedToken}
                                 </Typography>
@@ -2062,18 +2081,17 @@ export default function PoolDetail() {
                             }}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Box sx={{ 
-                                    width: 24, 
-                                    height: 24, 
-                                    borderRadius: '50%', 
-                                    background: 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '0.7rem'
-                                  }}>
-                                    ◎
-                                  </Box>
+                                  <Box
+                                    component="img"
+                                    src={TOKEN_ICONS.SOL}
+                                    alt="SOL"
+                                    sx={{ 
+                                      width: 24, 
+                                      height: 24, 
+                                      borderRadius: '50%',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
                                   <Typography sx={{ color: '#3b82f6', fontWeight: 600 }}>SOL</Typography>
                                 </Box>
                                 <TextField
@@ -2139,19 +2157,17 @@ export default function PoolDetail() {
                             }}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Box sx={{ 
-                                    width: 24, 
-                                    height: 24, 
-                                    borderRadius: '50%', 
-                                    backgroundColor: '#10b981',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '0.7rem',
-                                    color: '#ffffff'
-                                  }}>
-                                    J
-                                  </Box>
+                                  <Box
+                                    component="img"
+                                    src="https://storage.googleapis.com/token-metadata/JitoSOL-256.png"
+                                    alt="JITOSOL"
+                                    sx={{ 
+                                      width: 24, 
+                                      height: 24, 
+                                      borderRadius: '50%',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
                                   <Typography sx={{ color: '#10b981', fontWeight: 600 }}>JITOSOL</Typography>
                                 </Box>
                                 <TextField
