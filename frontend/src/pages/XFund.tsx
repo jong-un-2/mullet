@@ -38,7 +38,7 @@ import { useVaultHistoricalData } from '../hooks/useVaultHistoricalData';
 import { useMarsContract } from '../hooks/useMarsContract';
 import { useUserVaultPosition, refreshUserPositions } from '../hooks/useUserVaultPosition';
 import { TransactionProgress } from '../components/TransactionProgress';
-import { TokenIcon } from '../components/ChainIcons';
+import { TokenIcon } from '../components/TokenIcon';
 import { SOLANA_CHAIN_ID, SUPPORTED_CHAINS } from '../services/marsLiFiService';
 import { createConfig, getRoutes, executeRoute, EVM, Solana } from '@lifi/sdk';
 import type { RoutesRequest } from '@lifi/sdk';
@@ -997,16 +997,6 @@ const XFundPage = () => {
       decimals: 6,
       color: '#26a17b'
     },
-    'SOL-Solana': {
-      symbol: 'SOL',
-      name: 'Solana',
-      chainName: 'Solana',
-      chain: 'solana',
-      chainId: SOLANA_CHAIN_ID,
-      address: '0x0000000000000000000000000000000000000000',
-      decimals: 9,
-      color: '#14F195'
-    },
     // Ethereum 链代币
     'PYUSD-Ethereum': {
       symbol: 'PYUSD',
@@ -1037,16 +1027,6 @@ const XFundPage = () => {
       address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
       decimals: 6,
       color: '#26a17b'
-    },
-    'ETH-Ethereum': {
-      symbol: 'ETH',
-      name: 'Ethereum',
-      chainName: 'Ethereum',
-      chain: 'ethereum',
-      chainId: SUPPORTED_CHAINS.ETHEREUM,
-      address: '0x0000000000000000000000000000000000000000',
-      decimals: 18,
-      color: '#627EEA'
     },
   };
 
@@ -1463,21 +1443,31 @@ const XFundPage = () => {
                         Pending Rewards
                       </Typography>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        {Array.from(uniqueRewards.values()).map((reward) => (
-                          <Box key={reward.rewardMint} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box
-                              component="img"
-                              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23003087' d='M20.905 9.5c.16 2.167-.77 3.66-2.661 4.78-2.128 1.287-4.784 1.64-7.152 1.578-1.186-.03-2.37-.185-3.538-.396-.238-.042-.394-.22-.448-.45l-1.092-5.203c-.086-.41.137-.645.536-.645h2.655c.325 0 .528.182.595.502l.52 2.488c.067.32.281.489.595.489 1.478 0 2.956-.038 4.408-.398 1.427-.354 2.533-1.116 2.952-2.59.368-1.293-.04-2.346-1.186-3.058-1.042-.648-2.225-.907-3.448-.99-2.188-.145-4.366.028-6.52.534-.253.06-.48.014-.604-.214-.182-.332-.358-.668-.537-1.002-.16-.298-.1-.536.214-.686 2.575-1.226 5.285-1.656 8.094-1.414 1.607.138 3.125.588 4.474 1.524 1.666 1.158 2.456 2.757 2.143 4.851z'/%3E%3Cpath fill='%23009cde' d='M11.5 14.5c-.234.026-.468.052-.703.071-1.186.094-2.375.107-3.564.044-.238-.013-.394-.157-.448-.387l-1.092-5.203c-.086-.41.137-.645.536-.645h2.655c.325 0 .528.182.595.502l.52 2.488c.067.32.281.489.595.489.469 0 .937-.013 1.406-.044z'/%3E%3C/svg%3E"
-                              sx={{ width: 20, height: 20 }}
-                            />
-                            <Typography variant="h6" fontWeight={600} sx={{ color: 'white' }}>
-                              {reward.pendingBalance.toFixed(4)}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                              ({reward.tokenName})
-                            </Typography>
-                          </Box>
-                        ))}
+                        {Array.from(uniqueRewards.values()).map((reward) => {
+                          // 从 tokenName 提取代币符号 (例如 "PYUSD" 从 "PayPal USD")
+                          let tokenSymbol = 'PYUSD'; // 默认
+                          if (reward.tokenName.includes('PYUSD') || reward.tokenName.includes('PayPal')) {
+                            tokenSymbol = 'PYUSD';
+                          } else if (reward.tokenName.includes('USDC')) {
+                            tokenSymbol = 'USDC';
+                          } else if (reward.tokenName.includes('USDT')) {
+                            tokenSymbol = 'USDT';
+                          } else if (reward.tokenName.includes('SOL')) {
+                            tokenSymbol = 'SOL';
+                          }
+                          
+                          return (
+                            <Box key={reward.rewardMint} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <TokenIcon symbol={tokenSymbol} chain="solana" size={20} />
+                              <Typography variant="h6" fontWeight={600} sx={{ color: 'white' }}>
+                                {reward.pendingBalance.toFixed(4)}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                ({reward.tokenName})
+                              </Typography>
+                            </Box>
+                          );
+                        })}
                       </Box>
                     </Box>
 

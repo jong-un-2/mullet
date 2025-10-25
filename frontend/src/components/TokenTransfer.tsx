@@ -43,6 +43,7 @@ import SendIcon from '@mui/icons-material/Send';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import { toast } from 'sonner';
+import { TOKEN_ICONS } from '../config/tokenIcons';
 
 // 常用 Token 列表
 const COMMON_TOKENS = [
@@ -51,28 +52,28 @@ const COMMON_TOKENS = [
     name: 'Solana',
     mint: 'native',
     decimals: 9,
-    logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+    logo: TOKEN_ICONS.SOL,
   },
   {
     symbol: 'USDC',
     name: 'USD Coin',
     mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
     decimals: 6,
-    logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+    logo: TOKEN_ICONS.USDC_SOLANA,
   },
   {
     symbol: 'USDT',
     name: 'Tether USD',
     mint: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
     decimals: 6,
-    logo: 'https://coin-images.coingecko.com/coins/images/325/large/Tether.png',
+    logo: TOKEN_ICONS.USDT,
   },
   {
     symbol: 'PYUSD',
     name: 'PayPal USD',
     mint: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',
     decimals: 6,
-    logo: 'https://coin-images.coingecko.com/coins/images/31212/large/PYUSD_Logo_%282%29.png',
+    logo: TOKEN_ICONS.PYUSD,
   },
 ];
 

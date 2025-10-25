@@ -1,5 +1,5 @@
 /**
- * 标准区块链图标组件
+ * 区块链图标组件
  */
 import { Box } from '@mui/material';
 

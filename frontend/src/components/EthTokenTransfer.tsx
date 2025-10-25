@@ -30,6 +30,7 @@ import CallMadeIcon from '@mui/icons-material/CallMade';
 import { toast } from 'sonner';
 import { parseEther, formatEther } from 'viem';
 import { usePublicClient, useWalletClient } from 'wagmi';
+import { TOKEN_ICONS } from '../config/tokenIcons';
 
 // 常用 ERC20 Token 列表
 const COMMON_ETH_TOKENS = [
@@ -38,28 +39,28 @@ const COMMON_ETH_TOKENS = [
     name: 'Ethereum',
     address: 'native',
     decimals: 18,
-    logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    logo: TOKEN_ICONS.ETH,
   },
   {
     symbol: 'USDC',
     name: 'USD Coin',
     address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     decimals: 6,
-    logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    logo: TOKEN_ICONS.USDC_ETHEREUM,
   },
   {
     symbol: 'USDT',
     name: 'Tether USD',
     address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     decimals: 6,
-    logo: 'https://coin-images.coingecko.com/coins/images/325/large/Tether.png',
+    logo: TOKEN_ICONS.USDT,
   },
   {
-    symbol: 'DAI',
-    name: 'Dai Stablecoin',
-    address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
-    decimals: 18,
-    logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png',
+    symbol: 'PYUSD',
+    name: 'PayPal USD',
+    address: '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8',
+    decimals: 6,
+    logo: TOKEN_ICONS.PYUSD,
   },
 ];
 
