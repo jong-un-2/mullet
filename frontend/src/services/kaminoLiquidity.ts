@@ -17,6 +17,7 @@ import {
   TransactionMessage,
   VersionedTransaction,
   AddressLookupTableAccount,
+  TransactionInstruction,
 } from '@solana/web3.js';
 import Decimal from 'decimal.js';
 import { 
@@ -278,8 +279,18 @@ export async function depositAndStake(params: {
   amountJitoSOL: string;
   wallet: any; // WalletContextState
   connection: Connection;
+  slippageBps?: number; // Slippage tolerance in basis points (e.g., 50 = 0.5%)
+  priorityFeeSol?: number; // Priority fee in SOL (e.g., 0.001)
 }): Promise<string> {
-  const { strategyAddress, amountSOL, amountJitoSOL, wallet, connection } = params;
+  const { 
+    strategyAddress, 
+    amountSOL, 
+    amountJitoSOL, 
+    wallet, 
+    connection,
+    slippageBps = 50, // Default 0.5%
+    priorityFeeSol = 0.001 // Default 0.001 SOL
+  } = params;
   
   if (!wallet.publicKey || !wallet.signTransaction) {
     throw new Error('Wallet not connected');
@@ -338,6 +349,25 @@ export async function depositAndStake(params: {
   const computeBudgetIx = createComputeUnitLimitIx(1_400_000);
   const computeBudgetIxLegacy = toLegacyInstruction(computeBudgetIx);
   instructions.push(computeBudgetIxLegacy);
+
+  // Add priority fee (compute unit price)
+  // Priority fee is converted from SOL to microlamports per compute unit
+  // Formula: (priorityFeeSol * 1e9) / computeUnits
+  const priorityFeeMicroLamports = Math.floor((priorityFeeSol * 1e9) / 1_400_000);
+  console.log('[Kamino] Priority fee:', {
+    sol: priorityFeeSol,
+    microLamports: priorityFeeMicroLamports
+  });
+  
+  const computeUnitPriceIx = new TransactionInstruction({
+    programId: new PublicKey('ComputeBudget111111111111111111111111111111'),
+    keys: [],
+    data: Buffer.from([
+      3, // SetComputeUnitPrice instruction
+      ...new Uint8Array(new BigUint64Array([BigInt(priorityFeeMicroLamports)]).buffer)
+    ])
+  });
+  instructions.push(computeUnitPriceIx);
 
   // Check if this is a single-asset deposit
   const isSingleAssetDeposit = (solAmount.gt(0) && jitosolAmount.eq(0)) || (jitosolAmount.gt(0) && solAmount.eq(0));
@@ -469,13 +499,13 @@ export async function depositAndStake(params: {
     console.log('[Kamino] Single-asset deposit (SOL only), using singleSidedDepositTokenA...');
     
     // Use single-sided deposit for Token A (SOL)
-    // slippageBps: 100 = 1% slippage tolerance
-    const slippageBps = new Decimal(100);
+    // slippageBps: user-defined slippage tolerance (e.g., 50 = 0.5%)
+    const slippageBpsDecimal = new Decimal(slippageBps);
     const depositResult = await kamino.singleSidedDepositTokenA(
       strategyWithAddress as any,
       solAmount,
       ownerSigner as any,
-      slippageBps,
+      slippageBpsDecimal,
       undefined, // profiler
       undefined, // swapIxsBuilder
       undefined, // initialUserTokenAtaBalances
@@ -486,7 +516,8 @@ export async function depositAndStake(params: {
     
     console.log('[Kamino] Single-sided deposit instructions:', {
       instructions: depositResult.instructions.length,
-      lookupTables: depositResult.lookupTablesAddresses.length
+      lookupTables: depositResult.lookupTablesAddresses.length,
+      slippageBps: slippageBps
     });
     
     // Save lookup tables for later
@@ -502,12 +533,12 @@ export async function depositAndStake(params: {
     console.log('[Kamino] Single-asset deposit (JitoSOL only), using singleSidedDepositTokenB...');
     
     // Use single-sided deposit for Token B (JitoSOL)
-    const slippageBps = new Decimal(100);
+    const slippageBpsDecimal = new Decimal(slippageBps);
     const depositResult = await kamino.singleSidedDepositTokenB(
       strategyWithAddress as any,
       jitosolAmount,
       ownerSigner as any,
-      slippageBps,
+      slippageBpsDecimal,
       undefined, // profiler
       undefined, // swapIxsBuilder
       undefined, // initialUserTokenAtaBalances
@@ -518,7 +549,8 @@ export async function depositAndStake(params: {
     
     console.log('[Kamino] Single-sided deposit instructions:', {
       instructions: depositResult.instructions.length,
-      lookupTables: depositResult.lookupTablesAddresses.length
+      lookupTables: depositResult.lookupTablesAddresses.length,
+      slippageBps: slippageBps
     });
     
     // Save lookup tables for later
@@ -895,8 +927,17 @@ export async function unstakeAndWithdraw(params: {
   amountShares?: string;
   wallet: any;
   connection: Connection;
+  slippageBps?: number; // Slippage tolerance in basis points (e.g., 50 = 0.5%)
+  priorityFeeSol?: number; // Priority fee in SOL (e.g., 0.001)
 }): Promise<string> {
-  const { strategyAddress, amountShares, wallet, connection } = params;
+  const { 
+    strategyAddress, 
+    amountShares, 
+    wallet, 
+    connection,
+    slippageBps = 50, // Default 0.5%
+    priorityFeeSol = 0.001 // Default 0.001 SOL
+  } = params;
   
   if (!wallet.publicKey || !wallet.signTransaction) {
     throw new Error('Wallet not connected');
@@ -978,6 +1019,18 @@ export async function unstakeAndWithdraw(params: {
     );
     
     const unstakeTx = [createComputeUnitLimitIx(1_400_000)];
+    
+    // Add priority fee for unstake transaction
+    const unstakePriorityFeeMicroLamports = Math.floor((priorityFeeSol * 1e9) / 1_400_000);
+    const unstakeComputeUnitPriceIx = new TransactionInstruction({
+      programId: new PublicKey('ComputeBudget111111111111111111111111111111'),
+      keys: [],
+      data: Buffer.from([
+        3, // SetComputeUnitPrice instruction
+        ...new Uint8Array(new BigUint64Array([BigInt(unstakePriorityFeeMicroLamports)]).buffer)
+      ])
+    });
+    unstakeTx.push(toLegacyInstruction(unstakeComputeUnitPriceIx));
     unstakeTx.push(...unstakeIxs);
     
     // Convert to legacy instructions using the same converter as deposit
@@ -1030,6 +1083,23 @@ export async function unstakeAndWithdraw(params: {
   console.log('[Kamino] Preparing withdraw transaction...');
   const withdrawTx = [createComputeUnitLimitIx(1_400_000)];
   
+  // Add priority fee for withdraw transaction
+  const withdrawPriorityFeeMicroLamports = Math.floor((priorityFeeSol * 1e9) / 1_400_000);
+  console.log('[Kamino] Withdraw priority fee:', {
+    sol: priorityFeeSol,
+    microLamports: withdrawPriorityFeeMicroLamports
+  });
+  
+  const withdrawComputeUnitPriceIx = new TransactionInstruction({
+    programId: new PublicKey('ComputeBudget111111111111111111111111111111'),
+    keys: [],
+    data: Buffer.from([
+      3, // SetComputeUnitPrice instruction
+      ...new Uint8Array(new BigUint64Array([BigInt(withdrawPriorityFeeMicroLamports)]).buffer)
+    ])
+  });
+  withdrawTx.push(toLegacyInstruction(withdrawComputeUnitPriceIx));
+  
   // Get token ATAs and account data using SDK helper
   const [sharesAtaAddr, sharesMintData] = await getAssociatedTokenAddressAndAccount(
     rpc,
@@ -1061,6 +1131,13 @@ export async function unstakeAndWithdraw(params: {
   withdrawTx.push(...createAtasIxs);
   
   // Withdraw shares from pool
+  // Note: Slippage is primarily used for deposits with swaps. 
+  // Withdrawals return proportional assets, so slippage is less critical.
+  console.log('[Kamino] Withdrawing shares:', {
+    sharesToBurn: sharesToBurn.toString(),
+    slippageBps: slippageBps, // Logged for reference
+  });
+  
   const withdrawResult = await kamino.withdrawShares(
     strategyWithAddress as any,
     sharesToBurn,

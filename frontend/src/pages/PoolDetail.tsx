@@ -412,7 +412,11 @@ export default function PoolDetail() {
           amountSOL: sol.toString(),
           amountJitoSOL: jitosol.toString(),
           wallet: walletToUse,
-          connection
+          connection,
+          slippageBps: slippageTolerance * 100, // Convert percentage to basis points (0.5% = 50 bps)
+          priorityFeeSol: priorityFee === 'custom' 
+            ? parseFloat(customPriorityFee) 
+            : priorityFee === 'turbo' ? 0.005 : 0.001 // Normal: 0.001 SOL, Turbo: 0.005 SOL
         });
 
         setTxStatus('success');
@@ -484,7 +488,11 @@ export default function PoolDetail() {
           strategyAddress: pool.address,
           amountShares: withdrawSharesAmount ? withdrawSharesAmount.toString() : undefined,
           wallet: walletToUse,
-          connection
+          connection,
+          slippageBps: slippageTolerance * 100, // Convert percentage to basis points
+          priorityFeeSol: priorityFee === 'custom' 
+            ? parseFloat(customPriorityFee) 
+            : priorityFee === 'turbo' ? 0.005 : 0.001
         });
 
         setTxStatus('success');
@@ -1278,7 +1286,7 @@ export default function PoolDetail() {
                     {depositLoading ? (
                       <CircularProgress size={24} />
                     ) : (
-                      'Deposit and Stake'
+                      actionMode === 'deposit' ? 'Deposit and Stake' : 'Unstake and Withdraw'
                     )}
                   </Button>
 
@@ -2249,21 +2257,17 @@ export default function PoolDetail() {
                                   '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
                                 }}
                               >
-                                <Box sx={{ 
-                                  width: 24, 
-                                  height: 24, 
-                                  borderRadius: '50%', 
-                                  background: selectedToken === 'SOL' 
-                                    ? 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)'
-                                    : '#10b981',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '0.7rem',
-                                  color: '#ffffff'
-                                }}>
-                                  {selectedToken === 'SOL' ? '◎' : 'J'}
-                                </Box>
+                                <Box
+                                  component="img"
+                                  src={selectedToken === 'SOL' ? TOKEN_ICONS.SOL : 'https://storage.googleapis.com/token-metadata/JitoSOL-256.png'}
+                                  alt={selectedToken}
+                                  sx={{ 
+                                    width: 24, 
+                                    height: 24, 
+                                    borderRadius: '50%',
+                                    objectFit: 'cover'
+                                  }}
+                                />
                                 <Typography sx={{ color: selectedToken === 'SOL' ? '#3b82f6' : '#10b981', fontWeight: 600 }}>
                                   {selectedToken}
                                 </Typography>
@@ -2305,39 +2309,14 @@ export default function PoolDetail() {
                                 }}
                               />
                             </Box>
-                            {/* Available to withdraw info - compact display */}
-                            <Box sx={{ mt: 1, mb: 1 }}>
-                              <Typography sx={{ color: '#64748b', fontSize: '0.75rem', mb: 0.5 }}>
-                                Available to withdraw:
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                Available: {positionLoading 
+                                  ? '...' 
+                                  : selectedToken === 'SOL' 
+                                    ? `${(userPosition?.withdrawableTokenA || 0).toFixed(9)} SOL`
+                                    : `${(userPosition?.withdrawableTokenB || 0).toFixed(9)} JITOSOL`}
                               </Typography>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
-                                {singleAssetDeposit ? (
-                                  // Single Asset Mode - only show selected token
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                                    {positionLoading 
-                                      ? '...' 
-                                      : selectedToken === 'SOL'
-                                        ? `${(userPosition?.withdrawableTokenA || 0).toFixed(9)} SOL`
-                                        : `${(userPosition?.withdrawableTokenB || 0).toFixed(9)} JitoSOL`}
-                                  </Typography>
-                                ) : (
-                                  // Normal Mode - show both tokens
-                                  <>
-                                    <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                                      {positionLoading 
-                                        ? '...' 
-                                        : `${(userPosition?.withdrawableTokenA || 0).toFixed(9)} SOL`}
-                                    </Typography>
-                                    <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                                      {positionLoading 
-                                        ? '...' 
-                                        : `${(userPosition?.withdrawableTokenB || 0).toFixed(9)} JitoSOL`}
-                                    </Typography>
-                                  </>
-                                )}
-                              </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                               <Box sx={{ display: 'flex', gap: 1 }}>
                                 <Button 
                                   size="small" 
