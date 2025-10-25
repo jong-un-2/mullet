@@ -21,7 +21,7 @@ import { FaSignOutAlt, FaEthereum, FaCopy, FaExternalLinkAlt } from 'react-icons
 import { SiSolana } from 'react-icons/si';
 import { useWalletContext } from '../contexts/WalletContext';
 import { TokenTransfer } from './TokenTransfer';
-import { toast } from 'sonner';
+import { EthTokenTransfer } from './EthTokenTransfer';
 
 import { useAccount, useDisconnect } from 'wagmi';
 import { useWallet as useSolanaAdapterWallet } from '@solana/wallet-adapter-react';
@@ -123,6 +123,7 @@ const CustomUserProfile: React.FC = () => {
   
   // Token Transfer dialog state
   const [showTokenTransfer, setShowTokenTransfer] = useState(false);
+  const [showEthTokenTransfer, setShowEthTokenTransfer] = useState(false);
   const [transferMode, setTransferMode] = useState<'send' | 'receive'>('send');
 
   // External wallet states
@@ -888,8 +889,8 @@ const CustomUserProfile: React.FC = () => {
                               size="small"
                               variant="outlined"
                               onClick={() => {
-                                // TODO: 实现以太坊转账功能
-                                toast.info('Ethereum transfer feature coming soon!');
+                                setTransferMode('send');
+                                setShowEthTokenTransfer(true);
                               }}
                               sx={{
                                 flex: 1,
@@ -909,8 +910,8 @@ const CustomUserProfile: React.FC = () => {
                               size="small"
                               variant="outlined"
                               onClick={() => {
-                                // TODO: 实现以太坊接收功能
-                                toast.info('Ethereum receive feature coming soon!');
+                                setTransferMode('receive');
+                                setShowEthTokenTransfer(true);
                               }}
                               sx={{
                                 flex: 1,
@@ -1060,6 +1061,13 @@ const CustomUserProfile: React.FC = () => {
       <TokenTransfer
         open={showTokenTransfer}
         onClose={() => setShowTokenTransfer(false)}
+        mode={transferMode}
+      />
+
+      {/* Ethereum Token Transfer Dialog */}
+      <EthTokenTransfer
+        open={showEthTokenTransfer}
+        onClose={() => setShowEthTokenTransfer(false)}
         mode={transferMode}
       />
 

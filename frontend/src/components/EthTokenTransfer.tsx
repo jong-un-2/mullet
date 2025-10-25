@@ -1,10 +1,10 @@
 /**
- * Token Transfer Component
- * 支持从 Privy MPC 钱包转账 SOL 和各种 SPL Token
+ * Ethereum Token Transfer Component
+ * 支持从 Privy MPC 钱包转账 ETH 和 ERC20 Token
  */
 
 import { useState, useEffect } from 'react';
-import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
+import { useWallets } from '@privy-io/react-auth';
 import { 
   Button, 
   TextField, 
@@ -23,133 +23,121 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { 
-  PublicKey, 
-  Transaction, 
-  SystemProgram, 
-  LAMPORTS_PER_SOL,
-  TransactionMessage,
-  VersionedTransaction
-} from '@solana/web3.js';
-import { 
-  TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddressSync,
-  createAssociatedTokenAccountInstruction,
-  createTransferInstruction,
-} from '@solana/spl-token';
-import { useConnection } from '@solana/wallet-adapter-react';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SendIcon from '@mui/icons-material/Send';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import { toast } from 'sonner';
+import { parseEther, formatEther } from 'viem';
+import { usePublicClient, useWalletClient } from 'wagmi';
 
-// 常用 Token 列表
-const COMMON_TOKENS = [
+// 常用 ERC20 Token 列表
+const COMMON_ETH_TOKENS = [
   {
-    symbol: 'SOL',
-    name: 'Solana',
-    mint: 'native',
-    decimals: 9,
-    logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+    symbol: 'ETH',
+    name: 'Ethereum',
+    address: 'native',
+    decimals: 18,
+    logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
   },
   {
     symbol: 'USDC',
     name: 'USD Coin',
-    mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     decimals: 6,
-    logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+    logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
   },
   {
     symbol: 'USDT',
     name: 'Tether USD',
-    mint: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+    address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     decimals: 6,
     logo: 'https://coin-images.coingecko.com/coins/images/325/large/Tether.png',
   },
   {
-    symbol: 'PYUSD',
-    name: 'PayPal USD',
-    mint: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',
-    decimals: 6,
-    logo: 'https://coin-images.coingecko.com/coins/images/31212/large/PYUSD_Logo_%282%29.png',
+    symbol: 'DAI',
+    name: 'Dai Stablecoin',
+    address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    decimals: 18,
+    logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png',
   },
 ];
 
-interface TokenTransferProps {
+interface EthTokenTransferProps {
   open: boolean;
   onClose: () => void;
   mode: 'send' | 'receive';
 }
 
-export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
-  const { wallets: solanaWallets } = useSolanaWallets();
-  const { connection } = useConnection();
-  const [selectedToken, setSelectedToken] = useState(COMMON_TOKENS[0]);
+export function EthTokenTransfer({ open, onClose, mode }: EthTokenTransferProps) {
+  const { wallets } = useWallets();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+  
+  const [selectedToken, setSelectedToken] = useState(COMMON_ETH_TOKENS[0]);
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [tokenBalances, setTokenBalances] = useState<Record<string, number>>({});
 
-  // Get Privy wallet using the same detection pattern as CustomUserProfile
-  const privyWallet = solanaWallets?.[0];
-  const standardWallet = (privyWallet as any)?.standardWallet;
-  const isPrivyWallet = !standardWallet?.name; // undefined name = Privy embedded wallet
-  
-  // Use wallet address
-  const walletAddress = privyWallet?.address;
+  // Get Privy embedded Ethereum wallet
+  const ethWallet = wallets.find(w => w.address.startsWith('0x') && w.walletClientType === 'privy');
+  const walletAddress = ethWallet?.address;
 
-  console.log('🔍 TokenTransfer wallet detection:', {
-    hasPrivyWallet: isPrivyWallet,
-    hasSolanaWallet: !!privyWallet,
+  console.log('🔍 EthTokenTransfer wallet detection:', {
+    hasPrivyWallet: !!ethWallet,
     walletAddress,
-    walletName: standardWallet?.name || 'privy',
     mode,
-    solanaWalletsCount: solanaWallets?.length
   });
 
-  // Get Token balances
+  // 获取 Token 余额
   useEffect(() => {
-    if (!walletAddress || !open) return;
+    if (!walletAddress || !open || !publicClient) return;
 
     const fetchBalances = async () => {
       try {
-        const pubkey = new PublicKey(walletAddress);
         const balances: Record<string, number> = {};
 
-        // 获取 SOL 余额
-        const solBalance = await connection.getBalance(pubkey);
-        balances['native'] = solBalance / LAMPORTS_PER_SOL;
+        // 获取 ETH 余额
+        const ethBalance = await publicClient.getBalance({ 
+          address: walletAddress as `0x${string}` 
+        });
+        balances['native'] = parseFloat(formatEther(ethBalance));
 
-        // 获取各个 Token 的余额
-        for (const token of COMMON_TOKENS) {
-          if (token.mint === 'native') continue;
-
+        // 获取 ERC20 Token 余额
+        for (const token of COMMON_ETH_TOKENS.filter(t => t.address !== 'native')) {
           try {
-            const mintPubkey = new PublicKey(token.mint);
-            const ata = getAssociatedTokenAddressSync(
-              mintPubkey,
-              pubkey,
-              false,
-              TOKEN_PROGRAM_ID
-            );
-
-            const tokenAccount = await connection.getTokenAccountBalance(ata);
-            balances[token.mint] = tokenAccount.value.uiAmount || 0;
+            const balance = await publicClient.readContract({
+              address: token.address as `0x${string}`,
+              abi: [
+                {
+                  name: 'balanceOf',
+                  type: 'function',
+                  stateMutability: 'view',
+                  inputs: [{ name: 'account', type: 'address' }],
+                  outputs: [{ name: 'balance', type: 'uint256' }],
+                },
+              ],
+              functionName: 'balanceOf',
+              args: [walletAddress as `0x${string}`],
+            });
+            
+            balances[token.address] = parseFloat(formatEther(balance as bigint)) * Math.pow(10, 18 - token.decimals);
           } catch (err) {
-            balances[token.mint] = 0;
+            console.error(`Error fetching ${token.symbol} balance:`, err);
+            balances[token.address] = 0;
           }
         }
 
         setTokenBalances(balances);
       } catch (err) {
-        console.error('Failed to fetch balances:', err);
+        console.error('Error fetching balances:', err);
       }
     };
 
     fetchBalances();
-  }, [walletAddress, connection, open]);
+  }, [walletAddress, open, publicClient]);
 
   const handleCopyAddress = () => {
     if (walletAddress) {
@@ -159,120 +147,64 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
   };
 
   const handleTransfer = async () => {
-    if (!walletAddress) {
-      setError('No wallet found');
+    if (!walletAddress || !walletClient) {
+      setError('No wallet connected');
       return;
     }
 
     if (!recipientAddress || !amount) {
-      setError('Please enter recipient address and amount');
+      setError('Please fill in all fields');
       return;
     }
 
+    setLoading(true);
+    setError('');
+
     try {
-      setLoading(true);
-      setError('');
+      let hash: `0x${string}`;
 
-      const senderPubkey = new PublicKey(walletAddress);
-      const recipientPubkey = new PublicKey(recipientAddress);
-      const transaction = new Transaction();
-
-      if (selectedToken.mint === 'native') {
-        // 转账 SOL
-        const lamports = parseFloat(amount) * LAMPORTS_PER_SOL;
-        transaction.add(
-          SystemProgram.transfer({
-            fromPubkey: senderPubkey,
-            toPubkey: recipientPubkey,
-            lamports: Math.floor(lamports),
-          })
-        );
+      if (selectedToken.address === 'native') {
+        // 发送 ETH
+        hash = await walletClient.sendTransaction({
+          to: recipientAddress as `0x${string}`,
+          value: parseEther(amount),
+        });
       } else {
-        // 转账 SPL Token
-        const mintPubkey = new PublicKey(selectedToken.mint);
-        const senderAta = getAssociatedTokenAddressSync(
-          mintPubkey,
-          senderPubkey,
-          false,
-          TOKEN_PROGRAM_ID
-        );
-        const recipientAta = getAssociatedTokenAddressSync(
-          mintPubkey,
-          recipientPubkey,
-          false,
-          TOKEN_PROGRAM_ID
-        );
-
-        // 检查接收者的 ATA 是否存在
-        const recipientAtaInfo = await connection.getAccountInfo(recipientAta);
-        if (!recipientAtaInfo) {
-          // 创建接收者的 ATA
-          transaction.add(
-            createAssociatedTokenAccountInstruction(
-              senderPubkey,
-              recipientAta,
-              recipientPubkey,
-              mintPubkey,
-              TOKEN_PROGRAM_ID
-            )
-          );
-        }
-
-        // 添加转账指令
-        const tokenAmount = parseFloat(amount) * Math.pow(10, selectedToken.decimals);
-        transaction.add(
-          createTransferInstruction(
-            senderAta,
-            recipientAta,
-            senderPubkey,
-            Math.floor(tokenAmount),
-            [],
-            TOKEN_PROGRAM_ID
-          )
-        );
+        // 发送 ERC20 Token
+        const tokenAmount = BigInt(Math.floor(parseFloat(amount) * Math.pow(10, selectedToken.decimals)));
+        
+        hash = await walletClient.writeContract({
+          address: selectedToken.address as `0x${string}`,
+          abi: [
+            {
+              name: 'transfer',
+              type: 'function',
+              stateMutability: 'nonpayable',
+              inputs: [
+                { name: 'to', type: 'address' },
+                { name: 'amount', type: 'uint256' },
+              ],
+              outputs: [{ name: 'success', type: 'bool' }],
+            },
+          ],
+          functionName: 'transfer',
+          args: [recipientAddress as `0x${string}`, tokenAmount],
+        });
       }
-
-      // 获取最新的 blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.lastValidBlockHeight = lastValidBlockHeight;
-      transaction.feePayer = senderPubkey;
-
-      // 转换为 VersionedTransaction
-      const message = TransactionMessage.decompile(transaction.compileMessage());
-      const versionedTx = new VersionedTransaction(message.compileToV0Message());
-
-      // 序列化并签名
-      const serializedTx = versionedTx.serialize();
-      
-      // 使用 Privy 钱包签名
-      if (!privyWallet) {
-        throw new Error('No wallet available for signing');
-      }
-      
-      const signedResult = await (privyWallet as any).signTransaction({ 
-        transaction: serializedTx 
-      });
-
-      // 发送交易
-      const signature = await connection.sendRawTransaction(signedResult.signedTransaction, {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-      });
 
       // 等待确认
-      await connection.confirmTransaction(signature, 'confirmed');
+      await publicClient!.waitForTransactionReceipt({ hash });
 
       toast.success(
         <Box>
           <Typography variant="body2">Transfer successful!</Typography>
           <a 
-            href={`https://solscan.io/tx/${signature}`} 
+            href={`https://etherscan.io/tx/${hash}`} 
             target="_blank" 
             rel="noopener noreferrer"
             style={{ color: '#3b82f6' }}
           >
-            View on Solscan
+            View on Etherscan
           </a>
         </Box>
       );
@@ -333,12 +265,12 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
       }}>
         {mode === 'send' ? (
           <>
-            <CallMadeIcon sx={{ color: '#4ecdc4', fontSize: 28 }} />
+            <CallMadeIcon sx={{ color: '#627eea', fontSize: 28 }} />
             <span>Send Tokens</span>
           </>
         ) : (
           <>
-            <CallReceivedIcon sx={{ color: '#4ecdc4', fontSize: 28 }} />
+            <CallReceivedIcon sx={{ color: '#627eea', fontSize: 28 }} />
             <span>Receive Tokens</span>
           </>
         )}
@@ -360,8 +292,8 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
               alignItems: 'center', 
               gap: 1,
               p: 2,
-              bgcolor: 'rgba(78, 205, 196, 0.1)',
-              border: '1px solid rgba(78, 205, 196, 0.3)',
+              bgcolor: 'rgba(98, 126, 234, 0.1)',
+              border: '1px solid rgba(98, 126, 234, 0.3)',
               borderRadius: 2,
               mb: 2
             }}>
@@ -372,7 +304,7 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                   fontSize: '0.75rem',
                   wordBreak: 'break-all',
                   flex: 1,
-                  color: '#4ecdc4'
+                  color: '#627eea'
                 }}
               >
                 {walletAddress}
@@ -381,8 +313,8 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                 size="small" 
                 onClick={handleCopyAddress}
                 sx={{ 
-                  color: '#4ecdc4',
-                  '&:hover': { bgcolor: 'rgba(78, 205, 196, 0.2)' }
+                  color: '#627eea',
+                  '&:hover': { bgcolor: 'rgba(98, 126, 234, 0.2)' }
                 }}
               >
                 <ContentCopyIcon fontSize="small" />
@@ -402,9 +334,9 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
               YOUR BALANCES
             </Typography>
             <Box sx={{ maxHeight: 250, overflowY: 'auto' }}>
-              {COMMON_TOKENS.map(token => (
+              {COMMON_ETH_TOKENS.map(token => (
                 <Box 
-                  key={token.mint} 
+                  key={token.address} 
                   sx={{ 
                     display: 'flex', 
                     justifyContent: 'space-between',
@@ -446,9 +378,9 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                   </Box>
                   <Typography 
                     variant="body1" 
-                    sx={{ color: '#4ecdc4', fontWeight: 600 }}
+                    sx={{ color: '#627eea', fontWeight: 600 }}
                   >
-                    {tokenBalances[token.mint]?.toFixed(token.decimals === 9 ? 4 : 2) || '0.00'}
+                    {tokenBalances[token.address]?.toFixed(token.decimals === 18 ? 4 : 2) || '0.00'}
                   </Typography>
                 </Box>
               ))}
@@ -467,7 +399,7 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                   bgcolor: 'rgba(255, 255, 255, 0.05)',
                   '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
                   '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
-                  '&.Mui-focused fieldset': { borderColor: '#4ecdc4' }
+                  '&.Mui-focused fieldset': { borderColor: '#627eea' }
                 },
                 '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
                 '& .MuiSelect-select': { 
@@ -485,12 +417,12 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                 value={selectedToken.symbol}
                 label="Token"
                 onChange={(e) => {
-                  const token = COMMON_TOKENS.find(t => t.symbol === e.target.value);
+                  const token = COMMON_ETH_TOKENS.find(t => t.symbol === e.target.value);
                   if (token) setSelectedToken(token);
                 }}
                 disabled={loading}
                 renderValue={(value) => {
-                  const token = COMMON_TOKENS.find(t => t.symbol === value);
+                  const token = COMMON_ETH_TOKENS.find(t => t.symbol === value);
                   return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <Box
@@ -508,8 +440,8 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                   );
                 }}
               >
-                {COMMON_TOKENS.map(token => (
-                  <MenuItem key={token.mint} value={token.symbol}>
+                {COMMON_ETH_TOKENS.map(token => (
+                  <MenuItem key={token.address} value={token.symbol}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
                       <Box
                         component="img"
@@ -523,7 +455,7 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                       />
                       <Typography sx={{ flex: 1 }}>{token.symbol}</Typography>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {tokenBalances[token.mint]?.toFixed(2) || '0.00'}
+                        {tokenBalances[token.address]?.toFixed(2) || '0.00'}
                       </Typography>
                     </Box>
                   </MenuItem>
@@ -546,7 +478,7 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                   bgcolor: 'rgba(255, 255, 255, 0.05)',
                   '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
                   '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
-                  '&.Mui-focused fieldset': { borderColor: '#4ecdc4' }
+                  '&.Mui-focused fieldset': { borderColor: '#627eea' }
                 },
                 '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
                 '& .MuiInputBase-input': { color: '#fff' }
@@ -557,16 +489,16 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                     <Button
                       size="small"
                       onClick={() => {
-                        const balance = tokenBalances[selectedToken.mint] || 0;
-                        const maxAmount = selectedToken.mint === 'native' 
+                        const balance = tokenBalances[selectedToken.address] || 0;
+                        const maxAmount = selectedToken.address === 'native' 
                           ? Math.max(0, balance - 0.001)
                           : balance;
                         setAmount(maxAmount.toString());
                       }}
                       sx={{ 
-                        color: '#4ecdc4',
+                        color: '#627eea',
                         fontWeight: 600,
-                        '&:hover': { bgcolor: 'rgba(78, 205, 196, 0.1)' }
+                        '&:hover': { bgcolor: 'rgba(98, 126, 234, 0.1)' }
                       }}
                     >
                       MAX
@@ -582,7 +514,7 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
               label="Recipient Address"
               value={recipientAddress}
               onChange={(e) => setRecipientAddress(e.target.value)}
-              placeholder="Enter Solana address"
+              placeholder="Enter Ethereum address (0x...)"
               disabled={loading}
               sx={{ 
                 mb: 2,
@@ -590,7 +522,7 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
                   bgcolor: 'rgba(255, 255, 255, 0.05)',
                   '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
                   '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
-                  '&.Mui-focused fieldset': { borderColor: '#4ecdc4' }
+                  '&.Mui-focused fieldset': { borderColor: '#627eea' }
                 },
                 '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
                 '& .MuiInputBase-input': { color: '#fff', fontFamily: 'monospace', fontSize: '0.85rem' }
@@ -616,14 +548,14 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
             <Alert 
               severity="info" 
               sx={{ 
-                bgcolor: 'rgba(78, 205, 196, 0.1)',
+                bgcolor: 'rgba(98, 126, 234, 0.1)',
                 color: 'rgba(255, 255, 255, 0.7)',
-                border: '1px solid rgba(78, 205, 196, 0.3)',
-                '& .MuiAlert-icon': { color: '#4ecdc4' }
+                border: '1px solid rgba(98, 126, 234, 0.3)',
+                '& .MuiAlert-icon': { color: '#627eea' }
               }}
             >
               <Typography variant="caption">
-                Fee: ~0.00001 SOL
+                Network fees apply (varies by gas price)
               </Typography>
             </Alert>
           </Box>
@@ -653,12 +585,12 @@ export function TokenTransfer({ open, onClose, mode }: TokenTransferProps) {
             disabled={loading || !recipientAddress || !amount}
             startIcon={loading ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <SendIcon />}
             sx={{
-              bgcolor: '#4ecdc4',
-              color: '#1a1a2e',
+              bgcolor: '#627eea',
+              color: '#fff',
               fontWeight: 600,
               px: 3,
               '&:hover': {
-                bgcolor: '#3dbdb4'
+                bgcolor: '#4c63d2'
               },
               '&:disabled': {
                 bgcolor: 'rgba(255, 255, 255, 0.1)',
