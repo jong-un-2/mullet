@@ -6,6 +6,8 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), wasm(), topLevelAwait()],
+  // 使用相对路径，支持 IPFS 部署
+  base: './',
   define: {
     global: 'globalThis',
     'process.env': {},
@@ -68,6 +70,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         format: 'es',
+        // 确保资源路径正确，支持 IPFS 部署
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
         manualChunks: {
           vendor: ['react', 'react-dom'],
           solana: ['@solana/web3.js', '@solana/wallet-adapter-react', '@solana/kit'],
