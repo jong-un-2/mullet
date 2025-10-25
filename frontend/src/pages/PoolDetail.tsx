@@ -818,325 +818,497 @@ export default function PoolDetail() {
           </Card>
         </Box>
 
-        {/* JTO Rewards Banner */}
-        <Card sx={{ 
-          p: 4,
-          mb: 3,
-          position: 'relative',
-          overflow: 'hidden',
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-        }}>
-          <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
-            <Box sx={{ 
-              width: 80, 
-              height: 80, 
-              borderRadius: '50%',
-              backgroundColor: 'rgba(100, 116, 139, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '2rem'
-            }}>
-              ⚡
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h5" sx={{ color: '#10b981', fontWeight: 600, mb: 1 }}>
-                3 Months of $JTO Rewards!
-              </Typography>
-              <Typography sx={{ color: '#94a3b8', mb: 2 }}>
-                Provide liquidity to the JitoSOL-SOL Vault to earn $JTO for the next three months. Claim your $JTO in real-time. Withdraw at any time.
-              </Typography>
-              <Button 
-                sx={{ 
-                  color: '#10b981',
-                  textTransform: 'none',
-                  '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.1)' }
-                }}
-              >
-                Learn More →
-              </Button>
-            </Box>
-            <IconButton 
-              sx={{ 
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                color: '#64748b'
-              }}
-            >
-              ✕
-            </IconButton>
-          </Box>
-        </Card>
-
-        {/* Farm Info */}
-        <Card sx={{ 
-          p: 4, 
-          mb: 3,
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-        }}>
-          <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-            <Chip 
-              label="Boosted Fees APY" 
-              size="small" 
-              sx={{ 
-                backgroundColor: 'rgba(100, 116, 139, 0.2)', 
-                color: '#94a3b8',
-                fontSize: '0.85rem'
-              }} 
-            />
-            <Chip 
-              label="Daily JTO Rewards" 
-              size="small" 
-              sx={{ 
-                backgroundColor: 'rgba(100, 116, 139, 0.2)', 
-                color: '#94a3b8',
-                fontSize: '0.85rem'
-              }} 
-            />
-          </Box>
-          <Box sx={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <Box>
-              <Typography sx={{ color: '#10b981', fontSize: '2.5rem', fontWeight: 600 }}>
-                {(pool.feesApy * 100 * 0.8).toFixed(2)}%
-              </Typography>
-            </Box>
-            <Box>
-              <Typography sx={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: 400, mb: 0.5 }}>
-                24.83K JTO for past 7D
-              </Typography>
-            </Box>
-          </Box>
-        </Card>
-
-        {/* Strategy Section */}
-        <Card sx={{ 
-          p: 4, 
-          mb: 3,
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-        }}>
-          <Typography sx={{ color: '#3b82f6', fontSize: '1.1rem', fontWeight: 500, mb: 2 }}>
-            Drift
-          </Typography>
-          <Typography sx={{ color: '#94a3b8', mb: 2, lineHeight: 1.7 }}>
-            Earn staking yield and trading fees with SOL exposure. Kamino algorithms set and rebalance the trading range, and auto-compound fees and rewards.
-          </Typography>
-          <Button 
-            sx={{ 
-              color: '#3b82f6',
-              textTransform: 'none',
-              pl: 0,
-              '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
-            }}
-          >
-            Learn more →
-          </Button>
-        </Card>
-
-        {/* Two Column Layout: Farm Info & Manage Position */}
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-          {/* Vault Info - Left Side */}
-          <Box sx={{ flex: '1 1 600px', minWidth: 320 }}>
-            <Card sx={{ 
-              p: 4,
-              mb: 3,
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 3,
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            }}>
-              <Typography variant="h6" sx={{ color: '#ffffff', mb: 3 }}>Farm Info</Typography>
-              <Box sx={{ mb: 3 }}>
-                <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem', mb: 1 }}>Boosted Fees APY</Typography>
-                <Typography sx={{ color: '#10b981', fontSize: '2rem', fontWeight: 600 }}>
-                  {(pool.feesApy * 100 * 0.8).toFixed(2)}%
-                </Typography>
-              </Box>
-              <Box sx={{ mb: 3 }}>
-                <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem', mb: 1 }}>Daily JTO Rewards</Typography>
-                <Typography sx={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: 600 }}>
-                  3.54K JTO
-                </Typography>
-                <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                  24.83K JTO for past 7D
-                </Typography>
-              </Box>
-            </Card>
-
-            <Card sx={{ 
-              p: 4,
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 3,
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            }}>
-              <Typography sx={{ color: '#ffffff', fontSize: '1rem', fontWeight: 600, mb: 2 }}>Strategy: <Box component="span" sx={{ color: '#3b82f6' }}>Drift</Box></Typography>
-              <Typography sx={{ color: '#94a3b8', mb: 2, lineHeight: 1.7, fontSize: '0.9rem' }}>
-                Earn staking yield and trading fees with SOL exposure. Kamino algorithms set and rebalance the trading range, and auto-compound fees and rewards.
-              </Typography>
-              <Button 
-                sx={{ 
-                  color: '#3b82f6',
-                  textTransform: 'none',
-                  pl: 0,
-                  fontSize: '0.85rem',
-                  '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
-                }}
-              >
-                Learn more →
-              </Button>
-            </Card>
-          </Box>
-
-          {/* Manage Position - Right Side */}
-          <Box sx={{ flex: '0 1 400px', minWidth: 320 }}>
+        {/* Two Column Layout: Left Column (Farm Info, Strategy, Vault Info) & Right Column (Manage Position) */}
+        <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          {/* Left Column - Farm Info, Strategy, Vault Info (2/3 width) */}
+          <Box sx={{ flex: '2 1 600px', minWidth: 400, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Farm Info */}
             <Card sx={{ 
               p: 3,
               background: 'rgba(255, 255, 255, 0.05)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 3,
+              borderRadius: 4,
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             }}>
+              <Typography variant="h6" sx={{ color: '#ffffff', mb: 2.5, fontSize: '1.25rem', fontWeight: 600 }}>Farm Info</Typography>
+              
+              <Box sx={{ display: 'flex', gap: 4 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1, fontWeight: 400 }}>
+                    Boosted Fees APY
+                  </Typography>
+                  <Typography sx={{ color: '#10b981', fontSize: '2rem', fontWeight: 700, lineHeight: 1.2 }}>
+                    7.09%
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1, fontWeight: 400 }}>
+                    Daily JTO Rewards
+                  </Typography>
+                  <Typography sx={{ color: '#ffffff', fontSize: '1.4rem', fontWeight: 600, mb: 0.5, lineHeight: 1.2 }}>
+                    3.54K JTO
+                  </Typography>
+                  <Typography sx={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 400 }}>
+                    24.83K JTO for past 7D
+                  </Typography>
+                </Box>
+              </Box>
+            </Card>
+
+            {/* Strategy: Drift */}
+            <Card sx={{ 
+              p: 3,
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 4,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3
+            }}>
+              {/* 左侧文字内容 */}
+              <Box sx={{ flex: '1 1 60%', minWidth: 0 }}>
+                <Typography sx={{ color: '#ffffff', fontSize: '1.25rem', fontWeight: 600, mb: 2 }}>
+                  Strategy: <Box component="span" sx={{ color: '#3b82f6' }}>Drift</Box>
+                </Typography>
+                <Typography sx={{ color: '#94a3b8', mb: 2, lineHeight: 1.6, fontSize: '0.9rem', fontWeight: 400 }}>
+                  Earn staking yield and trading fees with SOL exposure. Kamino algorithms set and rebalance the trading range, and auto-compound fees and rewards.
+                </Typography>
+                <Button 
+                  sx={{ 
+                    color: '#3b82f6',
+                    textTransform: 'none',
+                    pl: 0,
+                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                  }}
+                >
+                  Learn more →
+                </Button>
+              </Box>
+              
+              {/* 右侧图表区域 */}
+              <Box sx={{ 
+                flex: '0 0 40%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 160
+              }}>
+                <svg width="100%" height="160" viewBox="0 0 320 160" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                  {/* 上方绿色阶梯线 */}
+                  <path 
+                    d="M 0 35 L 80 35 L 80 20 L 160 20 L 160 5 L 240 5" 
+                    stroke="#10b981" 
+                    strokeWidth="3.5" 
+                    fill="none"
+                    strokeLinecap="square"
+                    strokeLinejoin="miter"/>
+                  
+                  {/* 中间蓝色波浪线 */}
+                  <path 
+                    d="M 0 95 Q 25 75, 50 95 Q 75 115, 100 95 Q 125 75, 150 95 Q 175 115, 200 95 Q 225 75, 250 95 Q 275 115, 300 95" 
+                    stroke="#60a5fa" 
+                    strokeWidth="3" 
+                    fill="none"
+                    strokeLinecap="round"/>
+                  
+                  {/* 下方绿色阶梯线 */}
+                  <path 
+                    d="M 0 155 L 80 155 L 80 140 L 160 140 L 160 125 L 240 125 L 240 110 L 320 110" 
+                    stroke="#10b981" 
+                    strokeWidth="3.5" 
+                    fill="none"
+                    strokeLinecap="square"
+                    strokeLinejoin="miter"/>
+                </svg>
+              </Box>
+            </Card>
+
+            {/* Vault Info */}
+            <Card sx={{ 
+              p: 3,
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 4,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            }}>
+              <Typography variant="h6" sx={{ color: '#ffffff', mb: 3, fontSize: '1.25rem', fontWeight: 600 }}>Vault Info</Typography>
+              
+              {/* Position Range */}
+              <Box sx={{ mb: 3 }}>
+                <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1.5, fontWeight: 400 }}>
+                  Position Range
+                </Typography>
+                <Typography sx={{ color: '#ffffff', fontSize: '1.75rem', fontWeight: 700, mb: 1, lineHeight: 1.2 }}>
+                  1.2363-1.239
+                </Typography>
+                <Typography sx={{ color: '#3b82f6', fontSize: '0.85rem', mb: 2, fontWeight: 500 }}>
+                  1.2383 current
+                </Typography>
+                {/* Range slider visualization */}
+                <Box sx={{ position: 'relative', mt: 1.5 }}>
+                  <Box sx={{
+                    height: 4,
+                    borderRadius: 2,
+                    background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.8) 50%, rgba(59, 130, 246, 0.3) 100%)',
+                    position: 'relative'
+                  }}>
+                    <Box sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #3b82f6',
+                      boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)'
+                    }} />
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Asset Ratio */}
+              <Box>
+                <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', mb: 1.5, fontWeight: 400 }}>
+                  Asset Ratio
+                </Typography>
+                <Typography sx={{ color: '#ffffff', fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}>
+                  76.09% / 23.91%
+                </Typography>
+              </Box>
+            </Card>
+          </Box>
+
+          {/* Manage Position - Right Side */}
+          <Box sx={{ flex: '1 1 500px', minWidth: 320, display: 'flex' }}>
+            <Card sx={{ 
+              p: 3,
+              flex: 1,
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 3,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: '#ffffff' }}>Manage Position</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Button 
-                    size="small"
-                    onClick={(e) => setActionMenuAnchor(e.currentTarget)}
+                <Typography variant="h6" sx={{ color: '#ffffff', fontSize: '1.5rem' }}>Manage Position</Typography>
+                <Button 
+                  size="small"
+                  onClick={(e) => setActionMenuAnchor(e.currentTarget)}
+                  sx={{ 
+                    color: '#3b82f6',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                  }}
+                >
+                  {actionMode === 'deposit' ? 'Deposit' : 'Withdraw'} ▼
+                </Button>
+                <Menu
+                  anchorEl={actionMenuAnchor}
+                  open={Boolean(actionMenuAnchor)}
+                  onClose={() => setActionMenuAnchor(null)}
+                  PaperProps={{
+                    sx: {
+                      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)',
+                      mt: 1,
+                      minWidth: 120
+                    }
+                  }}
+                >
+                  <MenuItem 
+                    onClick={() => {
+                      setActionMode('deposit');
+                      setActionMenuAnchor(null);
+                    }}
                     sx={{ 
-                      color: '#3b82f6',
-                      textTransform: 'none',
-                      fontWeight: 600,
+                      color: actionMode === 'deposit' ? '#3b82f6' : '#94a3b8',
                       '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
                     }}
                   >
-                    {actionMode === 'deposit' ? 'Deposit' : 'Withdraw'} ▼
-                  </Button>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSettingsOpen(true);
+                    Deposit
+                  </MenuItem>
+                  <MenuItem 
+                    onClick={() => {
+                      setActionMode('withdraw');
+                      setActionMenuAnchor(null);
                     }}
-                    sx={{
-                      color: '#64748b',
-                      padding: '8px',
-                      '&:hover': { 
-                        color: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)' 
-                      }
+                    sx={{ 
+                      color: actionMode === 'withdraw' ? '#3b82f6' : '#94a3b8',
+                      '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
                     }}
                   >
-                    <TuneIcon sx={{ fontSize: '1.2rem' }} />
-                  </IconButton>
-                  <Menu
-                    anchorEl={actionMenuAnchor}
-                    open={Boolean(actionMenuAnchor)}
-                    onClose={() => setActionMenuAnchor(null)}
-                    PaperProps={{
-                      sx: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(59, 130, 246, 0.2)',
-                        mt: 1,
-                        minWidth: 120
-                      }
-                    }}
-                  >
-                    <MenuItem 
-                      onClick={() => {
-                        setActionMode('deposit');
-                        setActionMenuAnchor(null);
-                      }}
-                      sx={{ 
-                        color: actionMode === 'deposit' ? '#3b82f6' : '#94a3b8',
-                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
-                      }}
-                    >
-                      Deposit
-                    </MenuItem>
-                    <MenuItem 
-                      onClick={() => {
-                        setActionMode('withdraw');
-                        setActionMenuAnchor(null);
-                      }}
-                      sx={{ 
-                        color: actionMode === 'withdraw' ? '#3b82f6' : '#94a3b8',
-                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
-                      }}
-                    >
-                      Withdraw
-                    </MenuItem>
-                  </Menu>
-                </Box>
+                    Withdraw
+                  </MenuItem>
+                </Menu>
               </Box>
 
               {!isWalletConnected ? (
                 <Alert severity="warning" sx={{ mb: 2 }}>
                   Please connect your wallet to manage your position
                 </Alert>
-              ) : null}
+              ) : (
+                <>
+                  {/* You Deposit/Withdraw */}
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.95rem' }}>
+                        You Deposit
+                      </Typography>
+                      <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>~$0.00</Typography>
+                    </Box>
+                    
+                    {/* Single Asset Input */}
+                    <Box sx={{ 
+                      backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)',
+                      borderRadius: 2,
+                      p: 2,
+                      mb: 1.5
+                    }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Button
+                          onClick={() => setSelectedToken(selectedToken === 'SOL' ? 'JITOSOL' : 'SOL')}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            textTransform: 'none',
+                            color: '#3b82f6',
+                            minWidth: 'auto',
+                            p: 0.5,
+                            '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                          }}
+                        >
+                          <Box sx={{ 
+                            width: 22, 
+                            height: 22, 
+                            borderRadius: '50%', 
+                            background: selectedToken === 'SOL' 
+                              ? 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)'
+                              : '#10b981',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.65rem',
+                            color: '#ffffff'
+                          }}>
+                            {selectedToken === 'SOL' ? '◎' : 'J'}
+                          </Box>
+                          <Typography sx={{ color: selectedToken === 'SOL' ? '#3b82f6' : '#10b981', fontWeight: 600, fontSize: '0.95rem' }}>
+                            {selectedToken}
+                          </Typography>
+                          <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>▼</Typography>
+                        </Button>
+                        <TextField
+                          value={selectedToken === 'SOL' ? solAmount : jitosolAmount}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const maxAmount = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                            if (value === '' || (parseFloat(value) <= maxAmount && !isNaN(parseFloat(value)))) {
+                              if (selectedToken === 'SOL') {
+                                setSolAmount(value);
+                              } else {
+                                setJitosolAmount(value);
+                              }
+                            }
+                          }}
+                          placeholder="0"
+                          variant="standard"
+                          type="number"
+                          InputProps={{
+                            disableUnderline: true,
+                            inputProps: {
+                              style: { textAlign: 'right' }
+                            }
+                          }}
+                          sx={{
+                            width: '140px',
+                            '& .MuiInputBase-input': {
+                              color: '#ffffff',
+                              fontSize: '1.8rem',
+                              fontWeight: 600,
+                              textAlign: 'right',
+                              padding: 0,
+                            }
+                          }}
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography sx={{ color: '#64748b', fontSize: '0.8rem' }}>
+                          Available: {balancesLoading 
+                            ? '...' 
+                            : selectedToken === 'SOL' 
+                              ? `${solBalance.toFixed(8)} SOL`
+                              : `${jitosolBalance.toFixed(8)} JITOSOL`}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button 
+                            size="small" 
+                            onClick={() => {
+                              const balance = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                              const halfAmount = (balance / 2).toFixed(9);
+                              if (selectedToken === 'SOL') {
+                                setSolAmount(halfAmount);
+                              } else {
+                                setJitosolAmount(halfAmount);
+                              }
+                            }}
+                            disabled={selectedToken === 'SOL' ? solBalance === 0 : jitosolBalance === 0}
+                            sx={{ 
+                              color: '#3b82f6', 
+                              textTransform: 'none', 
+                              minWidth: 'auto', 
+                              px: 1.5,
+                              py: 0.5,
+                              fontSize: '0.85rem',
+                              fontWeight: 500
+                            }}
+                          >
+                            Half
+                          </Button>
+                          <Button 
+                            size="small"
+                            onClick={() => {
+                              const balance = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                              const maxAmount = balance.toFixed(9);
+                              if (selectedToken === 'SOL') {
+                                setSolAmount(maxAmount);
+                              } else {
+                                setJitosolAmount(maxAmount);
+                              }
+                            }}
+                            disabled={selectedToken === 'SOL' ? solBalance === 0 : jitosolBalance === 0}
+                            sx={{ 
+                              color: '#3b82f6', 
+                              textTransform: 'none', 
+                              minWidth: 'auto', 
+                              px: 1.5,
+                              py: 0.5,
+                              fontSize: '0.85rem',
+                              fontWeight: 500
+                            }}
+                          >
+                            Max
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Box>
 
-              {/* Simplified Transaction Settings Display */}
-              <Box sx={{ 
-                borderTop: '1px solid rgba(59, 130, 246, 0.1)', 
-                pt: 2,
-                mt: 2
-              }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ color: '#ffffff', fontSize: '0.95rem', fontWeight: 500 }}>
-                    Transaction Settings
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography sx={{ color: '#3b82f6', fontSize: '0.9rem', fontWeight: 600 }}>
-                      {slippageTolerance}%
-                    </Typography>
-                    <IconButton 
-                      size="small" 
-                      onClick={() => setSettingsOpen(true)}
-                      sx={{ 
-                        color: '#64748b',
-                        '&:hover': { color: '#3b82f6' }
-                      }}
-                    >
-                      <TuneIcon sx={{ fontSize: '1rem' }} />
-                    </IconButton>
+                    {/* Single Asset checkbox */}
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={singleAssetDeposit}
+                          onChange={(e) => setSingleAssetDeposit(e.target.checked)}
+                          sx={{ 
+                            color: '#3b82f6',
+                            py: 0.5,
+                            '&.Mui-checked': { color: '#3b82f6' }
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                          Single Asset Deposit
+                        </Typography>
+                      }
+                      sx={{ mb: 1 }}
+                    />
                   </Box>
-                </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>SOL to be Deposited</Typography>
-                  <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>0 SOL</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>JITOSOL to be Deposited</Typography>
-                  <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>0 JITOSOL</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>Lock-up Period</Typography>
-                  <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>0min</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
-                  <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>Deposit Value</Typography>
-                  <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>$0.00</Typography>
-                </Box>
-              </Box>
+                  {/* Action Button */}
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={handleDeposit}
+                    disabled={depositLoading || !isWalletConnected}
+                    sx={{
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      color: '#ffffff',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      py: 1.5,
+                      mb: 2,
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      },
+                      '&:disabled': {
+                        background: 'rgba(59, 130, 246, 0.3)',
+                      }
+                    }}
+                  >
+                    {depositLoading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      'Deposit and Stake'
+                    )}
+                  </Button>
+
+                  {/* Transaction Settings */}
+                  <Box sx={{ 
+                    borderTop: '1px solid rgba(59, 130, 246, 0.1)', 
+                    pt: 2 
+                  }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.95rem', fontWeight: 500 }}>
+                        Transaction Settings
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography sx={{ color: '#3b82f6', fontSize: '0.9rem', fontWeight: 600 }}>
+                          {slippageTolerance}%
+                        </Typography>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => setSettingsOpen(true)}
+                          sx={{ 
+                            color: '#64748b',
+                            padding: '4px',
+                            '&:hover': { color: '#3b82f6' }
+                          }}
+                        >
+                          <TuneIcon sx={{ fontSize: '0.85rem' }} />
+                        </IconButton>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>SOL to be Deposited</Typography>
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>
+                        0 SOL
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>JITOSOL to be Deposited</Typography>
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>
+                        0 JITOSOL
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>Lock-up Period</Typography>
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>0min</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+                      <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>Deposit Value</Typography>
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 500 }}>$0.00</Typography>
+                    </Box>
+                  </Box>
+                </>
+              )}
             </Card>
           </Box>
         </Box>
@@ -1688,78 +1860,57 @@ export default function PoolDetail() {
             }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ color: '#ffffff' }}>Manage Position</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Button 
-                    size="small"
-                    onClick={(e) => setActionMenuAnchor(e.currentTarget)}
+                <Button 
+                  size="small"
+                  onClick={(e) => setActionMenuAnchor(e.currentTarget)}
+                  sx={{ 
+                    color: '#3b82f6',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                  }}
+                >
+                  {actionMode === 'deposit' ? 'Deposit' : 'Withdraw'} ▼
+                </Button>
+                <Menu
+                  anchorEl={actionMenuAnchor}
+                  open={Boolean(actionMenuAnchor)}
+                  onClose={() => setActionMenuAnchor(null)}
+                  PaperProps={{
+                    sx: {
+                      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)',
+                      mt: 1,
+                      minWidth: 120
+                    }
+                  }}
+                >
+                  <MenuItem 
+                    onClick={() => {
+                      setActionMode('deposit');
+                      setActionMenuAnchor(null);
+                    }}
                     sx={{ 
-                      color: '#3b82f6',
-                      textTransform: 'none',
-                      fontWeight: 600,
+                      color: actionMode === 'deposit' ? '#3b82f6' : '#94a3b8',
                       '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
                     }}
                   >
-                    {actionMode === 'deposit' ? 'Deposit' : 'Withdraw'} ▼
-                  </Button>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Settings button clicked!');
-                      setSettingsOpen(true);
+                    Deposit
+                  </MenuItem>
+                  <MenuItem 
+                    onClick={() => {
+                      setActionMode('withdraw');
+                      setActionMenuAnchor(null);
                     }}
-                    sx={{
-                      color: '#64748b',
-                      padding: '8px',
-                      '&:hover': { 
-                        color: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)' 
-                      }
+                    sx={{ 
+                      color: actionMode === 'withdraw' ? '#3b82f6' : '#94a3b8',
+                      '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
                     }}
                   >
-                    <TuneIcon sx={{ fontSize: '1.2rem' }} />
-                  </IconButton>
-                  <Menu
-                    anchorEl={actionMenuAnchor}
-                    open={Boolean(actionMenuAnchor)}
-                    onClose={() => setActionMenuAnchor(null)}
-                    PaperProps={{
-                      sx: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(59, 130, 246, 0.2)',
-                        mt: 1,
-                        minWidth: 120
-                      }
-                    }}
-                  >
-                    <MenuItem 
-                      onClick={() => {
-                        setActionMode('deposit');
-                        setActionMenuAnchor(null);
-                      }}
-                      sx={{ 
-                        color: actionMode === 'deposit' ? '#3b82f6' : '#94a3b8',
-                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
-                      }}
-                    >
-                      Deposit
-                    </MenuItem>
-                    <MenuItem 
-                      onClick={() => {
-                        setActionMode('withdraw');
-                        setActionMenuAnchor(null);
-                      }}
-                      sx={{ 
-                        color: actionMode === 'withdraw' ? '#3b82f6' : '#94a3b8',
-                        '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
-                      }}
-                    >
-                      Withdraw
-                    </MenuItem>
-                  </Menu>
-                </Box>
+                    Withdraw
+                  </MenuItem>
+                </Menu>
               </Box>
 
               {!isWalletConnected ? (
@@ -2335,9 +2486,27 @@ export default function PoolDetail() {
                     borderTop: '1px solid rgba(59, 130, 246, 0.1)', 
                     pt: 3 
                   }}>
-                    <Typography sx={{ color: '#ffffff', fontSize: '0.95rem', fontWeight: 500, mb: 2 }}>
-                      Transaction Settings
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.95rem', fontWeight: 500 }}>
+                        Transaction Settings
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography sx={{ color: '#3b82f6', fontSize: '0.9rem', fontWeight: 600 }}>
+                          {slippageTolerance}%
+                        </Typography>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => setSettingsOpen(true)}
+                          sx={{ 
+                            color: '#64748b',
+                            padding: '4px',
+                            '&:hover': { color: '#3b82f6' }
+                          }}
+                        >
+                          <TuneIcon sx={{ fontSize: '0.85rem' }} />
+                        </IconButton>
+                      </Box>
+                    </Box>
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
                       <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>SOL to be Deposited</Typography>
