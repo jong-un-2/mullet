@@ -144,9 +144,7 @@ async function main() {
       groupId: undefined
     });
 
-    console.log('Upload response:', JSON.stringify(upload, null, 2));
-
-    const cid = upload.IpfsHash || upload.cid || upload.ipfs_hash;
+    const cid = upload.cid || upload.IpfsHash || upload.ipfs_hash;
     
     if (!cid) {
       throw new Error('No CID returned from Pinata');
@@ -155,25 +153,18 @@ async function main() {
     log.success(`CID: ${cid}`);
     console.log('');
 
-    // 显示访问链接
-    const gateway = process.env.PINATA_GATEWAY;
-    if (gateway) {
-      log.info('📍 通过你的专属 Pinata Gateway 访问 (推荐):');
-      console.log(`   https://${gateway}/ipfs/${cid}`);
-      console.log('');
-      log.info('🔗 其他访问链接:');
-      console.log(`   Cloudflare: https://cloudflare-ipfs.com/ipfs/${cid}`);
-      console.log(`   IPFS.io:    https://ipfs.io/ipfs/${cid}`);
-      console.log(`   Dweb.link:  https://dweb.link/ipfs/${cid}`);
-    } else {
-      log.info('📍 通过 Cloudflare Gateway 访问 (推荐):');
-      console.log(`   https://cloudflare-ipfs.com/ipfs/${cid}`);
-      console.log('');
-      log.info('🔗 其他访问链接:');
-      console.log(`   Pinata:    https://gateway.pinata.cloud/ipfs/${cid}`);
-      console.log(`   IPFS.io:   https://ipfs.io/ipfs/${cid}`);
-      console.log(`   Dweb.link: https://dweb.link/ipfs/${cid}`);
-    }
+    // 显示访问链接（使用支持 HTML 的公共 Gateway）
+    log.info('📍 通过公共 IPFS Gateway 访问:');
+    console.log('');
+    console.log(`   🌟 Dweb.link (推荐): https://${cid}.ipfs.dweb.link/`);
+    console.log(`   🌐 IPFS.io:          https://${cid}.ipfs.cf-ipfs.com/`);
+    console.log(`   🔗 Cloudflare:       https://cloudflare-ipfs.com/ipfs/${cid}`);
+    console.log('');
+    
+    log.info('💡 提示:');
+    console.log('   - 子域名格式 (推荐): 更好的安全性和隔离性');
+    console.log('   - 首次访问可能需要 1-2 分钟加载（IPFS 网络传播）');
+    console.log('   - 建议使用自定义域名 + DNSLink 获得更好的用户体验');
     console.log('');
 
     // 保存 CID
