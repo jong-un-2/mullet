@@ -29,8 +29,8 @@ const XLiquidPage = () => {
     
     loadPools();
     
-    // Refresh every 30 seconds
-    const interval = setInterval(loadPools, 30000);
+    // Refresh every 5 minutes
+    const interval = setInterval(loadPools, 300000);
     return () => clearInterval(interval);
   }, []); // Remove connection dependency
 
