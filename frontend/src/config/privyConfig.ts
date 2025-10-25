@@ -83,13 +83,13 @@ export const privyConfig = {
     supportedChains: [mainnet, sepolia],
     defaultChain: mainnet,
     
-    // Embedded wallet settings - Disable all embedded wallets, only use external wallets
+    // Embedded wallet settings
     embeddedWallets: {
       ethereum: {
-        createOnLogin: 'off', // Completely disable ETH wallet creation
+        createOnLogin: 'off', // Disable ETH wallet creation
       },
       solana: {
-        createOnLogin: 'off', // Completely disable Solana wallet creation - only use external wallets
+        createOnLogin: 'users-without-wallets', // Enable Solana embedded wallet for users without external wallets
       },
     },
     

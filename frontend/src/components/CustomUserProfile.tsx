@@ -20,6 +20,8 @@ import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import { FaSignOutAlt, FaEthereum, FaCopy, FaExternalLinkAlt } from 'react-icons/fa';
 import { SiSolana } from 'react-icons/si';
 import { useWalletContext } from '../contexts/WalletContext';
+import { TokenTransfer } from './TokenTransfer';
+import { toast } from 'sonner';
 
 import { useAccount, useDisconnect } from 'wagmi';
 import { useWallet as useSolanaAdapterWallet } from '@solana/wallet-adapter-react';
@@ -118,6 +120,10 @@ const CustomUserProfile: React.FC = () => {
   const [showCopySnackbar, setShowCopySnackbar] = useState(false);
   // Distinguish between connect and disconnect flows to avoid showing "Connecting..." after a disconnect
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  
+  // Token Transfer dialog state
+  const [showTokenTransfer, setShowTokenTransfer] = useState(false);
+  const [transferMode, setTransferMode] = useState<'send' | 'receive'>('send');
 
   // External wallet states
   const { address: ethAddress, isConnected: ethConnected } = useAccount();
@@ -722,6 +728,54 @@ const CustomUserProfile: React.FC = () => {
                             <FaExternalLinkAlt size={12} />
                           </IconButton>
                         </Box>
+                        
+                        {/* Send/Receive buttons for Privy embedded wallets only */}
+                        {walletSource === 'privy' && (
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => {
+                                setTransferMode('send');
+                                setShowTokenTransfer(true);
+                              }}
+                              sx={{
+                                flex: 1,
+                                borderColor: 'rgba(153, 69, 255, 0.5)',
+                                color: '#9945ff',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                '&:hover': {
+                                  borderColor: '#9945ff',
+                                  backgroundColor: 'rgba(153, 69, 255, 0.1)'
+                                }
+                              }}
+                            >
+                              Send
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => {
+                                setTransferMode('receive');
+                                setShowTokenTransfer(true);
+                              }}
+                              sx={{
+                                flex: 1,
+                                borderColor: 'rgba(153, 69, 255, 0.5)',
+                                color: '#9945ff',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                '&:hover': {
+                                  borderColor: '#9945ff',
+                                  backgroundColor: 'rgba(153, 69, 255, 0.1)'
+                                }
+                              }}
+                            >
+                              Receive
+                            </Button>
+                          </Box>
+                        )}
                       </Box>
                     );
                   })}
@@ -826,6 +880,54 @@ const CustomUserProfile: React.FC = () => {
                             <FaExternalLinkAlt size={12} />
                           </IconButton>
                         </Box>
+                        
+                        {/* Send/Receive buttons for Privy embedded Ethereum wallets only */}
+                        {walletSource === 'privy' && (
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => {
+                                // TODO: 实现以太坊转账功能
+                                toast.info('Ethereum transfer feature coming soon!');
+                              }}
+                              sx={{
+                                flex: 1,
+                                borderColor: 'rgba(98, 126, 234, 0.5)',
+                                color: '#627eea',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                '&:hover': {
+                                  borderColor: '#627eea',
+                                  backgroundColor: 'rgba(98, 126, 234, 0.1)'
+                                }
+                              }}
+                            >
+                              Send
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => {
+                                // TODO: 实现以太坊接收功能
+                                toast.info('Ethereum receive feature coming soon!');
+                              }}
+                              sx={{
+                                flex: 1,
+                                borderColor: 'rgba(98, 126, 234, 0.5)',
+                                color: '#627eea',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                '&:hover': {
+                                  borderColor: '#627eea',
+                                  backgroundColor: 'rgba(98, 126, 234, 0.1)'
+                                }
+                              }}
+                            >
+                              Receive
+                            </Button>
+                          </Box>
+                        )}
                       </Box>
                     );
                   })}
@@ -953,6 +1055,13 @@ const CustomUserProfile: React.FC = () => {
           Address copied to clipboard!
         </Alert>
       </Snackbar>
+
+      {/* Token Transfer Dialog */}
+      <TokenTransfer
+        open={showTokenTransfer}
+        onClose={() => setShowTokenTransfer(false)}
+        mode={transferMode}
+      />
 
       <style>{`
         @keyframes pulse {
