@@ -203,3 +203,4 @@ docker-compose.override.yml
 # Submodules (not tracked)
 # ====================
 klend-sdk/
+kliquidity-sdk/
