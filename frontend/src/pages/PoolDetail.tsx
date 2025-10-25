@@ -99,7 +99,7 @@ export default function PoolDetail() {
   // Check if ANY wallet is connected (Privy auth, ETH external, or Solana external)
   const isWalletConnected = authenticated || ethConnected || solConnected;
 
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(1); // Default to "My Position" tab
   const [pool, setPool] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedFaq, setExpandedFaq] = useState<number | false>(false);
