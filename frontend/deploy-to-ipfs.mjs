@@ -144,7 +144,13 @@ async function main() {
       groupId: undefined
     });
 
-    const cid = upload.IpfsHash;
+    console.log('Upload response:', JSON.stringify(upload, null, 2));
+
+    const cid = upload.IpfsHash || upload.cid || upload.ipfs_hash;
+    
+    if (!cid) {
+      throw new Error('No CID returned from Pinata');
+    }
     log.success('上传成功！');
     log.success(`CID: ${cid}`);
     console.log('');
