@@ -2,7 +2,7 @@
 
 > 🚀 **主域名 (Cloudflare Pages)**: [https://app.marsliquidity.com](https://app.marsliquidity.com)  
 > 🌐 **备用访问 (Cloudflare Web3 Gateway)**: [https://dapp.marsliquidity.com](https://dapp.marsliquidity.com)  
-> 🪐 **IPFS 去中心化访问**: [https://bafybeif2beh4tkoqfeqsptjdoy6deexyikxx73el5ih5uaylboki5xdevy.ipfs.dweb.link/](https://bafybeif2beh4tkoqfeqsptjdoy6deexyikxx73el5ih5uaylboki5xdevy.ipfs.dweb.link/)
+> 🪐 **IPFS 去中心化访问**: [https://bafybeic6m3yeaz7hyqv6onilsltaswgji35kdcdzhjalwspdx3kq4j4dcm.ipfs.dweb.link/](https://bafybeic6m3yeaz7hyqv6onilsltaswgji35kdcdzhjalwspdx3kq4j4dcm.ipfs.dweb.link/)
 
 Mars Liquid 是一个综合性的跨链 DeFi 协议，集成了收益聚合、DEX 交易、流动性管理和 Solana 智能合约等功能。项目采用现代化的全栈架构，支持多链生态系统，为用户提供一站式的 DeFi 服务。
 
