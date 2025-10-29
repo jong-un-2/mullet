@@ -7,7 +7,6 @@ import {
   initProject,
   setClusterConfig,
   updateGlobalStateParams,
-  setTargetChainMinFee,
   setFeeTiers,
   setInsuranceFeeTiers,
   setProtocolFeeFraction,
@@ -132,30 +131,6 @@ programCommand("set-protocol-fee-fraction")
     await setClusterConfig(env, keypair, rpc);
 
     await setProtocolFeeFraction(numerator, denominator);
-  });
-
-programCommand("set-target-chain-min-fee")
-  .option("-d, --dest_chain_id <number>", "dest chain id")
-  .option("-f, --min_fee <number>", "min fee")
-  .action(async (directory, cmd) => {
-    const { env, keypair, rpc, dest_chain_id, min_fee } = cmd.opts();
-
-    console.log("Solana Cluster:", env);
-    console.log("Keypair Path:", keypair);
-    console.log("RPC URL:", rpc);
-    console.log("Dest Chain ID:", dest_chain_id);
-    console.log("Min Fee:", min_fee);
-    if (dest_chain_id === undefined) {
-      console.log("Error dest chain id");
-      return;
-    }
-    if (min_fee === undefined) {
-      console.log("Error min fee");
-      return;
-    }
-    await setClusterConfig(env, keypair, rpc);
-
-    await setTargetChainMinFee(dest_chain_id, min_fee);
   });
 
 programCommand("get-jito-tip").action(async (directory, cmd) => {

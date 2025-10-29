@@ -159,27 +159,6 @@ export const setProtocolFeeFraction = async (numerator: number, denominator: num
   await execTx(tx, solConnection, payer);
 };
 
-/**
- * Admin can update the threshold amount of the program
- * @param rebalanceThreshold - new threshold amount
- * @param crossChainFeeBps - new cross chain fee bps
- */
-export const setTargetChainMinFee = async (
-  destChainId: number,
-  minFee: number
-) => {
-  const tx = await setTargetChainMinFeeTx(
-    payer.publicKey,
-    program,
-    destChainId,
-    minFee
-  );
-
-  tx.recentBlockhash = (await solConnection.getLatestBlockhash()).blockhash;
-
-  await execTx(tx, solConnection, payer);
-};
-
 
 
 export const getJitoTip = async () => {
