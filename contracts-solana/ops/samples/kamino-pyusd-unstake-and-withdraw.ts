@@ -14,7 +14,7 @@ import {
 import * as fs from "fs";
 import Decimal from "decimal.js/decimal";
 import { HELIUS_RPC, MARS_PROGRAM_ID, KAMINO_V2_PROGRAM, KLEND_PROGRAM, PYUSD_MINT } from "../utils/constants";
-import { KaminoSDKHelper } from "../utils/sdk-helper";
+import { KaminoSDKHelper } from "../utils/kamino-lend-helper";
 
 // 实际的 PYUSD 账户地址
 const PYUSD_ACCOUNT = new PublicKey("DhxxxG3fouc2j9f5AUVqM9M3GHCQydnSeUxXkwJWb3y6");

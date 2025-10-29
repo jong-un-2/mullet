@@ -20,7 +20,7 @@ Mars Vault 是一个基于 Solana 的多协议收益聚合器，作为用户和�
 
 #### 核心特性
 
-- 🔄 **多协议集成**: 支持 Kamino、Lido、Marinade、Jito 等主流协议
+- 🔄 **多协议集成**: 支持 Kamino、Jupiter、Jito 等主流协议
 - 💱 **智能兑换**: 集成 Jupiter 进行最优路由兑换
 - ⚖️ **自动再平衡**: 根据市场条件自动调整资产配置
 - 💰 **收益优化**: 通过分散投资最大化收益率
@@ -29,7 +29,7 @@ Mars Vault 是一个基于 Solana 的多协议收益聚合器，作为用户和�
 #### 技术架构
 
 ```
-用户 → Mars Vault → [Kamino/Lido/其他协议] → 收益生成
+用户 → Mars Vault → [Kamino/Jupiter/其他协议] → 收益生成
          ↕️
     Jupiter 兑换聚合器
 ```

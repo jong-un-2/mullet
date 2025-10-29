@@ -17,7 +17,7 @@ import {
   getAssociatedTokenAddressSync,
   createAssociatedTokenAccountInstruction,
 } from '@solana/spl-token';
-import { KaminoSDKHelper } from './kaminoSdkHelper';
+import { KaminoSDKHelper } from './kaminoLendHelper';
 
 // Mars 合约常量
 const MARS_PROGRAM_ID = new PublicKey("Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9");

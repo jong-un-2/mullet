@@ -14,7 +14,7 @@ import {
   checkPyusdBalance,
   checkSolBalance,
 } from '../services/marsContract';
-import { KaminoSDKHelper } from '../services/kaminoSdkHelper';
+import { KaminoSDKHelper } from '../services/kaminoLendHelper';
 
 export interface TransactionStatus {
   status: 'idle' | 'building' | 'signing' | 'sending' | 'confirming' | 'success' | 'error';
