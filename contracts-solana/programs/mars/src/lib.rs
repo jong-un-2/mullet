@@ -5,14 +5,14 @@
 
 use anchor_lang::prelude::*;
 
-pub mod constant;
+pub mod constants;
 pub mod error;
 pub mod events;
 pub mod instructions;
-pub mod kamino_constants;
 pub mod state;
 pub mod util;
-use constant::*;
+
+use constants::*;
 use error::MarsError;
 use instructions::*;
 use state::*;
@@ -114,15 +114,6 @@ pub mod mars {
         SetFeeTiers::process_instruction(ctx, threshold_amounts.as_ref(), bps_fees.as_ref())
     }
 
-    //  Admin can set target chain min fee
-    pub fn set_target_chain_min_fee(
-        ctx: Context<SetTargetChainMinFee>,
-        dest_chain_id: u32,
-        min_fee: u64,
-    ) -> Result<()> {
-        SetTargetChainMinFee::process_instruction(ctx, dest_chain_id, min_fee)
-    }
-
     //  admin can update threshold amount
     pub fn update_global_state_params(
         ctx: Context<UpdateGlobalStateParams>,
@@ -136,10 +127,6 @@ pub mod mars {
             cross_chain_fee_bps,
             max_order_amount,
         )
-    }
-
-    pub fn remove_bridge_liquidity(ctx: Context<RemoveBridgeLiquidity>, amount: u64) -> Result<()> {
-        RemoveBridgeLiquidity::process_instruction(ctx, amount)
     }
 
     /// 管理员提取 Vault 累积的费用（按类型）
@@ -243,5 +230,33 @@ pub mod mars {
         max_amount: u64,
     ) -> Result<()> {
         handler_kamino_deposit_and_stake(ctx, max_amount)
+    }
+
+    // === Jupiter Lend CPI 指令 ===
+
+    /// Jupiter Lend CPI 调用: 存款到 Jupiter Lend Earn
+    /// 
+    /// 参数:
+    /// - amount: 存款金额（基础单位，如 1 USDC = 1_000_000）
+    /// 
+    /// 账户需要通过 @jup-ag/lend SDK 的 getDepositContext() 方法获取
+    pub fn jupiter_lend_deposit<'info>(
+        ctx: Context<'_, '_, '_, 'info, JupiterLendDepositCPI<'info>>,
+        amount: u64,
+    ) -> Result<()> {
+        jupiter_lend_deposit_cpi(ctx, amount)
+    }
+
+    /// Jupiter Lend CPI 调用: 从 Jupiter Lend Earn 取款
+    ///
+    /// 参数:
+    /// - amount: 取款金额（基础单位，如 1 USDC = 1_000_000）
+    ///
+    /// 账户需要通过 @jup-ag/lend SDK 的 getWithdrawContext() 方法获取
+    pub fn jupiter_lend_withdraw<'info>(
+        ctx: Context<'_, '_, '_, 'info, JupiterLendWithdrawCPI<'info>>,
+        amount: u64,
+    ) -> Result<()> {
+        jupiter_lend_withdraw_cpi(ctx, amount)
     }
 }

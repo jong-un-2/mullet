@@ -1,4 +1,4 @@
-use crate::constant::GLOBAL_SEED;
+use crate::constants::GLOBAL_SEED;
 use crate::error::MarsError;
 use crate::state::*;
 use anchor_lang::prelude::*;
@@ -91,15 +91,15 @@ impl<'info> InitializeVault<'info> {
 
         // 初始化费用配置
         vault_state.fee_config = FeeConfig {
-            deposit_fee_bps: crate::kamino_constants::kamino::DEFAULT_DEPOSIT_FEE_BPS,
-            withdraw_fee_bps: crate::kamino_constants::kamino::DEFAULT_WITHDRAW_FEE_BPS,
-            management_fee_bps: crate::kamino_constants::kamino::DEFAULT_MANAGEMENT_FEE_BPS,
-            performance_fee_bps: crate::kamino_constants::kamino::DEFAULT_PERFORMANCE_FEE_BPS,
+            deposit_fee_bps: crate::constants::DEFAULT_DEPOSIT_FEE_BPS,
+            withdraw_fee_bps: crate::constants::DEFAULT_WITHDRAW_FEE_BPS,
+            management_fee_bps: crate::constants::DEFAULT_MANAGEMENT_FEE_BPS,
+            performance_fee_bps: crate::constants::DEFAULT_PERFORMANCE_FEE_BPS,
             fee_recipient: ctx.accounts.admin.key(),
         };
 
         vault_state.platform_fee_bps = platform_fee_bps;
-        vault_state.max_slippage_bps = crate::kamino_constants::kamino::MAX_SLIPPAGE_BPS;
+        vault_state.max_slippage_bps = crate::constants::MAX_SLIPPAGE_BPS;
 
         // 初始化费用统计
         vault_state.unclaimed_deposit_fee = 0;

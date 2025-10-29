@@ -1,4 +1,4 @@
-use crate::kamino_constants::kamino::KAMINO_PROGRAM_ID;
+use crate::constants::protocols::kamino::PROGRAM_ID as KAMINO_PROGRAM_ID;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::AccountMeta;
 

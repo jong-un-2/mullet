@@ -1,4 +1,4 @@
-use crate::constant::GLOBAL_SEED;
+use crate::constants::GLOBAL_SEED;
 use crate::error::MarsError;
 use crate::state::*;
 use anchor_lang::prelude::*;

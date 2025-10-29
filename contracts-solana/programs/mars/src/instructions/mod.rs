@@ -1,44 +1,11 @@
-pub mod initialize;
-pub use initialize::*;
-pub mod nominate_authority;
-pub use nominate_authority::*;
-pub mod accept_authority;
-pub use accept_authority::*;
-pub mod update_global_state_params;
-pub use update_global_state_params::*;
-pub mod remove_bridge_liquidity;
-pub use remove_bridge_liquidity::*;
-pub mod claim_fees;
-pub use claim_fees::*;
-pub mod add_global_state_authority;
-pub use add_global_state_authority::*;
-pub mod remove_global_state_authority;
-pub use remove_global_state_authority::*;
-pub mod freeze_thaw_global_state;
-pub use freeze_thaw_global_state::*;
-pub mod set_target_chain_min_fee;
-pub use set_target_chain_min_fee::*;
+// === 管理员指令模块 ===
+pub mod admin;
+pub use admin::*;
 
-// === 新增 Vault 指令模块 ===
-pub mod initialize_vault;
-pub use initialize_vault::*;
-pub mod vault_deposit;
-pub use vault_deposit::*;
-pub mod vault_withdraw;
-pub use vault_withdraw::*;
-pub mod set_fee_tiers;
-pub use set_fee_tiers::*;
-pub mod set_protocol_fee_fraction;
-pub use set_protocol_fee_fraction::*;
-pub mod set_insurance_fee_tiers;
-pub use set_insurance_fee_tiers::*;
-pub mod kamino_cpi;
-pub use kamino_cpi::*;
-pub mod kamino_farm;
-pub use kamino_farm::*;
-pub mod claim_farm_rewards;
-pub use claim_farm_rewards::*;
-pub mod update_vault_platform_fee;
-pub use update_vault_platform_fee::*;
-pub mod update_platform_fee_wallet;
-pub use update_platform_fee_wallet::*;
+// === Vault 指令模块 ===
+pub mod vault;
+pub use vault::*;
+
+// === 协议集成模块 ===
+pub mod integrations;
+pub use integrations::*;

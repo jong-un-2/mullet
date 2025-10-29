@@ -14,6 +14,8 @@
     "jupiter:deposit": "ts-node ops/samples/jupiter-lend-deposit.ts",
     "jupiter:withdraw": "ts-node ops/samples/jupiter-lend-withdraw.ts",
     "jupiter:query": "ts-node ops/query/jupiter-query-position.ts",
+    "mars:jupiter:deposit": "ts-node ops/samples/mars-jupiter-lend-cpi-example.ts deposit",
+    "mars:jupiter:withdraw": "ts-node ops/samples/mars-jupiter-lend-cpi-example.ts withdraw",
     "mars:verify:wallet": "ts-node ops/diagnostics/mars-verify-platform-fee-wallet.ts",
     "mars:cli": "ts-node ops/samples/mars-cli-commands.ts"
   },

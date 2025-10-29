@@ -48,7 +48,7 @@ pub struct VaultWithdraw<'info> {
 
     /// Kamino 程序
     /// CHECK: 硬编码程序 ID
-    #[account(constraint = kamino_program.key() == crate::kamino_constants::kamino::KAMINO_PROGRAM_ID)]
+    #[account(constraint = kamino_program.key() == crate::constants::protocols::kamino::PROGRAM_ID)]
     pub kamino_program: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,

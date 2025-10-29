@@ -1,4 +1,4 @@
-use crate::constant::GLOBAL_SEED;
+use crate::constants::GLOBAL_SEED;
 use crate::error::MarsError;
 use crate::state::*;
 use anchor_lang::prelude::*;
@@ -216,7 +216,7 @@ impl<'info> ClaimFarmRewards<'info> {
         // 使用 vault_state 中配置的平台费率（可通过管理指令更新）
         // 如果未设置或为 0，则使用默认值
         let platform_fee_bps: u64 = if ctx.accounts.vault_state.platform_fee_bps == 0 {
-            crate::constant::DEFAULT_PLATFORM_FEE_BPS
+            crate::constants::DEFAULT_PLATFORM_FEE_BPS
         } else {
             ctx.accounts.vault_state.platform_fee_bps as u64
         };

@@ -281,7 +281,7 @@ pub fn handler_kamino_deposit_and_stake<'info>(
     ctx: Context<'_, '_, '_, 'info, KaminoDepositAndStake<'info>>,
     max_amount: u64,
 ) -> Result<()> {
-    use crate::kamino_constants::kamino::KAMINO_PROGRAM_ID;
+    use crate::constants::protocols::kamino::PROGRAM_ID as KAMINO_PROGRAM_ID;
     use anchor_lang::solana_program::instruction::AccountMeta;
 
     msg!("💰 Starting deposit and stake flow, amount: {}", max_amount);
