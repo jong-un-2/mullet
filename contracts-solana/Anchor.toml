@@ -5,33 +5,23 @@ anchor_version = "0.32.1"
 resolution = true
 skip-lint = false
 
-[build]
-cargo_args = ["--release"]
-
 [programs.localnet]
+mars = "9tbZc9Vk7wuq3TWBzZqbWZufZASc3YkQUNB1mGg92LZX"
+
+[programs.mainnet]
 mars = "Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
-wallet = "~/.config/solana/id.json"
+cluster = "localnet"
+wallet = "./phantom-wallet.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
-[programs.mainnet]
-mars = "Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9"
-
-[[test.mars]]
-address = "4sN8PnN2ki2W4TFXAfzR645FWs8nimmsYeNtxM8RBK6A"
-program = "./artifacts/spl_token_faucet.so"
-
-[[test.mars]]
-address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-program = "./artifacts/metadata_program.so"
-
-[[test.mars]]
-address = "556qRmYYuXwFVXYVztx3HvMzePDBchuXMDLBWVzzaG4M"
-program = "./target/deploy/mars.so"
+[test]
+startup_wait = 5000
+shutdown_wait = 2000
+upgradeable = false
