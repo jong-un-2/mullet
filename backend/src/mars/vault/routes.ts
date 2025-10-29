@@ -137,9 +137,11 @@ marsVaultRoutes.post('/calendar',
 
     try {
       const result = await withDrizzle(c.env as HyperdriveEnv, async (db) => {
-        // Calculate date range for the month
+        // Calculate date range for the month (convert to ISO format for PostgreSQL)
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0, 23, 59, 59);
+        const startDateStr = startDate.toISOString();
+        const endDateStr = endDate.toISOString();
 
         // Get all deposits and withdrawals for the month from kamino tables
         const depositsResult = await db.execute(sql`
@@ -152,8 +154,8 @@ marsVaultRoutes.post('/calendar',
           FROM kaminodepositevent
           WHERE "user" = ${userAddress}
             ${vaultAddress ? sql`AND kamino_vault = ${vaultAddress}` : sql``}
-            AND _block_timestamp_ >= ${startDate}
-            AND _block_timestamp_ <= ${endDate}
+            AND _block_timestamp_ >= ${startDateStr}::timestamp
+            AND _block_timestamp_ <= ${endDateStr}::timestamp
         `);
 
         const withdrawalsResult = await db.execute(sql`
@@ -166,8 +168,8 @@ marsVaultRoutes.post('/calendar',
           FROM kaminowithdrawevent
           WHERE "user" = ${userAddress}
             ${vaultAddress ? sql`AND kamino_vault = ${vaultAddress}` : sql``}
-            AND _block_timestamp_ >= ${startDate}
-            AND _block_timestamp_ <= ${endDate}
+            AND _block_timestamp_ >= ${startDateStr}::timestamp
+            AND _block_timestamp_ <= ${endDateStr}::timestamp
         `);
 
         const deposits = Array.from(depositsResult) as any[];
