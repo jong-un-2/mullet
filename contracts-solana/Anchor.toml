@@ -9,7 +9,7 @@ skip-lint = false
 mars = "9tbZc9Vk7wuq3TWBzZqbWZufZASc3YkQUNB1mGg92LZX"
 
 [programs.mainnet]
-mars = "Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9"
+mars = "9tbZc9Vk7wuq3TWBzZqbWZufZASc3YkQUNB1mGg92LZX"
 
 [registry]
 url = "https://api.apr.dev"
