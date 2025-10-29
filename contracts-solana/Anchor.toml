@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-mars = "9tbZc9Vk7wuq3TWBzZqbWZufZASc3YkQUNB1mGg92LZX"
+mars = "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy"
 
 [programs.mainnet]
-mars = "9tbZc9Vk7wuq3TWBzZqbWZufZASc3YkQUNB1mGg92LZX"
+mars = "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy"
 
 [registry]
 url = "https://api.apr.dev"

@@ -76,5 +76,6 @@ test-results/
 # ==================== 
 # Rust specific
 # ====================
-Cargo.lock
+# Cargo.lock is needed for verifiable builds
+# !Cargo.lock
 !programs/*/Cargo.lock
