@@ -30,8 +30,8 @@ async function main() {
   const slotDuration = await getMedianSlotDurationInMsFromLastEpochs();
 
   const kaminoManager = new KaminoManager(rpc, slotDuration);
-  const vault = new KaminoVault(VAULT_ADDRESS as any);
-  const vaultState = await vault.getState(rpc);
+  const vault = new KaminoVault(rpc, VAULT_ADDRESS as any);
+  const vaultState = await vault.getState();
 
   // 获取用户在特定 Vault 的份额（使用 SingleVault 方法避免查询所有 vaults）
   const userSharesForVault = await kaminoManager.getUserSharesBalanceSingleVault(USER_ADDRESS as any, vault);
@@ -43,7 +43,7 @@ async function main() {
 
   // 获取 Vault 信息和价格
   const tokenPrice = new Decimal(1.0); // PYUSD 价格约为 $1
-  const vaultOverview = await kaminoManager.getVaultOverview(vaultState, tokenPrice);
+  const vaultOverview = await kaminoManager.getVaultOverview(vault, tokenPrice);
   
   // 计算关键指标
   const userSharesNum = userSharesForVault.totalShares.toNumber();
@@ -51,7 +51,7 @@ async function main() {
   
   // 获取 APY 分解
   const currentSlot = await rpc.getSlot({ commitment: 'confirmed' }).send();
-  const reservesOverview = await kaminoManager.getVaultReservesDetails(vaultState, currentSlot);
+  const reservesOverview = await kaminoManager.getVaultReservesDetails(vault.state!, currentSlot);
   
   // 计算加权 Lending APY (基础利率)
   let weightedLendingAPY = new Decimal(0);

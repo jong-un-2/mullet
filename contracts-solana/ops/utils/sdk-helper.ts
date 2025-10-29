@@ -100,8 +100,8 @@ export class KaminoSDKHelper {
       signAndSendTransactions: async () => [] as any,
     };
 
-    const vault = new KaminoVault(vaultAddress as any);
-    const vaultState = await vault.getState(this.rpc);
+    const vault = new KaminoVault(this.rpc, vaultAddress as any);
+    const vaultState = await vault.getState();
 
     // 获取存款指令
     const depositIxs = await this.manager.depositToVaultIxs(user, vault, depositAmount);
@@ -155,7 +155,7 @@ export class KaminoSDKHelper {
       signAndSendTransactions: async () => [] as any,
     };
 
-    const vault = new KaminoVault(vaultAddress as any);
+    const vault = new KaminoVault(this.rpc, vaultAddress as any);
     
     // 获取存款指令（包含 stake 指令）
     const depositIxs = await this.manager.depositToVaultIxs(user, vault, depositAmount);
@@ -197,8 +197,8 @@ export class KaminoSDKHelper {
       signAndSendTransactions: async () => [] as any,
     };
 
-    const vault = new KaminoVault(vaultAddress as any);
-    const vaultState = await vault.getState(this.rpc);
+    const vault = new KaminoVault(this.rpc, vaultAddress as any);
+    const vaultState = await vault.getState();
     
     // 获取取款指令（包含 unstake 指令）
     // withdrawFromVaultIxs(user, vault, amount, currentSlot, minAmountOutLamports?, withdrawStack?)
@@ -270,7 +270,7 @@ export class KaminoSDKHelper {
       signAndSendTransactions: async () => [] as any,
     };
 
-    const vault = new KaminoVault(vaultAddress as any);
+    const vault = new KaminoVault(this.rpc, vaultAddress as any);
     
     // 获取取款指令
     const currentSlot = await this.rpc.getSlot().send();
