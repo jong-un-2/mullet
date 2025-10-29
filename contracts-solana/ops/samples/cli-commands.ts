@@ -10,6 +10,7 @@ import {
   getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
 import * as fs from "fs";
+import { HELIUS_RPC, MARS_PROGRAM_ID } from "../utils/constants";
 
 /**
  * Mars Protocol - CLI 命令测试套件
@@ -27,11 +28,11 @@ import * as fs from "fs";
 async function main() {
   console.log("🚀 Mars Protocol - CLI 命令测试套件\n");
   console.log("=" .repeat(60));
-  console.log("测试环境: 本地测试网 (localhost:8899)");
+  console.log("网络环境: Solana 主网 (Helius RPC)");
   console.log("=" .repeat(60) + "\n");
 
-  // 连接到本地测试网
-  const connection = new anchor.web3.Connection("http://127.0.0.1:8899", "confirmed");
+  // 连接到主网 Helius RPC
+  const connection = new anchor.web3.Connection(HELIUS_RPC, "confirmed");
   
   // 加载钱包
   const walletKeypair = Keypair.fromSecretKey(
@@ -43,7 +44,11 @@ async function main() {
   });
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Mars as Program<Mars>;
+  const program = new Program(
+    require("../../target/idl/mars.json"),
+    provider
+  ) as Program<Mars>;
+  
   console.log("✅ Program ID:", program.programId.toString());
   console.log("✅ Wallet:", wallet.publicKey.toString());
   console.log("✅ Balance:", await connection.getBalance(wallet.publicKey) / 1e9, "SOL\n");
@@ -105,58 +110,58 @@ async function main() {
     console.log("=".repeat(60));
     
     console.log("\n🔧 1. 初始化命令");
-    console.log("   npm run script -- init -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899");
+    console.log("   npm run script -- init -k ./phantom-wallet.json");
     
     console.log("\n💰 2. 费用配置命令");
     console.log("   # 设置费用等级");
-    console.log("   npm run script -- set-fee-tiers -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899");
+    console.log("   npm run script -- set-fee-tiers -k ./phantom-wallet.json");
     console.log("\n   # 设置协议费用 (1%)");
-    console.log("   npm run script -- set-protocol-fee-fraction -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899 -n 1 -d 100");
+    console.log("   npm run script -- set-protocol-fee-fraction -k ./phantom-wallet.json -n 1 -d 100");
     
     console.log("\n🏦 3. Vault 管理命令");
     console.log("   # 初始化 Vault");
     console.log("   npm run script -- initialize-vault \\");
-    console.log("     -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899 \\");
+    console.log("     -k ./phantom-wallet.json \\");
     console.log("     --vault_id", usdcMint.toString(), "\\");
     console.log("     --base_token_mint", usdcMint.toString(), "\\");
     console.log("     --shares_mint <SHARES_MINT> \\");
     console.log("     --fee_bps 2500");
     console.log("\n   # 更新平台费率");
     console.log("   npm run script -- update-vault-platform-fee \\");
-    console.log("     -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899 \\");
+    console.log("     -k ./phantom-wallet.json \\");
     console.log("     -m", usdcMint.toString(), "\\");
     console.log("     -f 2000");
     
     console.log("\n💸 4. 费用提取命令");
     console.log("   # 提取所有费用");
     console.log("   npm run script -- claim-all-fees \\");
-    console.log("     -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899 \\");
+    console.log("     -k ./phantom-wallet.json \\");
     console.log("     -v <VAULT_ID>");
     console.log("\n   # 提取指定类型费用");
     console.log("   npm run script -- claim-fees \\");
-    console.log("     -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899 \\");
+    console.log("     -k ./phantom-wallet.json \\");
     console.log("     -v <VAULT_ID> -a 100 -t deposit");
     
     console.log("\n⚙️  5. 全局配置命令");
     console.log("   # 更新全局参数");
     console.log("   npm run script -- update-global-state-params \\");
-    console.log("     -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899 \\");
+    console.log("     -k ./phantom-wallet.json \\");
     console.log("     -rt 80 -cfb 5 -moa 110000000000");
     
     console.log("\n🎯 6. Jito 工具命令");
-    console.log("   npm run script -- get-jito-tip -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899");
+    console.log("   npm run script -- get-jito-tip -k ./phantom-wallet.json");
     
     console.log("\n👤 7. 管理员命令");
     console.log("   # 更改管理员");
     console.log("   npm run script -- change-admin \\");
-    console.log("     -e localnet -k ./phantom-wallet.json -r http://127.0.0.1:8899 \\");
+    console.log("     -k ./phantom-wallet.json \\");
     console.log("     -n <NEW_ADMIN_ADDRESS>");
     console.log("\n   # 接受管理员权限");
     console.log("   npm run script -- accept-authority \\");
-    console.log("     -e localnet -k ./new-admin.json -r http://127.0.0.1:8899");
+    console.log("     -k ./new-admin.json");
     
     console.log("\n" + "=".repeat(60));
-    console.log("📊 测试环境信息");
+    console.log("📊 主网环境信息");
     console.log("=".repeat(60));
     console.log("USDC Mint:     ", usdcMint.toString());
     console.log("Program ID:    ", program.programId.toString());
@@ -169,7 +174,8 @@ async function main() {
     console.log("   2. 然后运行 'set-fee-tiers' 和 'set-protocol-fee-fraction' 配置费用");
     console.log("   3. 最后运行 'initialize-vault' 创建 Vault");
     console.log("   4. 使用 'get-jito-tip' 查询 Jito tip 金额");
-    console.log("   5. 使用 'claim-fees' 提取累积的费用\n");
+    console.log("   5. 使用 'claim-fees' 提取累积的费用");
+    console.log("   ⚠️  注意：这是在主网环境运行，请谨慎操作！\n");
 
   } catch (error) {
     console.error("❌ 错误:", error);
