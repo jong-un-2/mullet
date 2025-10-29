@@ -24,6 +24,7 @@ import {
   createDefaultRpcTransport,
   createRpc,
   createSolanaRpcApi,
+  type Address,
 } from '@solana/kit';
 
 // Vault 配置
@@ -78,7 +79,7 @@ export async function fetchVaultData(
     const farmsClient = new Farms(rpc);
 
     // 4. 加载 Vault 状态
-    const vault = new KaminoVault(rpc, vaultAddress as any);
+    const vault = new KaminoVault(rpc, vaultAddress as Address);
     const vaultState = await vault.getState();
 
     // 5. 获取当前 slot
