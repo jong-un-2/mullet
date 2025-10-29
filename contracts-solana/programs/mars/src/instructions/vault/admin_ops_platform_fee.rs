@@ -30,9 +30,6 @@ impl UpdateVaultPlatformFee<'_> {
 
         vault_state.platform_fee_bps = new_platform_fee_bps;
         vault_state.last_updated = Clock::get()?.unix_timestamp;
-
-        msg!("✅ Platform fee updated for vault");
-        msg!("  Vault mint: {}", vault_state.base_token_mint);
         msg!("  Old fee: {} bps ({}%)", old_fee, old_fee as f64 / 100.0);
         msg!("  New fee: {} bps ({}%)", new_platform_fee_bps, new_platform_fee_bps as f64 / 100.0);
         msg!("  Updated by: {}", ctx.accounts.admin.key());

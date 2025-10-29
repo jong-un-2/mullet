@@ -59,8 +59,6 @@ impl<'info> InitializeVault<'info> {
         vault_id: [u8; 32],
         platform_fee_bps: u16,
     ) -> Result<()> {
-        msg!("🏦 Initializing new vault");
-        msg!("  Vault ID: {:?}", vault_id);
         msg!("  Base token: {}", ctx.accounts.base_token_mint.key());
         msg!("  Admin: {}", ctx.accounts.admin.key());
 
@@ -115,11 +113,7 @@ impl<'info> InitializeVault<'info> {
 
         // 保留字段
         vault_state.reserved = [0u8; 48];
-
-        msg!("✅ Vault initialized successfully");
         msg!("  Platform fee: {} bps ({}%)", platform_fee_bps, platform_fee_bps as f64 / 100.0);
-        msg!("  Vault bump: {}", bump);
-
         Ok(())
     }
 }
