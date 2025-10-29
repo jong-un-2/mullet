@@ -241,3 +241,42 @@ export type NewMarsVaultState = typeof marsVaultStates.$inferInsert;
 
 export type MarsUserPosition = typeof marsUserPositions.$inferSelect;
 export type NewMarsUserPosition = typeof marsUserPositions.$inferInsert;
+
+// ============================================================
+// Kamino Vault Historical Data - APY and TVL tracking
+// ============================================================
+
+/**
+ * Vault Historical Data - Kamino Vault APY and TVL snapshots
+ * Records historical lending APY, incentives APY, and TVL data for Kamino vaults
+ */
+export const vaultHistoricalData = pgTable('vault_historical_data', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  vaultAddress: text('vault_address').notNull(),
+  recordedAt: timestamp('recorded_at').notNull().defaultNow(),
+  
+  // APY data
+  lendingApy: decimal('lending_apy', { precision: 10, scale: 6 }).notNull(),
+  incentivesApy: decimal('incentives_apy', { precision: 10, scale: 6 }).notNull(),
+  totalApy: decimal('total_apy', { precision: 10, scale: 6 }).notNull(),
+  
+  // TVL data
+  totalSupplied: decimal('total_supplied', { precision: 20, scale: 6 }).notNull(),
+  totalSuppliedUsd: decimal('total_supplied_usd', { precision: 20, scale: 2 }).notNull(),
+  
+  // Token information
+  tokenSymbol: text('token_symbol').notNull(),
+  
+  // Additional metadata
+  slotNumber: decimal('slot_number', { precision: 20, scale: 0 }),
+  metadata: text('metadata'), // JSON string for additional data
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  vaultRecordedIdx: index('idx_vault_historical_vault_recorded').on(table.vaultAddress, table.recordedAt),
+  recordedIdx: index('idx_vault_historical_recorded').on(table.recordedAt),
+  vaultTokenIdx: index('idx_vault_historical_vault_token').on(table.vaultAddress, table.tokenSymbol, table.recordedAt),
+}));
+
+export type VaultHistoricalData = typeof vaultHistoricalData.$inferSelect;
+export type NewVaultHistoricalData = typeof vaultHistoricalData.$inferInsert;
