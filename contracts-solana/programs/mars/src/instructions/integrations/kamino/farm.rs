@@ -43,43 +43,27 @@ pub fn handler_kamino_stake_in_farm(
     ctx: Context<KaminoStakeInFarm>,
     shares_amount: u64,
 ) -> Result<()> {
-    msg!("🌾 Starting stake to Kamino Farm, amount: {}", shares_amount);
-
-    // 构造 CPI 账户
     let cpi_accounts = vec![
-        AccountMeta::new_readonly(ctx.accounts.user.key(), true), // 0: user (signer)
-        AccountMeta::new(ctx.accounts.farm_state.key(), false),   // 1: farm_state (writable)
-        AccountMeta::new(ctx.accounts.user_farm.key(), false),    // 2: user_farm (writable)
-        AccountMeta::new(ctx.accounts.delegated_stake.key(), false), // 3: delegated_stake (writable)
-        AccountMeta::new(ctx.accounts.user_shares_ata.key(), false), // 4: user_shares_ata (writable)
-        AccountMeta::new_readonly(ctx.accounts.shares_mint.key(), false), // 5: shares_mint (readonly)
-        AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false), // 6: farms_program (readonly)
-        AccountMeta::new_readonly(ctx.accounts.token_program.key(), false), // 7: token_program (readonly)
+        AccountMeta::new_readonly(ctx.accounts.user.key(), true),
+        AccountMeta::new(ctx.accounts.farm_state.key(), false),
+        AccountMeta::new(ctx.accounts.user_farm.key(), false),
+        AccountMeta::new(ctx.accounts.delegated_stake.key(), false),
+        AccountMeta::new(ctx.accounts.user_shares_ata.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.shares_mint.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),
     ];
 
-    msg!("📋 Preparing {} accounts", cpi_accounts.len());
-
-    // Build instruction data
-    // Farms stake instruction: discriminator (8 bytes) + amount (8 bytes)
     let mut instruction_data = vec![0u8; 16];
-
-    // Kamino Farms stake discriminator (从SDK获取)
-    // Hex: ceb0ca12c8d1b36c
     instruction_data[0..8].copy_from_slice(&[0xce, 0xb0, 0xca, 0x12, 0xc8, 0xd1, 0xb3, 0x6c]);
-
-    // Amount: u64::MAX 表示质押全部 shares
     instruction_data[8..16].copy_from_slice(&shares_amount.to_le_bytes());
 
-    // 创建 CPI 指令
     let stake_ix = solana_program::instruction::Instruction {
         program_id: ctx.accounts.farms_program.key(),
         accounts: cpi_accounts,
         data: instruction_data,
     };
 
-    msg!("🚀 Executing CPI call to Kamino Farms");
-
-    // 执行 CPI
     solana_program::program::invoke(
         &stake_ix,
         &[
@@ -93,8 +77,6 @@ pub fn handler_kamino_stake_in_farm(
             ctx.accounts.token_program.to_account_info(),
         ],
     )?;
-
-    msg!("✅ Stake successful!");
 
     Ok(())
 }
@@ -140,35 +122,24 @@ pub struct KaminoUnstakeFromFarm<'info> {
 }
 
 pub fn handler_kamino_unstake_from_farm(ctx: Context<KaminoUnstakeFromFarm>) -> Result<()> {
-    msg!("🌾 Starting unstake from Kamino Farm");
-
-    // 构造 CPI 账户（7个账户）
     let cpi_accounts = vec![
-        AccountMeta::new(ctx.accounts.user.key(), true), // 0: user (signer+writable)
-        AccountMeta::new(ctx.accounts.farm_state.key(), false), // 1: farm_state (writable)
-        AccountMeta::new(ctx.accounts.user_farm.key(), false), // 2: user_farm (writable)
-        AccountMeta::new(ctx.accounts.user_shares_ata.key(), false), // 3: user_shares_ata (writable)
-        AccountMeta::new(ctx.accounts.delegated_stake.key(), false), // 4: delegated_stake (writable)
-        AccountMeta::new_readonly(ctx.accounts.scope_prices.key(), false), // 5: scope_prices (readonly)
-        AccountMeta::new_readonly(ctx.accounts.token_program.key(), false), // 6: token_program (readonly)
+        AccountMeta::new(ctx.accounts.user.key(), true),
+        AccountMeta::new(ctx.accounts.farm_state.key(), false),
+        AccountMeta::new(ctx.accounts.user_farm.key(), false),
+        AccountMeta::new(ctx.accounts.user_shares_ata.key(), false),
+        AccountMeta::new(ctx.accounts.delegated_stake.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.scope_prices.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),
     ];
 
-    msg!("📋 Preparing {} accounts", cpi_accounts.len());
+    let instruction_data = vec![0x24, 0x66, 0xbb, 0x31, 0xdc, 0x24, 0x84, 0x43];
 
-    // Build instruction data
-    // Farms unstake instruction: discriminator (8 bytes)
-    let instruction_data = vec![0x24, 0x66, 0xbb, 0x31, 0xdc, 0x24, 0x84, 0x43]; // unstake discriminator
-
-    msg!("🚀 Executing CPI call to Kamino Farms unstake");
-
-    // 创建 CPI 指令
     let unstake_ix = solana_program::instruction::Instruction {
         program_id: ctx.accounts.farms_program.key(),
         accounts: cpi_accounts,
         data: instruction_data,
     };
 
-    // 执行 CPI
     solana_program::program::invoke(
         &unstake_ix,
         &[
@@ -181,8 +152,6 @@ pub fn handler_kamino_unstake_from_farm(ctx: Context<KaminoUnstakeFromFarm>) -> 
             ctx.accounts.token_program.to_account_info(),
         ],
     )?;
-
-    msg!("✅ Unstake successful!");
 
     Ok(())
 }
@@ -283,12 +252,7 @@ pub fn handler_kamino_deposit_and_stake<'info>(
 ) -> Result<()> {
     use crate::constants::protocols::kamino::PROGRAM_ID as KAMINO_PROGRAM_ID;
     use anchor_lang::solana_program::instruction::AccountMeta;
-
-    msg!("💰 Starting deposit and stake flow, amount: {}", max_amount);
-
     // ===== 第一步：存款到 Kamino Vault =====
-    msg!("📥 Step 1: Deposit to Vault");
-
     // 构建存款账户数组
     let mut deposit_accounts = vec![
         AccountMeta::new(ctx.accounts.user.key(), true),
@@ -350,11 +314,7 @@ pub fn handler_kamino_deposit_and_stake<'info>(
 
     // Execute deposit CPI
     anchor_lang::solana_program::program::invoke(&deposit_ix, &deposit_account_infos)?;
-    msg!("✅ Deposit successful");
-
     // ===== Step 2: Stake to Farm =====
-    msg!("🌾 Step 2: Stake to Farm");
-
     let stake_accounts = vec![
         AccountMeta::new_readonly(ctx.accounts.user.key(), true),
         AccountMeta::new(ctx.accounts.farm_state.key(), false),
@@ -391,10 +351,6 @@ pub fn handler_kamino_deposit_and_stake<'info>(
             ctx.accounts.farm_token_program.to_account_info(), // Use farm-specific token program
         ],
     )?;
-
-    msg!("✅ Stake successful");
-    msg!("🎉 Deposit and stake completed!");
-
     Ok(())
 }
 
@@ -425,10 +381,6 @@ pub fn handler_kamino_start_unstake_from_farm(
     shares_amount: u64,
     current_slot: u64,
 ) -> Result<()> {
-    msg!("🌾 Starting Farm unstake request");
-    msg!("  Amount: {}", shares_amount);
-    msg!("  Slot: {}", current_slot);
-
     // 构造 CPI 账户（4个账户）
     let cpi_accounts = vec![
         AccountMeta::new(ctx.accounts.user.key(), true), // 0: user (signer+writable)
@@ -451,9 +403,6 @@ pub fn handler_kamino_start_unstake_from_farm(
 
     // Slot (u64)
     instruction_data[16..24].copy_from_slice(&current_slot.to_le_bytes());
-
-    msg!("🚀 Executing CPI call to Kamino Farms StartUnstake");
-
     // 创建 CPI 指令
     let start_unstake_ix = solana_program::instruction::Instruction {
         program_id: ctx.accounts.farms_program.key(),
@@ -470,8 +419,5 @@ pub fn handler_kamino_start_unstake_from_farm(
             ctx.accounts.user_farm.to_account_info(),
         ],
     )?;
-
-    msg!("✅ StartUnstake successful!");
-
     Ok(())
 }

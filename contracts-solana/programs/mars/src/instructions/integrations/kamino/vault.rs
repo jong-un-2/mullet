@@ -141,8 +141,6 @@ pub fn kamino_deposit_cpi<'info>(
     ctx: Context<'_, '_, '_, 'info, KaminoDepositCPI<'info>>,
     max_amount: u64,
 ) -> Result<()> {
-    msg!("🚀 Starting Kamino deposit CPI call, amount: {}", max_amount);
-
     // 验证Kamino程序ID
     require_eq!(
         ctx.accounts.kamino_vault_program.key(),
@@ -234,8 +232,6 @@ pub fn kamino_deposit_cpi<'info>(
 
     // 执行CPI调用
     anchor_lang::solana_program::program::invoke(&ix, &account_infos)?;
-
-    msg!("✅ Kamino deposit CPI call successful");
     Ok(())
 }
 
@@ -259,8 +255,6 @@ pub fn kamino_withdraw_cpi<'info>(
     ctx: Context<'_, '_, '_, 'info, KaminoWithdrawCPI<'info>>,
     max_amount: u64,
 ) -> Result<()> {
-    msg!("🚀 Starting Kamino withdraw CPI call, max amount: {}", max_amount);
-
     // 验证Kamino程序ID
     require_eq!(
         ctx.accounts.kamino_vault_program.key(),
@@ -344,8 +338,6 @@ pub fn kamino_withdraw_cpi<'info>(
     }
 
     anchor_lang::solana_program::program::invoke(&ix, &account_infos)?;
-
-    msg!("✅ Kamino withdraw CPI call successful");
     Ok(())
 }
 

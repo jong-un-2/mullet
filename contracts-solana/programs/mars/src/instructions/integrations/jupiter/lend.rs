@@ -118,8 +118,6 @@ pub fn jupiter_lend_deposit_cpi<'info>(
     ctx: Context<'_, '_, '_, 'info, JupiterLendDepositCPI<'info>>,
     amount: u64,
 ) -> Result<()> {
-    msg!("🚀 Starting Jupiter Lend deposit CPI call, amount: {}", amount);
-
     // 验证 Jupiter Lend 程序 ID
     require_eq!(
         ctx.accounts.jupiter_lend_program.key(),
@@ -178,8 +176,6 @@ pub fn jupiter_lend_deposit_cpi<'info>(
 
     // 执行 CPI 调用
     anchor_lang::solana_program::program::invoke(&ix, &account_infos)?;
-
-    msg!("✅ Jupiter Lend deposit CPI call successful");
     Ok(())
 }
 
@@ -197,8 +193,6 @@ pub fn jupiter_lend_withdraw_cpi<'info>(
     ctx: Context<'_, '_, '_, 'info, JupiterLendWithdrawCPI<'info>>,
     amount: u64,
 ) -> Result<()> {
-    msg!("🚀 Starting Jupiter Lend withdraw CPI call, amount: {}", amount);
-
     // 验证 Jupiter Lend 程序 ID
     require_eq!(
         ctx.accounts.jupiter_lend_program.key(),
@@ -254,8 +248,6 @@ pub fn jupiter_lend_withdraw_cpi<'info>(
     ];
 
     anchor_lang::solana_program::program::invoke(&ix, &account_infos)?;
-
-    msg!("✅ Jupiter Lend withdraw CPI call successful");
     Ok(())
 }
 
