@@ -49,7 +49,7 @@ echo ""
 # Build the Docker image
 docker build -t mars-substreams:test \
     --build-arg RUST_LOG=info \
-    --build-arg START_BLOCK=372182088 \
+    --build-arg START_BLOCK=376601697 \
     -f Dockerfile \
     . 2>&1 | tail -30
 

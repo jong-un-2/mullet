@@ -36,15 +36,21 @@ Mars Vault 是一个基于 Solana 的多协议收益聚合器，作为用户和�
 
 #### 当前版本信息
 
-**主网部署 (V3)**
-- **程序ID**: `AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8`
+**主网部署 (V4 - Verified ✅)**
+- **程序ID**: `G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy`
 - **网络**: Solana Mainnet Beta
-- **部署时间**: 2025-10-01 21:45
-- **程序大小**: 494KB (506,000 bytes)
+- **部署时间**: 2025-10-30
+- **部署 Slot**: 376601697
+- **程序大小**: 569,920 bytes (556 KB)
+- **验证状态**: ✅ 已通过 Otter Sec 验证
+- **验证哈希**: `79fa6337a7f2c46395eba95ce26ef3afe949976600b340a729a741bce38745be`
+- **IDL Account**: `EWGvoVaGwvBuQBwfqkz21wzCBSc1EZ4yiCDxEP78mnvC`
+- **Security Metadata**: `54u2wtC2aEemHEmorJieZT7X3WL8sFKk4rnpriyADuE5`
 - **新特性**: 
   - ✨ 支持 Token-2022 (可处理 PYUSD 等新型代币)
   - ✨ 支持 Kamino Vault remaining_accounts (reserves + lending markets)
   - ✨ 重命名为 KaminoDepositCPI（更简洁的命名）
+  - ✨ 完全可验证的构建流程
 
 **Kamino 集成**
 - **Kamino Vault 程序ID (V2)**: `KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd`
@@ -380,7 +386,7 @@ solana program deploy ./target/deploy/mars.so \
 **预期输出：**
 ```
 Deploying... This may take a while.
-Deployment successful. Program Id: AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+Deployment successful. Program Id: G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 ```
 
 #### 步骤 4: 清理旧的 Buffer（可选）
@@ -419,24 +425,24 @@ solana-keygen pubkey ./target/deploy/mars-keypair.json
 
 **输出示例：**
 ```
-AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 ```
 
 ### 步骤 2: 更新配置文件
 
-假设新程序 ID 为 `AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8`：
+假设新程序 ID 为 `G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy`：
 
 #### a. `Anchor.toml`
 
 ```toml
 [programs.mainnet]
-mars = "AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8"
+mars = "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy"
 
 [programs.devnet]
-mars = "AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8"
+mars = "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy"
 
 [programs.localnet]
-mars = "AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8"
+mars = "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy"
 ```
 
 #### b. `programs/mars/src/lib.rs`
@@ -444,7 +450,7 @@ mars = "AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8"
 ```rust
 use anchor_lang::prelude::*;
 
-declare_id!("AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8");
+declare_id!("G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy");
 
 #[program]
 pub mod mars {
@@ -459,7 +465,7 @@ pub mod mars {
 import { PublicKey } from "@solana/web3.js";
 
 export const MARS_PROGRAM_ID = new PublicKey(
-  "AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8"
+  "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy"
 );
 ```
 
@@ -467,7 +473,7 @@ export const MARS_PROGRAM_ID = new PublicKey(
 
 ```rust
 // Mars Program ID
-const MARS_PROGRAM_ID: &str = "AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8";
+const MARS_PROGRAM_ID: &str = "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy";
 ```
 
 ### 步骤 3: 重新构建
@@ -485,7 +491,7 @@ cat target/idl/mars.json | jq '.metadata.address'
 
 **预期输出：**
 ```
-"AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8"
+"G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy"
 ```
 
 ### 步骤 4: 上传 IDL 到链上（推荐）
@@ -494,12 +500,12 @@ cat target/idl/mars.json | jq '.metadata.address'
 # 初始化 IDL
 anchor idl init \
   --filepath target/idl/mars.json \
-  AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+  G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 
 # 或更新已存在的 IDL
 anchor idl upgrade \
   --filepath target/idl/mars.json \
-  AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+  G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 ```
 
 ### 步骤 5: Mainnet 初始化和配置
@@ -509,16 +515,34 @@ anchor idl upgrade \
 #### a. 初始化全局状态
 
 ```bash
+# 基础初始化（平台费用钱包默认为 admin）
 npm run script init -- \
   --env mainnet \
   --keypair ./phantom-wallet.json \
   --rpc "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
+
+# 或指定特定的平台费用钱包
+npm run script init -- \
+  --env mainnet \
+  --keypair ./phantom-wallet.json \
+  --rpc "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3" \
+  --platform-fee-wallet A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6
 ```
+
+**参数说明：**
+- `--platform-fee-wallet`: (可选) 平台费用接收钱包地址，默认为 admin 地址
 
 **输出示例：**
 ```
-Global State PDA: 8MLg352JHqDZPffN4aWTND6qXrGWGh9Jm1EcHJgShDGh
-Transaction: 3uoVeBisGg3nBKQ3B22pagJ4iP2VyYBqkx9qWqQTkBLt...
+Solana Cluster: mainnet
+Keypair Path: ./phantom-wallet.json
+RPC URL: https://mainnet.helius-rpc.com/?api-key=***
+Platform Fee Wallet: A7iVLhNhLNaH4q8SZAZVceLUVowisGncQ9gwHVZKc8j6
+globalState: 8MLg352JHqDZPffN4aWTND6qXrGWGh9Jm1EcHJgShDGh
+vault: CZPqsuXXkFNZPE5cKHJUZQvLq8JVPsyD3kMRPXMnFJcZ
+ataVault: BxF9m8Y3oPJTyNqHbqfJQ5jU4mNVPjWrQxCy9wL5ZsDH
+✅ Transaction successful!
+Transaction Signature: 3uoVeBisGg3nBKQ3B22pagJ4iP2VyYBqkx9qWqQTkBLt...
 ```
 
 **说明：**
@@ -675,12 +699,12 @@ chmod +x initialize-mainnet.sh
 ### 1. 查看程序信息
 
 ```bash
-solana program show AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+solana program show G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 ```
 
 **输出示例：**
 ```
-Program Id: AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+Program Id: G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 Owner: BPFLoaderUpgradeab1e11111111111111111111111
 ProgramData Address: 8kXxxxx...
 Authority: 4AiFD35M6ZmddV9BbG6mKxvABMq8aeqz4usJSsT7c17w
@@ -692,24 +716,24 @@ Balance: 3.52394856 SOL
 ### 2. 查看程序账户余额
 
 ```bash
-solana balance AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+solana balance G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 ```
 
 ### 3. 在 Solana Explorer 查看
 
 **Mainnet:**
 ```
-https://explorer.solana.com/address/AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8?cluster=mainnet
+https://explorer.solana.com/address/G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy?cluster=mainnet
 ```
 
 **Devnet:**
 ```
-https://explorer.solana.com/address/AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8?cluster=devnet
+https://explorer.solana.com/address/G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy?cluster=devnet
 ```
 
 **Solscan:**
 ```
-https://solscan.io/account/AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+https://solscan.io/account/G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 ```
 
 ### 4. 测试程序调用
@@ -814,7 +838,7 @@ Error: IDL does not match deployed program
 # 更新链上 IDL
 anchor idl upgrade \
   --filepath target/idl/mars.json \
-  AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8
+  G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy
 ```
 
 ### 6. 权限不足
@@ -947,21 +971,21 @@ solana program show <PROGRAM_ID>
 
 ## 版本更新历史
 
-### V3 (2025-10-01 21:45) - Current ✅
-- **程序ID**: `AU5u98eeW17LZSPPd47BY3fYBeCZBCYc2nonBmmor5s8`
+### V4 (Verified) (2025-10-30 21:45) - Current ✅
+- **程序ID**: `G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy`
 - **新特性**: 
   - ✨ 支持 Kamino Vault remaining_accounts
   - ✨ 重命名为 KaminoDepositCPI
 - **升级说明**: 从 V2 升级，关闭旧程序回收 3.52 SOL
 
-### V2 (2025-10-01 20:30) - Deprecated
+### V2 (2025-10-30 20:30) - Deprecated
 - **程序ID**: `BFw4j7oRUpS19jGfnTSw9HiW4MVyKh1z1U2dvh7CtLN9`
 - **新特性**: 
   - ✨ 支持 Token-2022 程序
   - ✨ PYUSD 等新型代币支持
 - **状态**: 已关闭，租金已回收
 
-### V1 (2025-10-01 19:50) - Deprecated
+### V1 (2025-10-30 19:50) - Deprecated
 - **程序ID**: `FA11bwhCyQA1xqKGv9c9VuSYiWB6EJTeupbYpJwEtvJY`
 - **新特性**: 
   - ✨ 更新为 Kamino V2 程序ID

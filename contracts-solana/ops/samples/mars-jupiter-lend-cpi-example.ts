@@ -29,8 +29,8 @@ import path from "path";
 // Jupiter Lend 程序 ID
 const JUPITER_LEND_PROGRAM_ID = new PublicKey("jup3YeL8QhtSx1e253b2FDvsMNC87fDrgQZivbrndc9");
 
-// Mars Protocol 程序 ID
-const MARS_PROGRAM_ID = new PublicKey("Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9");
+// Mars Protocol 程序 ID (Verified deployment - Slot 376601697)
+const MARS_PROGRAM_ID = new PublicKey("G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy");
 
 // USDC Mint
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");

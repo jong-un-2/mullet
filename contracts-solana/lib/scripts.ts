@@ -238,62 +238,6 @@ export const setProtocolFeeFractionTx = async (
   return tx;
 };
 
-export const setTargetChainMinFeeTx = async (
-  admin: PublicKey,
-  program: Program<Mars>,
-  destChainId: number,
-  minFee: number
-) => {
-  const tx = new Transaction();
-  tx.add(
-    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 })
-  ).add(
-    await program.methods
-      .setTargetChainMinFee(destChainId, new BN(minFee))
-      .accounts({ admin, usdcMint: USDC_ADDRESS })
-      .transaction()
-  );
-
-  tx.feePayer = admin;
-
-  return tx;
-};
-
-export const removeBridgeLiquidityTx = async (
-  admin: PublicKey,
-  amount: number,
-  program: Program<Mars>
-) => {
-  const ataAdmin = getAssociatedTokenAccount(admin, USDC_ADDRESS);
-  console.log("ataAdmin: ", ataAdmin.toBase58());
-
-  const [globalState, bump] = PublicKey.findProgramAddressSync(
-    [Buffer.from(GLOBAL_STATE_SEED)],
-    program.programId
-  );
-  console.log("globalState: ", globalState.toBase58());
-
-  const [vault, _] = PublicKey.findProgramAddressSync(
-    [Buffer.from(VAULT_SEED)],
-    program.programId
-  );
-  console.log("vault: ", vault.toBase58());
-
-  const ataVault = getAssociatedTokenAccount(vault, USDC_ADDRESS);
-  console.log("ataVault: ", ataVault.toBase58());
-
-  const tx = await program.methods
-    .removeBridgeLiquidity(new BN(amount * 1_000_000))
-    .accounts({
-      admin: admin,
-    })
-    .transaction();
-
-  tx.feePayer = admin;
-
-  return tx;
-};
-
 // export const createOrderTx = async (
 //   user: PublicKey,
 //   orchestrator: PublicKey,

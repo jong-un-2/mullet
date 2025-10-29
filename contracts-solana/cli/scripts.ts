@@ -12,7 +12,6 @@ import {
   changeAdminTx,
   createInitializeTx,
   updateGlobalStateParamsTx,
-  setTargetChainMinFeeTx,
   setFeeTiersTx,
   setInsuranceFeeTiersTx,
   setProtocolFeeFractionTx,

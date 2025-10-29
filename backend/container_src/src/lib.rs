@@ -5,7 +5,7 @@ use substreams::prelude::*;
 use substreams::Hex;
 use substreams_solana::pb::sf::solana::r#type::v1::Block;
 
-const MARS_PROGRAM_ID: &str = "Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9";
+const MARS_PROGRAM_ID: &str = "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy";
 
 // Kamino Vaults Program ID (V2 - Current Mainnet Version)
 // V1 (Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE) is deprecated

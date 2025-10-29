@@ -10,7 +10,7 @@ import MarsIDL from '@/idl/mars.json';
 const { Title, Text, Paragraph } = Typography;
 
 // 智能合约常量
-const PROGRAM_ID = new PublicKey('Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9');
+const PROGRAM_ID = new PublicKey('G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy');
 const VAULT_ID = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK'); // Kamino PYUSD Vault
 const PYUSD_MINT = new PublicKey('2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo');
 

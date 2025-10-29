@@ -57,7 +57,7 @@ export class SubstreamsIndexerContainer extends Container {
           "--final-blocks-only",
           "--on-module-hash-mistmatch=warn",
           "--undo-buffer-size=12",
-          `--start-block=${config.startBlock || 370500000}`,
+          `--start-block=${config.startBlock || 376601697}`,
           "graph_out"
         ],
         env: {

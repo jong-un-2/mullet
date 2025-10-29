@@ -101,7 +101,7 @@ EXPOSE 9102
 # Accept non-sensitive build arguments from wrangler.toml [containers.image_vars]
 ARG RUST_LOG=debug
 ARG SUBSTREAMS_ENDPOINT=mainnet.sol.streamingfast.io:443
-ARG START_BLOCK=372182088
+ARG START_BLOCK=376601697
 ARG OUTPUT_MODULE=map_vault_events
 
 # Run as non-root user

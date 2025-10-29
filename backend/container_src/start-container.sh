@@ -35,7 +35,7 @@ if [ -z "$SUBSTREAMS_ENDPOINT" ]; then
 fi
 
 if [ -z "$START_BLOCK" ]; then
-    export START_BLOCK="370500000"
+    export START_BLOCK="376601697"
 fi
 
 if [ -z "$OUTPUT_MODULE" ]; then

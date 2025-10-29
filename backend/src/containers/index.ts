@@ -45,7 +45,7 @@ export function createIndexerRoutes() {
         databaseUrl,
         endpoint: c.env.SUBSTREAMS_ENDPOINT || 'mainnet.sol.streamingfast.io:443',
         jwtToken: c.env.SUBSTREAMS_JWT_TOKEN || '',
-        startBlock: 370500000
+        startBlock: 376601697
       });
       
       return c.json({

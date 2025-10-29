@@ -13,8 +13,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# 配置
-START_BLOCK=${START_BLOCK:-374121131}
+# 配置 - Mars Program 部署 slot: 376601697 (Oct 30, 2025)
+START_BLOCK=${START_BLOCK:-376601697}
 DEPLOYMENT_TYPE=${1:-"postgres"}  # postgres, docker
 
 # 检查环境

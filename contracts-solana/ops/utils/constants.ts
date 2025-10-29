@@ -1,5 +1,5 @@
 // Mars 项目主网常量配置
-// 最后更新: 2025-10-20 (New verified deployment)
+// 最后更新: 2025-10-30 (Verified deployment - Slot 376601697)
 
 import { PublicKey } from "@solana/web3.js";
 
@@ -9,7 +9,7 @@ import { PublicKey } from "@solana/web3.js";
 
 // Program ID (from declare_id! macro)
 export const MARS_PROGRAM_ID = new PublicKey(
-  "Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9"
+  "G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoMvKy"
 );
 
 // Kamino 集成
