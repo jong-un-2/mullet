@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmars_admin=self.webpackChunkmars_admin||[]).push([[2571],{9826:function(t,n,r){r.r(n);var s=r(21836),e=r(29905),u=r(83622),i=(r(67294),r(85893));n.default=function(){return(0,i.jsx)(e.ZP,{status:"404",title:"404",subTitle:"抱歉，您访问的页面不存在。",extra:(0,i.jsx)(u.ZP,{type:"primary",onClick:function(){return s.history.push("/")},children:"返回首页"})})}}}]);

@@ -1,0 +1,206 @@
+# Mars Liquid Project - Global .gitignore
+
+# ==================== 
+# Node.js & NPM
+# ====================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.npm
+.yarn
+.pnpm-debug.log*
+
+# ==================== 
+# Environment Files
+# ====================
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# ==================== 
+# Build Outputs
+# ====================
+dist/
+dist-ssr/
+build/
+out/
+*.tsbuildinfo
+coverage/
+.nyc_output
+
+# ==================== 
+# Solana & Anchor
+# ====================
+.anchor/
+target/
+test-ledger/
+**/*.rs.bk
+*.so
+deploy-keypair.json
+validator-keypair.json
+
+# Anchor generated files
+programs/**/target/
+programs/**/*.so
+
+# Solana CLI generated files
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!Anchor.toml
+
+# ==================== 
+# Cloudflare Workers
+# ====================
+.wrangler/
+wrangler.toml
+!wrangler.example.toml
+
+# ==================== 
+# Frontend Build Tools
+# ====================
+# Vite
+.vite/
+vite.config.ts.timestamp-*
+
+# Next.js
+.next/
+next-env.d.ts
+
+# Vercel
+.vercel/
+
+# ==================== 
+# Database & Cache
+# ====================
+*.db
+*.sqlite
+*.sqlite3
+.cache/
+redis-dump.rdb
+
+# ==================== 
+# The Graph & Substreams
+# ====================
+graph_data/
+generated/
+subgraph.yaml
+!subgraph.template.yaml
+build/
+matchstick_output/
+
+# ==================== 
+# Development Tools
+# ====================
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ==================== 
+# System Files
+# ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.tmp
+*.temp
+
+# ==================== 
+# Logs & Debug
+# ====================
+logs/
+*.log
+debug.log
+error.log
+combined.log
+
+# ==================== 
+# Testing
+# ====================
+coverage/
+.coverage
+.nyc_output
+junit.xml
+test-results/
+playwright-report/
+test-results.xml
+
+# ==================== 
+# Security & Keys
+# ====================
+# Private keys (be extra careful!)
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# API keys and secrets
+secrets.json
+.secrets
+
+# ==================== 
+# Deployment & CI/CD
+# ====================
+.github/workflows/*.yml
+!.github/workflows/ci.yml
+!.github/workflows/release.yml
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# ==================== 
+# Package Managers
+# ====================
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# PNPM
+.pnpm-store/
+
+# ==================== 
+# Miscellaneous
+# ====================
+.todo
+.notes
+*.backup
+*.bak
+*.swp
+*.swo
+*~
+
+# ==================== 
+# Submodules (not tracked)
+# ====================
+klend-sdk/
+kliquidity-sdk/

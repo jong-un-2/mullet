@@ -1,0 +1,107 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-error.log
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+.wrangler/
+*.tsbuildinfo
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Environment and config
+.env
+.env.local
+.env.production
+.env.development
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Test results
+test-results/
+coverage/
+
+# ==================== 
+# Cloudflare Workers Specific
+# ====================
+.wrangler/
+wrangler.toml
+!wrangler.example.toml
+
+# D1 Database
+*.db
+*.sqlite
+*.sqlite3
+
+# KV namespace data
+kv-data/
+
+# R2 bucket local storage
+r2-local/
+
+# Worker deployment artifacts
+worker-*.js
+worker-*.js.map
+
+# ==================== 
+# Drizzle ORM
+# ====================
+drizzle/migrations/
+!drizzle/0000_*.sql
+
+# Database schema snapshots
+drizzle/meta/*.json
+!drizzle/meta/_journal.json
+
+# ==================== 
+# The Graph Indexer
+# ====================
+indexer/generated/
+indexer/build/
+indexer/graph_data/
+indexer/matchstick_output/
+indexer/subgraph.yaml
+!indexer/subgraph.template.yaml
+!indexer/subgraph.bsc.yaml
+!indexer/subgraph.bsc-testnet.yaml
+
+# ==================== 
+# API Keys & Secrets
+# ====================
+.secrets/
+api-keys.json
+auth-tokens.json
+
+# ==================== 
+# Performance & Monitoring
+# ====================
+performance-reports/
+monitoring-logs/
+metrics/
