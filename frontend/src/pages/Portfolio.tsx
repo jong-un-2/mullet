@@ -16,6 +16,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import Navigation from '../components/Navigation';
 
 import { getUserWalletAddress, useMarsUserPositions } from '../hooks/useMarsApi';
+import { useKaminoPositions } from '../hooks/useKaminoPositions';
 
 const PortfolioPage = () => {
   const { address } = useAccount();
@@ -30,21 +31,51 @@ const PortfolioPage = () => {
   
   // Get Mars user positions
   const { positions, loading: isLoading } = useMarsUserPositions(userWalletAddress);
+  
+  // Get Kamino liquidity positions
+  const { positions: kaminoPositions } = useKaminoPositions(userWalletAddress);
+
+  // Format number with K/M/B suffix
+  const formatNumber = (num: number) => {
+    if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B`;
+    if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
+    if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
+    return num.toFixed(2);
+  };
 
   // Calculate total net value from all positions
-  const totalNetValue = positions?.summary?.totalValue || 0;
-  const totalPositions = positions?.summary?.totalPositions || 0;
-  const avgAPY = positions?.summary?.avgAPY || 0;
+  // Combine Mars API positions and Kamino liquidity positions
+  const marsNetValue = positions?.summary?.totalValue || 0;
+  const kaminoNetValue = kaminoPositions?.reduce((sum, pos) => {
+    return sum + parseFloat(pos.stakeValue || '0');
+  }, 0) || 0;
+  const totalNetValue = marsNetValue + kaminoNetValue;
+
+  const totalPositions = (positions?.summary?.totalPositions || 0) + (kaminoPositions?.length || 0);
+
+  // Calculate weighted average APY
+  const marsAPY = positions?.summary?.avgAPY || 0;
+  const marsValue = positions?.summary?.totalValue || 0;
+  const kaminoAPYWeighted = kaminoPositions?.reduce((sum, pos) => {
+    const value = parseFloat(pos.stakeValue || '0');
+    return sum + (pos.apy * value);
+  }, 0) || 0;
+  const avgAPY = totalNetValue > 0 
+    ? (marsAPY * marsValue + kaminoAPYWeighted) / totalNetValue 
+    : 0;
 
   // Calculate total interest earned (Fees & Interest)
   const allPositions = [
     ...(positions?.kamino?.positions || []),
     ...(positions?.jupiter?.positions || [])
   ];
-  const totalInterest = allPositions.reduce((sum, pos: any) => {
-    // unrealizedGain represents the interest/profit earned
+  const marsInterest = allPositions.reduce((sum, pos: any) => {
     return sum + (pos.unrealizedGain || 0);
   }, 0);
+  const kaminoInterest = kaminoPositions?.reduce((sum, pos) => {
+    return sum + (pos.pnl || 0);
+  }, 0) || 0;
+  const totalInterest = marsInterest + kaminoInterest;
 
   // Calculate total claimable rewards (use pendingRewards object, not rewards array)
   const totalClaimableRewards = allPositions.reduce((sum, pos: any) => {
@@ -255,14 +286,83 @@ const PortfolioPage = () => {
           </Box>
 
           {/* Mars Positions Section */}
-          {positions && totalPositions > 0 ? (
+          {(positions && totalPositions > 0) || (kaminoPositions && kaminoPositions.length > 0) ? (
             <Box>
               <Typography variant="h5" fontWeight={600} sx={{ color: '#fff', mb: 3 }}>
                 Mars Positions
               </Typography>
 
+              {/* Kamino Liquidity Positions */}
+              {kaminoPositions && kaminoPositions.length > 0 && (
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" fontWeight={600} sx={{ color: '#94a3b8', mb: 2 }}>
+                    Liquidity Positions
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {kaminoPositions.map((position, index) => (
+                      <Paper key={index} sx={{
+                        p: 3,
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(148, 163, 184, 0.1)',
+                        borderRadius: 2,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                        }
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: 2 }}>
+                          <Box>
+                            <Typography variant="h6" fontWeight={600} sx={{ color: '#fff', mb: 1 }}>
+                              {position.poolName}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                              <Chip 
+                                label={`${(position.apy * 100).toFixed(2)}% APY`}
+                                size="small"
+                                sx={{ 
+                                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                  color: '#10b981',
+                                  fontWeight: 500
+                                }}
+                              />
+                              <Chip 
+                                label={position.dex}
+                                size="small"
+                                sx={{ 
+                                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                  color: '#60a5fa',
+                                  fontWeight: 500
+                                }}
+                              />
+                            </Box>
+                            <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
+                              Staked: {formatNumber(position.sharesStaked)} shares
+                            </Typography>
+                            {position.withdrawableTokenA && position.withdrawableTokenA > 0 && (
+                              <Typography variant="body2" sx={{ color: '#64748b' }}>
+                                Withdrawable: {position.withdrawableTokenA.toFixed(4)} SOL + {position.withdrawableTokenB?.toFixed(4)} JitoSOL
+                              </Typography>
+                            )}
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="h5" fontWeight={700} sx={{ color: '#fff' }}>
+                              ${parseFloat(position.stakeValue || '0').toFixed(2)}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: position.pnl && position.pnl >= 0 ? '#10b981' : '#ef4444' }}>
+                              {position.pnl && position.pnl >= 0 ? '+' : ''}${position.pnl ? position.pnl.toFixed(2) : '0.00'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
               {/* Kamino Positions */}
-              {positions.kamino.totalPositions > 0 && (
+              {positions && positions.kamino.totalPositions > 0 && (
                 <Box sx={{ mb: 4 }}>
                   
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -321,7 +421,7 @@ const PortfolioPage = () => {
               )}
 
               {/* Jupiter Positions */}
-              {positions.jupiter.totalPositions > 0 && (
+              {positions && positions.jupiter.totalPositions > 0 && (
                 <Box>
                   
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
