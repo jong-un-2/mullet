@@ -78,22 +78,22 @@ export async function fetchVaultData(
     const farmsClient = new Farms(rpc);
 
     // 4. 加载 Vault 状态
-    const vault = new KaminoVault(vaultAddress as any);
-    const vaultState = await vault.getState(rpc);
+    const vault = new KaminoVault(rpc, vaultAddress as any);
+    const vaultState = await vault.getState();
 
     // 5. 获取当前 slot
     const currentSlot = await rpc.getSlot({ commitment: 'confirmed' }).send();
 
     // 6. 获取 Holdings (TVL)
     const tokenPrice = new Decimal(1.0); // PYUSD = $1
-    const holdingsInUSD: any = await kaminoManager.getVaultHoldingsWithPrice(vaultState, tokenPrice);
+    const holdingsInUSD: any = await kaminoManager.getVaultHoldingsWithPrice(vault.state!, tokenPrice);
     
     const totalSuppliedUsd = holdingsInUSD.totalUSDIncludingFees 
       ? holdingsInUSD.totalUSDIncludingFees.toNumber()
       : (holdingsInUSD.available?.toNumber() || 0) + (holdingsInUSD.invested?.toNumber() || 0);
 
     // 7. 获取 reserves 详情来计算 Lending APY
-    const reservesOverview = await kaminoManager.getVaultReservesDetails(vaultState, currentSlot);
+    const reservesOverview = await kaminoManager.getVaultReservesDetails(vault.state!, currentSlot);
     
     let weightedLendingAPY = new Decimal(0);
     let totalSupplied = new Decimal(0);

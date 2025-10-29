@@ -107,7 +107,7 @@ export class KaminoSDKHelper {
       signAndSendTransactions: async () => [] as any,
     };
 
-    const vault = new KaminoVault(vaultAddress.toBase58() as any);
+    const vault = new KaminoVault(this.rpc, vaultAddress.toBase58() as any);
     
     // 获取存款指令
     const depositIxs = await this.manager!.depositToVaultIxs(user, vault, depositAmount);
@@ -166,7 +166,7 @@ export class KaminoSDKHelper {
       signAndSendTransactions: async () => [] as any,
     };
 
-    const vault = new KaminoVault(vaultAddress.toBase58() as any);
+    const vault = new KaminoVault(this.rpc, vaultAddress.toBase58() as any);
     
     // 获取存款指令（包含 stake 指令）
     const depositIxs = await this.manager!.depositToVaultIxs(user, vault, depositAmount);
@@ -268,7 +268,7 @@ export class KaminoSDKHelper {
       signAndSendTransactions: async () => [] as any,
     };
 
-    const vault = new KaminoVault(vaultAddress.toBase58() as any);
+    const vault = new KaminoVault(this.rpc, vaultAddress.toBase58() as any);
     
     // 获取取款指令（包含 unstake 指令）
     const currentSlot = await this.rpc.getSlot().send();
@@ -323,7 +323,7 @@ export class KaminoSDKHelper {
       signAndSendTransactions: async () => [] as any,
     };
 
-    const vault = new KaminoVault(vaultAddress.toBase58() as any);
+    const vault = new KaminoVault(this.rpc, vaultAddress.toBase58() as any);
     
     // 获取取款指令
     const currentSlot = await this.rpc.getSlot().send();
@@ -422,8 +422,8 @@ export class KaminoSDKHelper {
       const farmsClient = new Farms(this.rpc);
 
       // 获取 vault 状态
-      const vault = new KaminoVault(vaultAddress.toBase58() as any);
-      const vaultState = await vault.getState(this.rpc);
+      const vault = new KaminoVault(this.rpc, vaultAddress.toBase58() as any);
+      const vaultState = await vault.getState();
 
       const user = {
         address: this.userPublicKey.toBase58() as any,
@@ -550,8 +550,8 @@ export class KaminoSDKHelper {
       const farmsClient = new Farms(this.rpc);
 
       // 1. 获取 vault 状态
-      const vault = new KaminoVault(vaultAddress.toBase58() as any);
-      const vaultState = await vault.getState(this.rpc);
+      const vault = new KaminoVault(this.rpc, vaultAddress.toBase58() as any);
+      const vaultState = await vault.getState();
 
       const currentTimestamp = new Decimal(Date.now() / 1000);
 

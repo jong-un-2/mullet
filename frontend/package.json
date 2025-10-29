@@ -30,7 +30,7 @@
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
     "@kamino-finance/farms-sdk": "^3.2.13",
-    "@kamino-finance/klend-sdk": "^7.1.8",
+    "@kamino-finance/klend-sdk": "^7.2.3",
     "@kamino-finance/kliquidity-sdk": "^8.5.3",
     "@lb-xyz/sdk": "^5.0.14",
     "@lb-xyz/sdk-core": "^2.0.13",

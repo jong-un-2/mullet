@@ -161,8 +161,8 @@ export class UserPositionsCollector {
       console.log('📦 Fetching Kamino Vault position for:', userAddr);
       
       // 1. Initialize Vault
-      const vault = new KaminoVault(PYUSD_VAULT_ADDRESS as any);
-      const vaultState = await vault.getState(this.rpc);
+      const vault = new KaminoVault(this.rpc, PYUSD_VAULT_ADDRESS as any);
+      const vaultState = await vault.getState();
       console.log('✅ Vault state loaded');
       
       // 2. Get current slot

@@ -76,7 +76,7 @@
     "@cloudflare/containers": "^0.0.28",
     "@hono/zod-validator": "^0.7.0",
     "@kamino-finance/farms-sdk": "^3.2.13",
-    "@kamino-finance/klend-sdk": "^7.1.8",
+    "@kamino-finance/klend-sdk": "^7.2.3",
     "@lifi/sdk": "^3.12.14",
     "@modelcontextprotocol/sdk": "^1.19.1",
     "@neondatabase/serverless": "^1.0.2",
