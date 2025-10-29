@@ -12,7 +12,7 @@ import {
   KaminoVault,
 } from "@kamino-finance/klend-sdk";
 import { Farms } from "@kamino-finance/farms-sdk";
-import { HELIUS_RPC } from "./constants";
+import { HELIUS_RPC } from "../utils/constants";
 
 // 可以通过命令行参数传入 Vault 地址
 const VAULT_ADDRESS = process.argv[2] || "A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK";

@@ -9,7 +9,7 @@ import fs from 'fs';
 // 配置
 const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
 const VAULT_ADDRESS = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK');
-const WALLET_PATH = './phantom-wallet.json';
+const WALLET_PATH = '../../phantom-wallet.json';
 
 async function diagnoseFarms() {
   console.log('🔍 开始诊断 Farm 状态...\n');

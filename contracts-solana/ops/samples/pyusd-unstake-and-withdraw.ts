@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Mars } from "./target/types/mars";
+import { Mars } from "../../target/types/mars";
 import { 
     TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -13,8 +13,8 @@ import {
 } from "@solana/web3.js";
 import * as fs from "fs";
 import Decimal from "decimal.js/decimal";
-import { HELIUS_RPC, MARS_PROGRAM_ID, KAMINO_V2_PROGRAM, KLEND_PROGRAM, PYUSD_MINT } from "./constants";
-import { KaminoSDKHelper } from "./sdk-helper";
+import { HELIUS_RPC, MARS_PROGRAM_ID, KAMINO_V2_PROGRAM, KLEND_PROGRAM, PYUSD_MINT } from "../utils/constants";
+import { KaminoSDKHelper } from "../utils/sdk-helper";
 
 // 实际的 PYUSD 账户地址
 const PYUSD_ACCOUNT = new PublicKey("DhxxxG3fouc2j9f5AUVqM9M3GHCQydnSeUxXkwJWb3y6");

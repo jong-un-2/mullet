@@ -2,7 +2,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { readFileSync } from "fs";
-import { Mars } from "./target/types/mars";
+import { Mars } from "../../target/types/mars";
 
 const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
 const PROGRAM_ID = "Dfr6zir7nV2DWduqhtHNdkJn4mMxHf9G8muQSatiZ1k9";
