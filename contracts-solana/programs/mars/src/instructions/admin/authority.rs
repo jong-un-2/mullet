@@ -201,7 +201,9 @@ pub struct AddGlobalStateAuthority<'info> {
     //  Stores GlobalStateAuthority info
     #[account(
         init_if_needed,
-        space = 8 + std::mem::size_of::<GlobalStateAuthority>(),
+        space = 8 + // discriminator
+                4 + (32 * 10) + // freeze_authority vec (max 10 authorities)
+                4 + (32 * 10), // thaw_authority vec (max 10 authorities)
         seeds = [GLOBAL_AUTHORITY_SEED],
         bump,
         payer = admin

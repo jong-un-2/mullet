@@ -441,6 +441,30 @@ describe("🛡️ Mars Admin & Management Tests", () => {
   // ============================================================================
 
   describe("5️⃣ Freeze & Thaw Operations", () => {
+    it("Should add thaw authority before testing", async () => {
+      console.log("\n🔥 Adding thaw authority for test...");
+      console.log(`   Thaw Authority: ${thawAuthority.publicKey.toBase58()}`);
+
+      try {
+        const tx = await program.methods
+          .addThawAuthority(thawAuthority.publicKey)
+          .accounts({
+            admin: wallet.publicKey,
+          })
+          .rpc();
+
+        console.log(`   📝 Transaction: ${tx}`);
+        console.log("   ✅ Thaw authority added!");
+      } catch (error) {
+        console.log("   ⚠️  Error adding thaw authority:", error.message);
+        // 如果已经存在，跳过错误
+        if (!error.message.includes("AuthorityAlreadyExists")) {
+          throw error;
+        }
+        console.log("   ℹ️  Thaw authority already exists, continuing...");
+      }
+    });
+
     it("Should freeze global state", async () => {
       console.log("\n🧊 Freezing global state...");
       console.log(`   Signer: ${freezeAuthority.publicKey.toBase58()}`);
@@ -459,21 +483,27 @@ describe("🛡️ Mars Admin & Management Tests", () => {
 
     it("Should thaw global state", async () => {
       console.log("\n🌡️  Thawing global state...");
-      console.log(`   Signer: ${wallet.publicKey.toBase58()} (admin)`);
+      console.log(`   Signer: ${thawAuthority.publicKey.toBase58()} (thaw authority)`);
 
       const tx = await program.methods
         .thawGlobalState()
         .accounts({
-          signer: wallet.publicKey,
+          signer: thawAuthority.publicKey,
         })
+        .signers([thawAuthority])
         .rpc();
 
       console.log(`   📝 Transaction: ${tx}`);
       console.log("   ✅ Global state thawed!");
 
       // 验证状态已解冻
-      const globalState = await program.account.globalState.fetch(globalStatePDA);
-      console.log(`   ℹ️  Frozen status: ${globalState.frozen}`);
+      const [globalState] = PublicKey.findProgramAddressSync(
+        [Buffer.from("mars-global-state-seed")],
+        program.programId
+      );
+      const globalStateAccount = await program.account.globalState.fetch(globalState);
+      console.log(`   ℹ️  Frozen status: ${globalStateAccount.frozen}`);
+      assert.equal(globalStateAccount.frozen, false, "Global state should be thawed");
     });
   });
 
