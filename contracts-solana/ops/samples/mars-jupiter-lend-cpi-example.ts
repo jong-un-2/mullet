@@ -20,7 +20,7 @@ import {
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
-import { getDepositContext, getWithdrawContext } from "@jup-ag/lend/earn";
+import { getDepositIx, getWithdrawIx } from "@jup-ag/lend/earn";
 import { Program, AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
 import fs from "fs";
@@ -36,13 +36,13 @@ const MARS_PROGRAM_ID = new PublicKey("G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoM
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 // RPC 连接
-const HELIUS_RPC_URL = process.env.HELIUS_RPC_URL || "https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY";
+const HELIUS_RPC_URL = process.env.HELIUS_RPC_URL || "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
 
 /**
  * 加载用户钱包
  */
 function loadWallet(): Keypair {
-  const walletPath = path.join(process.env.HOME || "", ".config/solana/id.json");
+  const walletPath = process.env.WALLET_KEYPAIR_PATH || path.join(__dirname, "../../phantom-wallet.json");
   const walletData = JSON.parse(fs.readFileSync(walletPath, "utf-8"));
   return Keypair.fromSecretKey(new Uint8Array(walletData));
 }
@@ -58,21 +58,21 @@ async function exampleMarsJupiterLendDeposit() {
   
   console.log("👤 用户钱包:", wallet.publicKey.toBase58());
 
-  // 1. 获取 Jupiter Lend 存款所需的账户上下文
-  console.log("\n📋 获取 Jupiter Lend 存款上下文...");
-  const depositContext = await getDepositContext({
+  // 1. 获取 Jupiter Lend 存款指令（包含完整的账户列表）
+  console.log("\n📋 获取 Jupiter Lend 存款指令...");
+  const depositIx = await getDepositIx({
+    amount: new BN(1_000_000),
     asset: USDC_MINT,
     signer: wallet.publicKey,
     connection,
   });
 
-  console.log("✅ 存款上下文账户:");
-  console.log("  - signer:", depositContext.signer.toBase58());
-  console.log("  - depositorTokenAccount:", depositContext.depositorTokenAccount.toBase58());
-  console.log("  - recipientTokenAccount:", depositContext.recipientTokenAccount.toBase58());
-  console.log("  - lendingAdmin:", depositContext.lendingAdmin.toBase58());
-  console.log("  - lending:", depositContext.lending.toBase58());
-  console.log("  - fTokenMint:", depositContext.fTokenMint.toBase58());
+  console.log("✅ 存款指令账户 (共", depositIx.keys.length, "个):");
+  depositIx.keys.forEach((key, i) => {
+    if (i < 7) {
+      console.log(`  ${i + 1}. ${key.pubkey.toBase58()}`);
+    }
+  });
 
   // 2. 加载 Mars Protocol 程序
   const provider = new AnchorProvider(connection, new Wallet(wallet), {
@@ -90,19 +90,31 @@ async function exampleMarsJupiterLendDeposit() {
   console.log("\n💰 存款金额: 1 USDC (1,000,000 基础单位)");
   console.log("\n📤 发送 Mars Protocol CPI 调用...");
 
+  // 从指令中提取账户
+  const depositAccounts = {
+    signer: wallet.publicKey,
+    depositorTokenAccount: depositIx.keys[1].pubkey,
+    recipientTokenAccount: depositIx.keys[2].pubkey,
+    mint: depositIx.keys[3].pubkey,
+    lendingAdmin: depositIx.keys[4].pubkey,
+    lending: depositIx.keys[5].pubkey,
+    fTokenMint: depositIx.keys[6].pubkey,
+    tokenProgram: TOKEN_PROGRAM_ID,
+    jupiterLendProgram: JUPITER_LEND_PROGRAM_ID,
+  };
+
+  // remaining_accounts: 账户 7-16 (索引 7-16)
+  const remainingAccounts = depositIx.keys.slice(7).map(key => ({
+    pubkey: key.pubkey,
+    isSigner: key.isSigner,
+    isWritable: key.isWritable,
+  }));
+
   try {
     const tx = await marsProgram.methods
       .jupiterLendDeposit(depositAmount)
-      .accounts({
-        signer: wallet.publicKey,
-        depositorTokenAccount: depositContext.depositorTokenAccount,
-        recipientTokenAccount: depositContext.recipientTokenAccount,
-        lendingAdmin: depositContext.lendingAdmin,
-        lending: depositContext.lending,
-        fTokenMint: depositContext.fTokenMint,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        jupiterLendProgram: JUPITER_LEND_PROGRAM_ID,
-      })
+      .accounts(depositAccounts)
+      .remainingAccounts(remainingAccounts)
       .rpc();
 
     console.log("\n✅ 存款成功!");
@@ -125,21 +137,21 @@ async function exampleMarsJupiterLendWithdraw() {
   
   console.log("👤 用户钱包:", wallet.publicKey.toBase58());
 
-  // 1. 获取 Jupiter Lend 取款所需的账户上下文
-  console.log("\n📋 获取 Jupiter Lend 取款上下文...");
-  const withdrawContext = await getWithdrawContext({
+  // 1. 获取 Jupiter Lend 取款指令（包含完整的账户列表）
+  console.log("\n📋 获取 Jupiter Lend 取款指令...");
+  const withdrawIx = await getWithdrawIx({
+    amount: new BN(1_000_000),
     asset: USDC_MINT,
     signer: wallet.publicKey,
     connection,
   });
 
-  console.log("✅ 取款上下文账户:");
-  console.log("  - signer:", withdrawContext.signer.toBase58());
-  console.log("  - ownerTokenAccount:", withdrawContext.ownerTokenAccount.toBase58());
-  console.log("  - recipientTokenAccount:", withdrawContext.recipientTokenAccount.toBase58());
-  console.log("  - lendingAdmin:", withdrawContext.lendingAdmin.toBase58());
-  console.log("  - lending:", withdrawContext.lending.toBase58());
-  console.log("  - fTokenMint:", withdrawContext.fTokenMint.toBase58());
+  console.log("✅ 取款指令账户 (共", withdrawIx.keys.length, "个):");
+  withdrawIx.keys.forEach((key, i) => {
+    if (i < 7) {
+      console.log(`  ${i + 1}. ${key.pubkey.toBase58()}`);
+    }
+  });
 
   // 2. 加载 Mars Protocol 程序
   const provider = new AnchorProvider(connection, new Wallet(wallet), {
@@ -156,19 +168,31 @@ async function exampleMarsJupiterLendWithdraw() {
   console.log("\n💰 取款金额: 1 USDC (1,000,000 基础单位)");
   console.log("\n📤 发送 Mars Protocol CPI 调用...");
 
+  // 从指令中提取账户 (注意取款账户顺序与存款不同)
+  const withdrawAccounts = {
+    signer: wallet.publicKey,
+    recipientTokenAccount: withdrawIx.keys[1].pubkey,  // jlToken账户
+    depositorTokenAccount: withdrawIx.keys[2].pubkey,  // USDC账户
+    lendingAdmin: withdrawIx.keys[3].pubkey,
+    lending: withdrawIx.keys[4].pubkey,
+    mint: withdrawIx.keys[5].pubkey,
+    fTokenMint: withdrawIx.keys[6].pubkey,
+    tokenProgram: TOKEN_PROGRAM_ID,
+    jupiterLendProgram: JUPITER_LEND_PROGRAM_ID,
+  };
+
+  // remaining_accounts: 账户 7-17 (索引 7-17)
+  const remainingAccounts = withdrawIx.keys.slice(7).map(key => ({
+    pubkey: key.pubkey,
+    isSigner: key.isSigner,
+    isWritable: key.isWritable,
+  }));
+
   try {
     const tx = await marsProgram.methods
       .jupiterLendWithdraw(withdrawAmount)
-      .accounts({
-        signer: wallet.publicKey,
-        depositorTokenAccount: withdrawContext.ownerTokenAccount,
-        recipientTokenAccount: withdrawContext.recipientTokenAccount,
-        lendingAdmin: withdrawContext.lendingAdmin,
-        lending: withdrawContext.lending,
-        fTokenMint: withdrawContext.fTokenMint,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        jupiterLendProgram: JUPITER_LEND_PROGRAM_ID,
-      })
+      .accounts(withdrawAccounts)
+      .remainingAccounts(remainingAccounts)
       .rpc();
 
     console.log("\n✅ 取款成功!");
