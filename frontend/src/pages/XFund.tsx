@@ -463,9 +463,7 @@ const XFundPage = () => {
         options: {
           slippage: 0.03, // 3% slippage
           order: 'FASTEST',
-          // 集成商费用配置 - 0.25% 费用
-          integrator: 'mullet1',
-          fee: 0.0025, // 0.25% 集成商费用
+          // 费用已在 createConfig 中全局配置，无需在此重复
         },
       };
 
@@ -576,6 +574,10 @@ const XFundPage = () => {
         integrator: 'mullet1',
         apiKey: '17a821dd-2065-4bdb-b3ec-fe45cdca67ee.f004e74e-b922-498e-bab7-6b8ba539335c',
         providers: providers,
+        // 全局费用配置（推荐方式）
+        routeOptions: {
+          fee: 0.0025, // 0.25% 集成商费用，自动应用到所有请求
+        },
         // 配置 Solana RPC URL，避免使用公共节点
         rpcUrls: {
           1151111081099710: [customRpcUrl], // Solana Mainnet
@@ -777,9 +779,7 @@ const XFundPage = () => {
         options: {
           slippage: 0.03, // 3% slippage
           order: 'FASTEST',
-          // 集成商费用配置 - 0.25% 费用
-          integrator: 'mullet1',
-          fee: 0.0025, // 0.25% 集成商费用
+          // 费用已在 createConfig 中全局配置，无需在此重复
         },
       };
 
@@ -838,6 +838,10 @@ const XFundPage = () => {
         integrator: 'mullet1',
         apiKey: '17a821dd-2065-4bdb-b3ec-fe45cdca67ee.f004e74e-b922-498e-bab7-6b8ba539335c',
         providers: [solanaProvider],
+        // 全局费用配置（推荐方式）
+        routeOptions: {
+          fee: 0.0025, // 0.25% 集成商费用，自动应用到所有请求
+        },
         // 配置 Solana RPC URL，避免使用公共节点
         rpcUrls: {
           1151111081099710: [customRpcUrl], // Solana Mainnet

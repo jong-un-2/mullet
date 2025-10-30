@@ -701,6 +701,10 @@ const XStockPage = () => {
         integrator: 'mullet1',
         apiKey: '17a821dd-2065-4bdb-b3ec-fe45cdca67ee.f004e74e-b922-498e-bab7-6b8ba539335c',
         providers: [evmProvider, solanaProvider],
+        // 全局费用配置（推荐方式）
+        routeOptions: {
+          fee: 0.0025, // 0.25% 集成商费用，自动应用到所有请求
+        },
         // 配置 Solana RPC URL，避免使用公共节点
         rpcUrls: {
           1151111081099710: [customRpcUrl], // Solana Mainnet

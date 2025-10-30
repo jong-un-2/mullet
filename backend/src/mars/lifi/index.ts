@@ -16,11 +16,15 @@ export class LiFiService {
   /**
    * 初始化LI.FI SDK配置
    * 使用默认配置支持所有可用链（包括Solana）
+   * 使用全局 routeOptions.fee 配置集成商费用（推荐方式）
    */
   private initialize() {
     createConfig({
       integrator: 'mullet1',
       apiKey: '17a821dd-2065-4bdb-b3ec-fe45cdca67ee.f004e74e-b922-498e-bab7-6b8ba539335c',
+      routeOptions: {
+        fee: 0.0025, // 0.25% 全局费用，自动应用到所有请求
+      },
     });
     
     this.initialized = true;
@@ -55,9 +59,12 @@ export class LiFiService {
       options: {
         slippage: 0.03, // 3% slippage tolerance
         order: 'FASTEST', // 优先最快路由
-        // 集成商费用配置 - 用于费用收取
-        integrator: 'mullet1', // 必须与 createConfig 中的 integrator 一致
-        fee: params.fee || 0.0025, // 默认 0.25% 费用 (Solana: 直接发送到钱包, EVM: 需要在 portal.li.fi 领取)
+        // 集成商费用配置（可选，已在 createConfig 中全局配置）
+        // 如果需要为特定请求设置不同费用，可以在这里覆盖
+        ...(params.fee !== undefined && {
+          integrator: 'mullet1',
+          fee: params.fee,
+        }),
       },
     };
 
