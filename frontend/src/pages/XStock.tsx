@@ -279,7 +279,7 @@ const TOKENIZED_STOCKS = [
 
 // 支付代币选项 - 优先使用 Solana 链
 const PAYMENT_TOKENS = [
-  // Solana 链代币（优先）
+  // Solana 链稳定币（优先）
   { 
     symbol: 'USDC', 
     name: 'USD Coin', 
@@ -298,16 +298,7 @@ const PAYMENT_TOKENS = [
     address: '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', // Solana PYUSD
     decimals: 6
   },
-  { 
-    symbol: 'SOL', 
-    name: 'Solana', 
-    chainName: 'Solana',
-    chain: 'solana' as const,
-    chainId: SOLANA_CHAIN_ID,
-    address: '0x0000000000000000000000000000000000000000', // Native SOL (LI.FI 会识别)
-    decimals: 9
-  },
-  // Ethereum 链代币
+  // Ethereum 链稳定币
   { 
     symbol: 'USDC', 
     name: 'USD Coin', 
@@ -334,15 +325,6 @@ const PAYMENT_TOKENS = [
     chainId: SUPPORTED_CHAINS.ETHEREUM,
     address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     decimals: 6
-  },
-  { 
-    symbol: 'ETH', 
-    name: 'Ethereum', 
-    chainName: 'Ethereum',
-    chain: 'ethereum' as const,
-    chainId: SUPPORTED_CHAINS.ETHEREUM,
-    address: '0x0000000000000000000000000000000000000000',
-    decimals: 18
   },
 ];
 
