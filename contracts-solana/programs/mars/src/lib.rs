@@ -11,6 +11,7 @@ pub mod events;
 pub mod instructions;
 pub mod state;
 pub mod util;
+pub mod utils; // 新增：高级工具模块（oracle, rebalance）
 
 use constants::*;
 use error::MarsError;
@@ -235,10 +236,10 @@ pub mod mars {
     // === Jupiter Lend CPI 指令 ===
 
     /// Jupiter Lend CPI 调用: 存款到 Jupiter Lend Earn
-    /// 
+    ///
     /// 参数:
     /// - amount: 存款金额（基础单位，如 1 USDC = 1_000_000）
-    /// 
+    ///
     /// 账户需要通过 @jup-ag/lend SDK 的 getDepositContext() 方法获取
     pub fn jupiter_lend_deposit<'info>(
         ctx: Context<'_, '_, '_, 'info, JupiterLendDepositCPI<'info>>,

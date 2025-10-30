@@ -22,3 +22,7 @@ pub use admin_ops_wallet::*;
 // === Farm 奖励 ===
 pub mod farm_rewards;
 pub use farm_rewards::*;
+
+// === 再平衡操作（新增） ===
+pub mod rebalance_ops;
+pub use rebalance_ops::*;
