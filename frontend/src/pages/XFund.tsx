@@ -460,6 +460,13 @@ const XFundPage = () => {
         fromAmount: fromAmount,
         fromAddress: userWalletAddress,
         toAddress: userWalletAddress,
+        options: {
+          slippage: 0.03, // 3% slippage
+          order: 'FASTEST',
+          // 集成商费用配置 - 0.25% 费用
+          integrator: 'mullet1',
+          fee: 0.0025, // 0.25% 集成商费用
+        },
       };
 
       const routesResponse = await getRoutes(routeRequest);
@@ -566,8 +573,8 @@ const XFundPage = () => {
       console.log('🔗 Using custom Solana RPC:', customRpcUrl);
       
       createConfig({
-        integrator: 'MarsLiquid',
-        apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+        integrator: 'mullet1',
+        apiKey: '17a821dd-2065-4bdb-b3ec-fe45cdca67ee.f004e74e-b922-498e-bab7-6b8ba539335c',
         providers: providers,
         // 配置 Solana RPC URL，避免使用公共节点
         rpcUrls: {
@@ -767,6 +774,13 @@ const XFundPage = () => {
         fromAddress: solanaWallets[0].address, // PYUSD 在 Solana
         toAddress: walletAddress, // 目标代币接收地址
         fromAmount: (amount * 1_000_000).toString(), // PYUSD uses 6 decimals
+        options: {
+          slippage: 0.03, // 3% slippage
+          order: 'FASTEST',
+          // 集成商费用配置 - 0.25% 费用
+          integrator: 'mullet1',
+          fee: 0.0025, // 0.25% 集成商费用
+        },
       };
 
       console.log('📡 Requesting LiFi swap route (PYUSD → ' + currentToken.symbol + ' on ' + currentToken.chainName + ')...');
@@ -821,8 +835,8 @@ const XFundPage = () => {
       console.log('🔗 Using custom Solana RPC:', customRpcUrl);
       
       createConfig({
-        integrator: 'MarsLiquid',
-        apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+        integrator: 'mullet1',
+        apiKey: '17a821dd-2065-4bdb-b3ec-fe45cdca67ee.f004e74e-b922-498e-bab7-6b8ba539335c',
         providers: [solanaProvider],
         // 配置 Solana RPC URL，避免使用公共节点
         rpcUrls: {

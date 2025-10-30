@@ -698,8 +698,8 @@ const XStockPage = () => {
       
       // 初始化 LiFi SDK 同时支持 EVM 和 Solana，并配置自定义 RPC URLs
       createConfig({
-        integrator: 'MarsLiquid',
-        apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+        integrator: 'mullet1',
+        apiKey: '17a821dd-2065-4bdb-b3ec-fe45cdca67ee.f004e74e-b922-498e-bab7-6b8ba539335c',
         providers: [evmProvider, solanaProvider],
         // 配置 Solana RPC URL，避免使用公共节点
         rpcUrls: {

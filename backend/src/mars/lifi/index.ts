@@ -19,8 +19,8 @@ export class LiFiService {
    */
   private initialize() {
     createConfig({
-      integrator: 'MarsLiquid',
-      apiKey: '9c3f31e3-312b-4e47-87d0-9eda9dfaac6f.c19a2c37-a846-4882-a111-9dc3cf90317d',
+      integrator: 'mullet1',
+      apiKey: '17a821dd-2065-4bdb-b3ec-fe45cdca67ee.f004e74e-b922-498e-bab7-6b8ba539335c',
     });
     
     this.initialized = true;
@@ -38,6 +38,7 @@ export class LiFiService {
     fromAmount: string;
     fromAddress: string;
     toAddress?: string;
+    fee?: number; // 集成商费用百分比 (例如: 0.02 = 2%)
   }): Promise<Route[]> {
     if (!this.initialized) {
       throw new Error('LI.FI service not initialized');
@@ -54,6 +55,9 @@ export class LiFiService {
       options: {
         slippage: 0.03, // 3% slippage tolerance
         order: 'FASTEST', // 优先最快路由
+        // 集成商费用配置 - 用于费用收取
+        integrator: 'mullet1', // 必须与 createConfig 中的 integrator 一致
+        fee: params.fee || 0.0025, // 默认 0.25% 费用 (Solana: 直接发送到钱包, EVM: 需要在 portal.li.fi 领取)
       },
     };
 
