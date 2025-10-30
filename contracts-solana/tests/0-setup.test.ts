@@ -118,7 +118,7 @@ describe("🏗️ Setup - Base Initialization", () => {
       console.log(`   USDC Mint: ${usdcMint.toBase58()}`);
 
       const tx = await program.methods
-        .initialize()
+        .initialize(null) // platform_fee_wallet: Option<Pubkey> - use null to default to admin
         .accountsStrict({
           admin: wallet.publicKey,
           globalState: globalState,
@@ -136,7 +136,7 @@ describe("🏗️ Setup - Base Initialization", () => {
 
       // 验证初始化
       const globalStateAccount = await program.account.globalState.fetch(globalState);
-      
+
       assert.equal(
         globalStateAccount.admin.toBase58(),
         wallet.publicKey.toBase58(),
@@ -151,7 +151,7 @@ describe("🏗️ Setup - Base Initialization", () => {
       console.log(`   ✅ Platform Fee Wallet: ${globalStateAccount.platformFeeWallet.toBase58()}`);
 
       console.log("   ✅ Global State initialized successfully!");
-      
+
       // 保存到共享状态，供其他测试文件使用
       SharedTestState.setUsdcMint(usdcMint);
       SharedTestState.setGlobalState(globalState);
