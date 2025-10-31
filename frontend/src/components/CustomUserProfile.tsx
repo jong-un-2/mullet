@@ -704,11 +704,20 @@ const CustomUserProfile: React.FC = () => {
                     return (
                       <Box
                         key={solWallet.address}
+                        onClick={() => setPrimaryWallet(primaryWallet === 'sol' ? null : 'sol')}
                         sx={{
                           border: '1px solid rgba(153, 69, 255, 0.3)',
                           borderRadius: 2,
                           p: 2,
                           background: 'rgba(153, 69, 255, 0.05)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            background: 'rgba(153, 69, 255, 0.1)',
+                            borderColor: 'rgba(153, 69, 255, 0.5)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(153, 69, 255, 0.2)'
+                          }
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
@@ -753,7 +762,10 @@ const CustomUserProfile: React.FC = () => {
                           </Typography>
                           <IconButton 
                             size="small" 
-                            onClick={() => setPrimaryWallet('sol')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPrimaryWallet(primaryWallet === 'sol' ? null : 'sol');
+                            }}
                             sx={{ 
                               color: primaryWallet === 'sol' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
                               '&:hover': { color: '#ffd700' }
@@ -764,10 +776,10 @@ const CustomUserProfile: React.FC = () => {
                           </IconButton>
                           <IconButton 
                             size="small" 
-                            onClick={() => copyToClipboard(
-                              solWallet.address, 
-                              `sol-${index}`
-                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(solWallet.address, `sol-${index}`);
+                            }}
                             sx={{ 
                               color: copied === `sol-${index}` ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
                               '&:hover': { color: '#4ecdc4' }
@@ -777,10 +789,10 @@ const CustomUserProfile: React.FC = () => {
                           </IconButton>
                           <IconButton 
                             size="small"
-                            onClick={() => openInExplorer(
-                              solWallet.address,
-                              'solana'
-                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInExplorer(solWallet.address, 'solana');
+                            }}
                             sx={{ 
                               color: 'rgba(255, 255, 255, 0.5)',
                               '&:hover': { color: '#9945ff' }
@@ -792,7 +804,7 @@ const CustomUserProfile: React.FC = () => {
                         
                         {/* Send/Receive buttons for Privy embedded wallets only */}
                         {walletSource === 'privy' && (
-                          <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }} onClick={(e) => e.stopPropagation()}>
                             <Button
                               size="small"
                               variant="outlined"
@@ -867,11 +879,20 @@ const CustomUserProfile: React.FC = () => {
                     return (
                       <Box
                         key={ethWallet.address}
+                        onClick={() => setPrimaryWallet(primaryWallet === 'eth' ? null : 'eth')}
                         sx={{
                           border: '1px solid rgba(98, 126, 234, 0.3)',
                           borderRadius: 2,
                           p: 2,
                           background: 'rgba(98, 126, 234, 0.05)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            background: 'rgba(98, 126, 234, 0.1)',
+                            borderColor: 'rgba(98, 126, 234, 0.5)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(98, 126, 234, 0.2)'
+                          }
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
@@ -916,7 +937,10 @@ const CustomUserProfile: React.FC = () => {
                           </Typography>
                           <IconButton 
                             size="small" 
-                            onClick={() => setPrimaryWallet('eth')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPrimaryWallet(primaryWallet === 'eth' ? null : 'eth');
+                            }}
                             sx={{ 
                               color: primaryWallet === 'eth' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
                               '&:hover': { color: '#ffd700' }
@@ -927,10 +951,10 @@ const CustomUserProfile: React.FC = () => {
                           </IconButton>
                           <IconButton 
                             size="small" 
-                            onClick={() => copyToClipboard(
-                              ethWallet.address, 
-                              `eth-${index}`
-                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(ethWallet.address, `eth-${index}`);
+                            }}
                             sx={{ 
                               color: copied === `eth-${index}` ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
                               '&:hover': { color: '#4ecdc4' }
@@ -940,10 +964,10 @@ const CustomUserProfile: React.FC = () => {
                           </IconButton>
                           <IconButton 
                             size="small"
-                            onClick={() => openInExplorer(
-                              ethWallet.address,
-                              'ethereum'
-                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInExplorer(ethWallet.address, 'ethereum');
+                            }}
                             sx={{ 
                               color: 'rgba(255, 255, 255, 0.5)',
                               '&:hover': { color: '#627eea' }
@@ -955,7 +979,7 @@ const CustomUserProfile: React.FC = () => {
                         
                         {/* Send/Receive buttons for Privy embedded Ethereum wallets only */}
                         {walletSource === 'privy' && (
-                          <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }} onClick={(e) => e.stopPropagation()}>
                             <Button
                               size="small"
                               variant="outlined"
@@ -1023,11 +1047,20 @@ const CustomUserProfile: React.FC = () => {
                   TRON WALLETS
                 </Typography>
                 <Box
+                  onClick={() => setPrimaryWallet(primaryWallet === 'tron' ? null : 'tron')}
                   sx={{
                     border: '1px solid rgba(198, 40, 40, 0.3)',
                     borderRadius: 2,
                     p: 2,
                     background: 'rgba(198, 40, 40, 0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      background: 'rgba(198, 40, 40, 0.1)',
+                      borderColor: 'rgba(198, 40, 40, 0.5)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(198, 40, 40, 0.2)'
+                    }
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
@@ -1088,7 +1121,10 @@ const CustomUserProfile: React.FC = () => {
                     </Typography>
                     <IconButton 
                       size="small"
-                      onClick={() => setPrimaryWallet(primaryWallet === 'tron' ? null : 'tron')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPrimaryWallet(primaryWallet === 'tron' ? null : 'tron');
+                      }}
                       sx={{ 
                         color: primaryWallet === 'tron' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
                         '&:hover': { 
@@ -1103,10 +1139,10 @@ const CustomUserProfile: React.FC = () => {
                     </IconButton>
                     <IconButton 
                       size="small" 
-                      onClick={() => copyToClipboard(
-                        tronWalletInfo.address, 
-                        'tron-wallet'
-                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(tronWalletInfo.address, 'tron-wallet');
+                      }}
                       sx={{ 
                         color: copied === 'tron-wallet' ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
                         '&:hover': { color: '#4ecdc4' }
@@ -1116,11 +1152,14 @@ const CustomUserProfile: React.FC = () => {
                     </IconButton>
                     <IconButton 
                       size="small"
-                      onClick={() => window.open(
-                        `https://tronscan.org/#/address/${tronWalletInfo.address}`,
-                        '_blank',
-                        'noopener,noreferrer'
-                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(
+                          `https://tronscan.org/#/address/${tronWalletInfo.address}`,
+                          '_blank',
+                          'noopener,noreferrer'
+                        );
+                      }}
                       sx={{ 
                         color: 'rgba(255, 255, 255, 0.5)',
                         '&:hover': { color: '#c62828' }
