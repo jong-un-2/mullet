@@ -13,14 +13,15 @@ export const privyConfig = {
       logo: '/mars-logo.svg',
       showWalletLoginFirst: true,
       walletChainType: 'solana', // Prioritize Solana globally
-      // Top wallets for Solana ecosystem
+      // Top wallets - 包含 TRON 兼容钱包
       walletList: [
         'phantom',          // #1 - Most popular Solana & Ethereum wallet
         'metamask',         // #2 - Most popular Ethereum wallet
-        'solflare',         // #3 - Popular Solana-native wallet
-        'wallet_connect',   // WalletConnect support for mobile wallets
+        'wallet_connect',   // #3 - WalletConnect - 支持 TRON 移动端钱包 (imToken, TokenPocket, Trust Wallet, Klever)
+        'coinbase_wallet',  // #4 - Coinbase Wallet - 支持多链
+        'okx_wallet',       // #5 - OKX Wallet - 支持 TRON + 多链
       ],
-      // WalletConnect configuration
+      // WalletConnect configuration - 支持 TRON
       walletConnectCloudProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '', // Get WalletConnect Project ID from https://cloud.walletconnect.com
       disableWalletConnect: false,
     },

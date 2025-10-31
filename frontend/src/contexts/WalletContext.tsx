@@ -4,8 +4,8 @@ import { useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 
 interface WalletContextType {
-  primaryWallet: 'eth' | 'sol' | null;
-  setPrimaryWallet: (wallet: 'eth' | 'sol' | null) => void;
+  primaryWallet: 'eth' | 'sol' | 'tron' | null;
+  setPrimaryWallet: (wallet: 'eth' | 'sol' | 'tron' | null) => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -14,7 +14,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const { authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const { wallets: solanaWallets } = useSolanaWallets();
-  const [primaryWallet, setPrimaryWallet] = useState<'eth' | 'sol' | null>(null);
+  const [primaryWallet, setPrimaryWallet] = useState<'eth' | 'sol' | 'tron' | null>(null);
 
   // Helper function to get wallet info
   const getWalletInfo = () => {

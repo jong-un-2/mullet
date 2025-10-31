@@ -181,6 +181,13 @@ class MarsLiFiService {
   }
 
   /**
+   * 检查地址是否为TRON地址
+   */
+  private isTronAddress(address: string): boolean {
+    return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
+  }
+
+  /**
    * 根据地址获取链ID
    */
   getChainIdFromAddress(address: string): number {
@@ -188,6 +195,8 @@ class MarsLiFiService {
       return SUPPORTED_CHAINS.ETHEREUM; // 默认EVM链
     } else if (this.isSolanaAddress(address)) {
       return SOLANA_CHAIN_ID; // Solana链ID
+    } else if (this.isTronAddress(address)) {
+      return TRON_CHAIN_ID; // TRON链ID
     }
     throw new Error(`Unsupported address format: ${address}`);
   }
@@ -270,6 +279,7 @@ class MarsLiFiService {
       case SUPPORTED_CHAINS.OPTIMISM: return 'Optimism';
       case SUPPORTED_CHAINS.ARBITRUM: return 'Arbitrum';
       case SOLANA_CHAIN_ID: return 'Solana';
+      case TRON_CHAIN_ID: return 'TRON';
       default: return `Chain ${chainId}`;
     }
   }
@@ -286,10 +296,12 @@ export const SUPPORTED_CHAINS = {
   OPTIMISM: 10,
   ARBITRUM: 42161,
   SOLANA: 1151111081099710, // LI.FI 使用的 Solana Chain ID
+  TRON: 728126428, // LI.FI 使用的 TRON Chain ID
 } as const;
 
 // 向后兼容
 export const SOLANA_CHAIN_ID = 1151111081099710;
+export const TRON_CHAIN_ID = 728126428;
 
 // 导出常用代币地址
 export const COMMON_TOKENS = {
@@ -307,5 +319,10 @@ export const COMMON_TOKENS = {
     USDC: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
     USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
     MATIC: '0x0000000000000000000000000000000000000000',
+  },
+  TRON: {
+    USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // USDT TRC20
+    USDC: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', // USDC TRC20
+    TRX: 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb', // Native TRX (placeholder)
   },
 } as const;

@@ -17,11 +17,13 @@ import {
 } from '@mui/material';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
-import { FaSignOutAlt, FaEthereum, FaCopy, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaSignOutAlt, FaEthereum, FaCopy, FaExternalLinkAlt, FaStar, FaRegStar } from 'react-icons/fa';
 import { SiSolana } from 'react-icons/si';
 import { useWalletContext } from '../contexts/WalletContext';
 import { TokenTransfer } from './TokenTransfer';
 import { EthTokenTransfer } from './EthTokenTransfer';
+import TronWalletButton from './TronWalletButton';
+import { useTronWallet } from '../hooks/useTronWallet';
 
 import { useAccount, useDisconnect } from 'wagmi';
 import { useWallet as useSolanaAdapterWallet } from '@solana/wallet-adapter-react';
@@ -112,7 +114,7 @@ const CustomUserProfile: React.FC = () => {
   const { login, logout, authenticated, user } = usePrivy();
   const { wallets } = useWallets(); // General wallets (ETH, etc.)
   const { wallets: solanaWallets } = useSolanaWallets(); // Dedicated Solana wallets
-  const { primaryWallet } = useWalletContext(); // Get primary wallet from context
+  const { primaryWallet, setPrimaryWallet } = useWalletContext(); // Get and set primary wallet
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState<string>('');
@@ -131,6 +133,13 @@ const CustomUserProfile: React.FC = () => {
   const { disconnect: disconnectEth } = useDisconnect();
   // External (adapter) Solana wallet (Phantom, Solflare, etc.) outside Privy scope
   const { connected: adapterSolConnected, disconnect: adapterSolDisconnect } = useSolanaAdapterWallet();
+  
+  // TRON wallet state
+  const { 
+    walletInfo: tronWalletInfo, 
+    balance: tronBalance, 
+    isConnected: tronConnected,
+  } = useTronWallet();
   
   // Use dedicated Solana wallets - this is the correct way
   const solanaWallet = solanaWallets?.[0]; // Get first Solana wallet
@@ -170,7 +179,7 @@ const CustomUserProfile: React.FC = () => {
     };
   };
 
-  const getUserDisplayName = (walletInfo: WalletInfo, primary: 'eth' | 'sol' | null) => {
+  const getUserDisplayName = (walletInfo: WalletInfo, primary: 'eth' | 'sol' | 'tron' | null) => {
     // First check for social logins
     if (user?.email?.address) return user.email.address;
     if (user?.phone?.number) return user.phone.number;
@@ -186,8 +195,25 @@ const CustomUserProfile: React.FC = () => {
       if (walletInfo.ethWallet?.address) {
         return `${walletInfo.ethWallet.address.slice(0, 4)}...${walletInfo.ethWallet.address.slice(-4)}`;
       }
+      if (tronWalletInfo?.address) {
+        return `${tronWalletInfo.address.slice(0, 4)}...${tronWalletInfo.address.slice(-4)}`;
+      }
     } else if (primary === 'eth') {
       // ETH is primary - show ETH first
+      if (walletInfo.ethWallet?.address) {
+        return `${walletInfo.ethWallet.address.slice(0, 4)}...${walletInfo.ethWallet.address.slice(-4)}`;
+      }
+      if (walletInfo.solWallet?.address) {
+        return `${walletInfo.solWallet.address.slice(0, 4)}...${walletInfo.solWallet.address.slice(-4)}`;
+      }
+      if (tronWalletInfo?.address) {
+        return `${tronWalletInfo.address.slice(0, 4)}...${tronWalletInfo.address.slice(-4)}`;
+      }
+    } else if (primary === 'tron') {
+      // TRON is primary - show TRON first
+      if (tronWalletInfo?.address) {
+        return `${tronWalletInfo.address.slice(0, 4)}...${tronWalletInfo.address.slice(-4)}`;
+      }
       if (walletInfo.ethWallet?.address) {
         return `${walletInfo.ethWallet.address.slice(0, 4)}...${walletInfo.ethWallet.address.slice(-4)}`;
       }
@@ -203,6 +229,9 @@ const CustomUserProfile: React.FC = () => {
     if (walletInfo.externalSolConnected && walletInfo.solWallet?.address) {
       return `${walletInfo.solWallet.address.slice(0, 4)}...${walletInfo.solWallet.address.slice(-4)}`;
     }
+    if (tronConnected && tronWalletInfo?.address) {
+      return `${tronWalletInfo.address.slice(0, 4)}...${tronWalletInfo.address.slice(-4)}`;
+    }
     
     // Then check for embedded wallets
     if (walletInfo.ethWallet?.address) {
@@ -214,10 +243,13 @@ const CustomUserProfile: React.FC = () => {
       return `${solanaAddress.slice(0, 4)}...${solanaAddress.slice(-4)}`;
     }
     
+    if (tronWalletInfo?.address) {
+      return `${tronWalletInfo.address.slice(0, 4)}...${tronWalletInfo.address.slice(-4)}`;
+    }
     return 'User';
   };
 
-  const getConnectionType = (primary: 'eth' | 'sol' | null) => {
+  const getConnectionType = (primary: 'eth' | 'sol' | 'tron' | null) => {
     const walletInfo = getWalletInfo();
     
     // Use primary wallet to determine connection type
@@ -229,14 +261,20 @@ const CustomUserProfile: React.FC = () => {
       // ETH is primary
       if (walletInfo.externalEthConnected) return 'ETH_EXTERNAL';
       if (walletInfo.ethWallet) return 'ETH_NEURAL';
+    } else if (primary === 'tron') {
+      // TRON is primary
+      if (tronConnected) return 'TRON_EXTERNAL';
     }
     
-    // Fallback: Priority: ETH external > Solana external > ETH embedded > Solana embedded
+    // Fallback: Priority: ETH external > Solana external > TRON > ETH embedded > Solana embedded
     if (walletInfo.externalEthConnected) {
       return 'ETH_EXTERNAL';
     }
     if (walletInfo.externalSolConnected) {
       return 'SOL_EXTERNAL';
+    }
+    if (tronConnected) {
+      return 'TRON_EXTERNAL';
     }
     if (authenticated && wallets.length > 0) {
       // Check if we have ETH embedded wallet first
@@ -259,6 +297,8 @@ const CustomUserProfile: React.FC = () => {
         return 'ETHEREUM LINKED';
       case 'SOL_EXTERNAL':
         return 'SOLANA LINKED';
+      case 'TRON_EXTERNAL':
+        return 'TRON LINKED';
       case 'ETH_NEURAL':
         return 'ETHEREUM SYNC';
       case 'SOL_NEURAL':
@@ -286,7 +326,13 @@ const CustomUserProfile: React.FC = () => {
     if (primaryWallet === 'sol') {
       if (walletInfo.solWallet?.address) return walletInfo.solWallet.address;
       if (walletInfo.ethWallet?.address) return walletInfo.ethWallet.address;
+      if (tronWalletInfo?.address) return tronWalletInfo.address;
     } else if (primaryWallet === 'eth') {
+      if (walletInfo.ethWallet?.address) return walletInfo.ethWallet.address;
+      if (walletInfo.solWallet?.address) return walletInfo.solWallet.address;
+      if (tronWalletInfo?.address) return tronWalletInfo.address;
+    } else if (primaryWallet === 'tron') {
+      if (tronWalletInfo?.address) return tronWalletInfo.address;
       if (walletInfo.ethWallet?.address) return walletInfo.ethWallet.address;
       if (walletInfo.solWallet?.address) return walletInfo.solWallet.address;
     }
@@ -294,6 +340,7 @@ const CustomUserProfile: React.FC = () => {
     // Fallback logic
     if (walletInfo.externalEthConnected && ethAddress) return ethAddress;
     if (walletInfo.externalSolConnected && solanaWallet) return solanaWallet.address;
+    if (tronConnected && tronWalletInfo?.address) return tronWalletInfo.address;
     if (walletInfo.ethWallet?.address) return walletInfo.ethWallet.address;
     if (walletInfo.solWallet?.address) return walletInfo.solWallet.address;
     return displayName;
@@ -302,8 +349,10 @@ const CustomUserProfile: React.FC = () => {
     primaryWallet,
     walletInfo.externalEthConnected, 
     walletInfo.externalSolConnected, 
+    tronConnected,
     ethAddress, 
     solanaWallet?.address, 
+    tronWalletInfo?.address,
     walletInfo.ethWallet?.address, 
     walletInfo.solWallet?.address, 
     displayName
@@ -704,6 +753,17 @@ const CustomUserProfile: React.FC = () => {
                           </Typography>
                           <IconButton 
                             size="small" 
+                            onClick={() => setPrimaryWallet('sol')}
+                            sx={{ 
+                              color: primaryWallet === 'sol' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
+                              '&:hover': { color: '#ffd700' }
+                            }}
+                            title={primaryWallet === 'sol' ? '主钱包' : '设为主钱包'}
+                          >
+                            {primaryWallet === 'sol' ? <FaStar size={12} /> : <FaRegStar size={12} />}
+                          </IconButton>
+                          <IconButton 
+                            size="small" 
                             onClick={() => copyToClipboard(
                               solWallet.address, 
                               `sol-${index}`
@@ -856,6 +916,17 @@ const CustomUserProfile: React.FC = () => {
                           </Typography>
                           <IconButton 
                             size="small" 
+                            onClick={() => setPrimaryWallet('eth')}
+                            sx={{ 
+                              color: primaryWallet === 'eth' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
+                              '&:hover': { color: '#ffd700' }
+                            }}
+                            title={primaryWallet === 'eth' ? '主钱包' : '设为主钱包'}
+                          >
+                            {primaryWallet === 'eth' ? <FaStar size={12} /> : <FaRegStar size={12} />}
+                          </IconButton>
+                          <IconButton 
+                            size="small" 
                             onClick={() => copyToClipboard(
                               ethWallet.address, 
                               `eth-${index}`
@@ -933,6 +1004,176 @@ const CustomUserProfile: React.FC = () => {
                     );
                   })}
                 </Stack>
+              </Box>
+            )}
+
+            {/* TRON Wallet Section */}
+            {tronConnected && tronWalletInfo && (
+              <Box sx={{ mt: 2 }}>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    fontFamily: 'monospace',
+                    fontWeight: 600,
+                    mb: 1,
+                    display: 'block'
+                  }}
+                >
+                  TRON WALLETS
+                </Typography>
+                <Box
+                  sx={{
+                    border: '1px solid rgba(198, 40, 40, 0.3)',
+                    borderRadius: 2,
+                    p: 2,
+                    background: 'rgba(198, 40, 40, 0.05)',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                    <Box
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #c62828, #e53935)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: 'white'
+                      }}
+                    >
+                      T
+                    </Box>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: 600,
+                        color: '#c62828',
+                        fontFamily: 'monospace',
+                        flex: 1
+                      }}
+                    >
+                      TRON
+                    </Typography>
+                    <Chip 
+                      label={tronWalletInfo.walletType} 
+                      size="small"
+                      sx={{ 
+                        fontSize: '0.65rem',
+                        height: 20,
+                        fontFamily: 'monospace',
+                        fontWeight: 600,
+                        backgroundColor: 'rgba(198, 40, 40, 0.2)',
+                        color: '#c62828',
+                        border: '1px solid rgba(198, 40, 40, 0.5)'
+                      }}
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontFamily: 'monospace', 
+                        fontSize: '0.75rem',
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        flex: 1,
+                        letterSpacing: '0.5px'
+                      }}
+                    >
+                      {`${tronWalletInfo.address.slice(0, 8)}...${tronWalletInfo.address.slice(-6)}`}
+                    </Typography>
+                    <IconButton 
+                      size="small"
+                      onClick={() => setPrimaryWallet(primaryWallet === 'tron' ? null : 'tron')}
+                      sx={{ 
+                        color: primaryWallet === 'tron' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
+                        '&:hover': { 
+                          color: '#ffd700',
+                          transform: 'scale(1.1)' 
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                      title={primaryWallet === 'tron' ? 'Unset as primary wallet' : 'Set as primary wallet'}
+                    >
+                      {primaryWallet === 'tron' ? <FaStar size={14} /> : <FaRegStar size={14} />}
+                    </IconButton>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => copyToClipboard(
+                        tronWalletInfo.address, 
+                        'tron-wallet'
+                      )}
+                      sx={{ 
+                        color: copied === 'tron-wallet' ? '#4ecdc4' : 'rgba(255, 255, 255, 0.5)',
+                        '&:hover': { color: '#4ecdc4' }
+                      }}
+                    >
+                      <FaCopy size={12} />
+                    </IconButton>
+                    <IconButton 
+                      size="small"
+                      onClick={() => window.open(
+                        `https://tronscan.org/#/address/${tronWalletInfo.address}`,
+                        '_blank',
+                        'noopener,noreferrer'
+                      )}
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        '&:hover': { color: '#c62828' }
+                      }}
+                    >
+                      <FaExternalLinkAlt size={12} />
+                    </IconButton>
+                  </Box>
+
+                  {/* Display TRON Balance */}
+                  {tronBalance && (
+                    <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(198, 40, 40, 0.2)' }}>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          fontFamily: 'monospace',
+                          display: 'block',
+                          mb: 0.5
+                        }}
+                      >
+                        Balances:
+                      </Typography>
+                      <Stack spacing={0.5}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'rgba(255, 255, 255, 0.6)' }}>
+                            TRX:
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#c62828', fontWeight: 600 }}>
+                            {parseFloat(tronBalance.trx).toFixed(4)} TRX
+                          </Typography>
+                        </Box>
+                        {Object.entries(tronBalance.tokens).map(([address, token]) => (
+                          <Box key={address} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'rgba(255, 255, 255, 0.6)' }}>
+                              {token.symbol}:
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#c62828', fontWeight: 600 }}>
+                              {parseFloat(token.balance).toFixed(4)} {token.symbol}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {/* TronLink Connection Button - Show only if not connected */}
+            {!tronConnected && (
+              <Box sx={{ mt: 2 }}>
+                <TronWalletButton />
               </Box>
             )}
           </Stack>

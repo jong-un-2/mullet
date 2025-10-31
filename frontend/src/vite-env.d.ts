@@ -18,6 +18,15 @@ interface ImportMetaEnv {
 	// Ethereum Network Configuration
 	readonly VITE_ALCHEMY_API_KEY: string
 	readonly VITE_DEFAULT_CHAIN_ID: string
+	
+	// TRON Network Configuration
+	readonly VITE_TRON_MAINNET_RPC: string
+	readonly VITE_TRON_SOLIDITY_NODE: string
+	readonly VITE_TRON_EVENT_SERVER: string
+	readonly VITE_TRONGRID_API_KEY: string
+	readonly VITE_TRON_NILE_RPC: string
+	readonly VITE_TRON_NILE_SOLIDITY: string
+	readonly VITE_TRON_NILE_EVENT: string
 }
 
 interface ImportMeta {
