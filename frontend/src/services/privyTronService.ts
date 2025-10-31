@@ -384,7 +384,7 @@ export async function buildAndSignTrc20Transaction(
   toAddress: string,
   amount: number,
   tokenContract: string,
-  accessToken: string,
+  _accessToken: string, // Not used - kept for API compatibility
   publicKey: string
 ): Promise<string> {
   try {
@@ -419,27 +419,27 @@ export async function buildAndSignTrc20Transaction(
       contract: tokenContract
     });
 
-    // Sign with Privy's raw_sign API
+    // Sign with our backend API (required for TRON as Tier 2 chain)
+    // TRON doesn't support client-side raw_sign, must use server-side SDK
+    const backendUrl = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:8787';
     const signResponse = await fetch(
-      `https://auth.privy.io/api/v1/wallets/${walletId}/raw_sign`,
+      `${backendUrl}/api/tron-transaction/sign`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-          'privy-app-id': import.meta.env.VITE_PRIVY_APP_ID,
         },
         body: JSON.stringify({
-          chain_type: 'tron',
-          data: txID,
-          public_key: publicKey,
+          walletId,
+          transactionHash: txID,
+          publicKey,
         }),
       }
     );
 
     if (!signResponse.ok) {
       const errorData = await signResponse.json();
-      throw new Error(`Privy signing failed: ${JSON.stringify(errorData)}`);
+      throw new Error(`Transaction signing failed: ${JSON.stringify(errorData)}`);
     }
 
     const signData = await signResponse.json();

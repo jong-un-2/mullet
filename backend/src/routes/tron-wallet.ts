@@ -8,14 +8,15 @@
 
 import { Hono } from 'hono';
 import { PrivyClient } from '@privy-io/server-auth';
+import type { Env } from '../index';
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 // Initialize Privy server client
 // Note: This will be initialized per-request with env variables
-function getPrivyClient(env: any) {
+function getPrivyClient(env: Env) {
   return new PrivyClient(
-    env.VITE_PRIVY_APP_ID || '',
+    env.PRIVY_APP_ID || '',
     env.PRIVY_APP_SECRET || ''
   );
 }

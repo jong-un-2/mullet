@@ -17,6 +17,7 @@ import { createNeonCommissionRoutes } from './neon/commission-routes';
 import { runIncrementalSync, getIndexerHealth } from './services/substreamsIndexer';
 import { collectVaultHistoricalData } from './services/vaultHistoricalCollector';
 import tronWalletRoutes from './routes/tron-wallet';
+import tronTransactionRoutes from './routes/tron-transaction';
 
 export interface Env {
 	D1_DATABASE?: D1Database;
@@ -35,6 +36,11 @@ export interface Env {
 	SOLANA_CLUSTER?: string;
 	// Neon Database direct connection (fallback)
 	NEON_DATABASE_URL?: string;
+	// Privy Configuration (for TRON Tier 2 support)
+	PRIVY_APP_ID?: string;
+	PRIVY_APP_SECRET?: string; // Set via: wrangler secret put PRIVY_APP_SECRET
+	// TRON Network Configuration
+	TRONGRID_API_KEY?: string;
 }
 
 // Export Durable Objects for wrangler
@@ -89,6 +95,7 @@ app.route('/mars', createMarsRoutes());
 app.route('/v1/api/mars', createMarsRoutes()); // V1 API compatibility
 app.route('/api/neon', createNeonCommissionRoutes());
 app.route('/api/tron-wallet', tronWalletRoutes); // TRON wallet creation (Privy Tier 2)
+app.route('/api/tron-transaction', tronTransactionRoutes); // TRON transaction signing (Privy Tier 2)
 
 // Mount indexer routes (Durable Object container control)
 app.route('/indexer', createIndexerRoutes());

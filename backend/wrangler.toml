@@ -72,10 +72,13 @@ BSC_MAINNET_RPC_URL = "https://bsc-mainnet.infura.io/v3/402b910bd7e24d2a866ac48a
 BSC_TESTNET_RPC_URL = "https://bsc-testnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75"
 
 # Privy Configuration (for TRON wallet creation)
-VITE_PRIVY_APP_ID = "cmfw7skmh00lfjx0cg4zompxp"
+PRIVY_APP_ID = "cmfw7skmh00lfjx0cg4zompxp"
 # Note: PRIVY_APP_SECRET should be set as a secret, not in vars
 # Run: wrangler secret put PRIVY_APP_SECRET
 # (Input your Privy App Secret from dashboard)
+
+# TRON Network Configuration
+TRONGRID_API_KEY = "7bcda08c-dc0e-4aec-9645-d153d5ea258d"
 
 # ⚠️ Sensitive information should use secrets instead of vars
 # Run this command to set secret:
