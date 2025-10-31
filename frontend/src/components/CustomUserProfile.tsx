@@ -676,7 +676,7 @@ const CustomUserProfile: React.FC = () => {
             </Box>
           </Box>
 
-          <Divider sx={{ borderColor: 'rgba(255, 107, 107, 0.2)', my: 3 }} />
+          <Divider sx={{ borderColor: 'rgba(255, 107, 107, 0.2)', my: 2 }} />
 
           <Stack spacing={2}>
             {/* Display ALL Solana wallets */}
@@ -704,7 +704,12 @@ const CustomUserProfile: React.FC = () => {
                     return (
                       <Box
                         key={solWallet.address}
-                        onClick={() => setPrimaryWallet(primaryWallet === 'sol' ? null : 'sol')}
+                        onClick={() => {
+                          console.log('Clicked Solana wallet, current primary:', primaryWallet);
+                          const newPrimary = primaryWallet === 'sol' ? null : 'sol';
+                          console.log('Setting primary to:', newPrimary);
+                          setPrimaryWallet(newPrimary);
+                        }}
                         sx={{
                           border: '1px solid rgba(153, 69, 255, 0.3)',
                           borderRadius: 2,
@@ -764,7 +769,10 @@ const CustomUserProfile: React.FC = () => {
                             size="small" 
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPrimaryWallet(primaryWallet === 'sol' ? null : 'sol');
+                              console.log('Clicked Solana star, current primary:', primaryWallet);
+                              const newPrimary = primaryWallet === 'sol' ? null : 'sol';
+                              console.log('Setting primary to:', newPrimary);
+                              setPrimaryWallet(newPrimary);
                             }}
                             sx={{ 
                               color: primaryWallet === 'sol' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
@@ -879,7 +887,12 @@ const CustomUserProfile: React.FC = () => {
                     return (
                       <Box
                         key={ethWallet.address}
-                        onClick={() => setPrimaryWallet(primaryWallet === 'eth' ? null : 'eth')}
+                        onClick={() => {
+                          console.log('Clicked Ethereum wallet, current primary:', primaryWallet);
+                          const newPrimary = primaryWallet === 'eth' ? null : 'eth';
+                          console.log('Setting primary to:', newPrimary);
+                          setPrimaryWallet(newPrimary);
+                        }}
                         sx={{
                           border: '1px solid rgba(98, 126, 234, 0.3)',
                           borderRadius: 2,
@@ -939,7 +952,10 @@ const CustomUserProfile: React.FC = () => {
                             size="small" 
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPrimaryWallet(primaryWallet === 'eth' ? null : 'eth');
+                              console.log('Clicked Ethereum star, current primary:', primaryWallet);
+                              const newPrimary = primaryWallet === 'eth' ? null : 'eth';
+                              console.log('Setting primary to:', newPrimary);
+                              setPrimaryWallet(newPrimary);
                             }}
                             sx={{ 
                               color: primaryWallet === 'eth' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
@@ -1033,7 +1049,7 @@ const CustomUserProfile: React.FC = () => {
 
             {/* TRON Wallet Section */}
             {tronConnected && tronWalletInfo && (
-              <Box sx={{ mt: 2 }}>
+              <>
                 <Typography 
                   variant="caption" 
                   sx={{ 
@@ -1047,7 +1063,12 @@ const CustomUserProfile: React.FC = () => {
                   TRON WALLETS
                 </Typography>
                 <Box
-                  onClick={() => setPrimaryWallet(primaryWallet === 'tron' ? null : 'tron')}
+                  onClick={() => {
+                    console.log('Clicked TRON wallet, current primary:', primaryWallet);
+                    const newPrimary = primaryWallet === 'tron' ? null : 'tron';
+                    console.log('Setting primary to:', newPrimary);
+                    setPrimaryWallet(newPrimary);
+                  }}
                   sx={{
                     border: '1px solid rgba(198, 40, 40, 0.3)',
                     borderRadius: 2,
@@ -1092,7 +1113,7 @@ const CustomUserProfile: React.FC = () => {
                       TRON
                     </Typography>
                     <Chip 
-                      label={tronWalletInfo.walletType} 
+                      label={tronWalletInfo.walletType === 'privy-embedded' ? 'embedded' : 'imported'} 
                       size="small"
                       sx={{ 
                         fontSize: '0.65rem',
@@ -1123,7 +1144,10 @@ const CustomUserProfile: React.FC = () => {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setPrimaryWallet(primaryWallet === 'tron' ? null : 'tron');
+                        console.log('Clicked TRON star, current primary:', primaryWallet);
+                        const newPrimary = primaryWallet === 'tron' ? null : 'tron';
+                        console.log('Setting primary to:', newPrimary);
+                        setPrimaryWallet(newPrimary);
                       }}
                       sx={{ 
                         color: primaryWallet === 'tron' ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
@@ -1189,16 +1213,18 @@ const CustomUserProfile: React.FC = () => {
                             TRX:
                           </Typography>
                           <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#c62828', fontWeight: 600 }}>
-                            {parseFloat(tronBalance.trx).toFixed(4)} TRX
+                            {parseFloat(tronBalance.trx.toString()).toFixed(4)} TRX
                           </Typography>
                         </Box>
-                        {Object.entries(tronBalance.tokens).map(([address, token]) => (
+                        {Object.entries(tronBalance.tokens)
+                          .filter(([_, token]) => token.symbol === 'USDT')
+                          .map(([address, token]) => (
                           <Box key={address} sx={{ display: 'flex', justifyContent: 'space-between' }}>
                             <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'rgba(255, 255, 255, 0.6)' }}>
                               {token.symbol}:
                             </Typography>
                             <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#c62828', fontWeight: 600 }}>
-                              {parseFloat(token.balance).toFixed(4)} {token.symbol}
+                              {parseFloat(token.balance.toString()).toFixed(4)} {token.symbol}
                             </Typography>
                           </Box>
                         ))}
@@ -1206,20 +1232,16 @@ const CustomUserProfile: React.FC = () => {
                     </Box>
                   )}
                 </Box>
-              </Box>
+              </>
             )}
 
-            {/* TronLink Connection Button - Show only if not connected */}
+            {/* TRON Wallet Button - Show only if not connected */}
             {!tronConnected && (
-              <Box sx={{ mt: 2 }}>
-                <TronWalletButton />
-              </Box>
+              <TronWalletButton />
             )}
           </Stack>
 
-          <Divider sx={{ borderColor: 'rgba(255, 107, 107, 0.2)', my: 3 }} />
-
-
+          <Divider sx={{ borderColor: 'rgba(255, 107, 107, 0.2)', my: 2 }} />
 
           {/* Terminate Connection */}
           <Button

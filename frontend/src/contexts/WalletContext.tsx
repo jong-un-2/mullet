@@ -14,7 +14,15 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const { authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const { wallets: solanaWallets } = useSolanaWallets();
-  const [primaryWallet, setPrimaryWallet] = useState<'eth' | 'sol' | 'tron' | null>(null);
+  const [primaryWallet, setPrimaryWalletState] = useState<'eth' | 'sol' | 'tron' | null>(null);
+
+  // Wrapper function with logging
+  const setPrimaryWallet = (wallet: 'eth' | 'sol' | 'tron' | null) => {
+    console.log('WalletContext setPrimaryWallet called with:', wallet);
+    console.log('Current primaryWallet:', primaryWallet);
+    setPrimaryWalletState(wallet);
+    console.log('After setPrimaryWallet, new value should be:', wallet);
+  };
 
   // Helper function to get wallet info
   const getWalletInfo = () => {

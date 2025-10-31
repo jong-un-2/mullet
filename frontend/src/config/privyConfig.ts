@@ -18,8 +18,8 @@ export const privyConfig = {
         'phantom',          // #1 - Most popular Solana & Ethereum wallet
         'metamask',         // #2 - Most popular Ethereum wallet
         'wallet_connect',   // #3 - WalletConnect - 支持 TRON 移动端钱包 (imToken, TokenPocket, Trust Wallet, Klever)
-        'coinbase_wallet',  // #4 - Coinbase Wallet - 支持多链
-        'okx_wallet',       // #5 - OKX Wallet - 支持 TRON + 多链
+        'okx_wallet',       // #4 - OKX Wallet - 支持 TRON + 多链
+        'coinbase_wallet',  // #5 - Coinbase Wallet - 支持多链
       ],
       // WalletConnect configuration - 支持 TRON
       walletConnectCloudProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '', // Get WalletConnect Project ID from https://cloud.walletconnect.com
@@ -91,6 +91,9 @@ export const privyConfig = {
       },
       solana: {
         createOnLogin: 'users-without-wallets', // Enable Solana embedded wallet for users without external wallets
+      },
+      tron: {
+        createOnLogin: 'users-without-wallets', // Enable TRON embedded wallet (Tier 2 support)
       },
     },
     
