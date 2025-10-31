@@ -45,7 +45,7 @@ class TronService {
     try {
       this.tronWeb = new (TronWeb as any)({
         fullHost: this.config.fullHost,
-        headers: { "TRON-PRO-API-KEY": import.meta.env.VITE_TRONGRID_API_KEY || '' },
+        headers: { "TRON-PRO-API-KEY": import.meta.env.VITE_TRONGRID_API_KEY || 'df3df0ca-ae0c-4ff1-82bd-d17f2620e868' },
       });
       console.log('✅ TronWeb initialized:', this.config.name);
     } catch (error) {

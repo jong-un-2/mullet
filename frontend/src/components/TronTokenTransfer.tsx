@@ -10,7 +10,6 @@ import {
   TextField, 
   Box, 
   Typography, 
-  Alert, 
   CircularProgress,
   Select,
   MenuItem,
@@ -22,9 +21,13 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
+
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SendIcon from '@mui/icons-material/Send';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
+// QR code generator (no types in this project) - toDataURL is used to create an image data URL
+// @ts-ignore
+import QRCodeLib from 'qrcode';
 import { toast } from 'sonner';
 import { useTronWallet } from '../hooks/useTronWallet';
 import { 
@@ -63,8 +66,9 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  // const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const walletAddress = walletInfo?.address;
 
@@ -73,10 +77,38 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
     if (!open) {
       setRecipientAddress('');
       setAmount('');
-      setError('');
+  // setError removed
       setLoading(false);
     }
   }, [open]);
+
+  // Generate QR code data URL for receive mode
+  useEffect(() => {
+    let mounted = true;
+    if (mode === 'receive' && walletAddress) {
+      QRCodeLib.toDataURL(walletAddress, {
+        errorCorrectionLevel: 'H',
+        margin: 1,
+        color: {
+          dark: '#c62828',
+          light: '#ffffff',
+        },
+      })
+        .then((url: string) => {
+          if (mounted) setQrDataUrl(url);
+        })
+        .catch((err: any) => {
+          console.error('[TronTokenTransfer] QR generation error', err);
+          if (mounted) setQrDataUrl(null);
+        });
+    } else {
+      setQrDataUrl(null);
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [mode, walletAddress]);
 
   // Get token balance
   const getTokenBalance = (): number => {
@@ -113,32 +145,31 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
   // Handle send transaction
   const handleSend = async () => {
     if (!walletAddress) {
-      setError('Wallet not connected');
-      return;
+  toast.error('Wallet not connected');
+  return;
     }
 
     if (!recipientAddress) {
-      setError('Please enter recipient address');
-      return;
+  toast.error('Please enter recipient address');
+  return;
     }
 
     if (!isValidTronAddress(recipientAddress)) {
-      setError('Invalid TRON address. Must start with T and be 34 characters long');
-      return;
+  toast.error('Invalid TRON address. Must start with T and be 34 characters long');
+  return;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
-      setError('Please enter a valid amount');
-      return;
+  toast.error('Please enter a valid amount');
+  return;
     }
 
     if (parseFloat(amount) > tokenBalance) {
-      setError(`Insufficient ${selectedToken.symbol} balance`);
-      return;
+  toast.error(`Insufficient ${selectedToken.symbol} balance`);
+  return;
     }
 
-    setLoading(true);
-    setError('');
+  setLoading(true);
 
     try {
       // Get Privy access token
@@ -223,8 +254,7 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
     } catch (err: any) {
       console.error('[TronTokenTransfer] Send transaction error:', err);
       const errorMessage = err.message || 'Failed to send transaction';
-      setError(errorMessage);
-      toast.error(`Transaction failed: ${errorMessage}`);
+  toast.error(`Transaction failed: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -303,8 +333,12 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
               border: '1px solid rgba(198, 40, 40, 0.3)',
               borderRadius: 2,
               p: 2.5,
-              mb: 2
+              mb: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}>
+
               <Typography 
                 variant="caption" 
                 sx={{ 
@@ -346,59 +380,76 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
               >
                 {copied ? '✓ Copied!' : 'Copy Address'}
               </Button>
+              
+              {/* QR Code for easy scanning */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mt: 2 }}>
+                <Box sx={{ backgroundColor: '#fff', p: 1, borderRadius: 2 }}>
+                  {qrDataUrl ? (
+                    // show generated QR image
+                    // width/height kept square and use decode-friendly white background
+                    <img src={qrDataUrl} alt="TRON QR Code" width={160} height={160} style={{ display: 'block' }} />
+                  ) : (
+                    <Box sx={{ width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CircularProgress size={28} sx={{ color: '#c62828' }} />
+                    </Box>
+                  )}
+                </Box>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>Scan to receive TRON</Typography>
+              </Box>
             </Box>
 
-            <Alert 
-              severity="info" 
-              sx={{ 
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                '& .MuiAlert-icon': {
-                  color: '#3b82f6'
-                }
-              }}
-            >
-              <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
-                Supported Tokens:
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                • TRX (native TRON token)<br/>
-                • USDT (TRC20)
-              </Typography>
-            </Alert>
+            {/* Supported Tokens alert removed as per request */}
           </Box>
         ) : (
           // Send Mode - Transaction form
           <Box>
             {/* Token Selection */}
-            <FormControl fullWidth sx={{ mb: 2.5 }}>
-              <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Token</InputLabel>
+            <FormControl 
+              fullWidth 
+              sx={{ 
+                mt: 3,
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  '& fieldset': { borderColor: 'rgba(198, 40, 40, 0.2)' },
+                  '&:hover fieldset': { borderColor: 'rgba(198, 40, 40, 0.3)' },
+                  '&.Mui-focused fieldset': { borderColor: '#c62828' }
+                },
+                '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                '& .MuiSelect-select': { 
+                  color: '#c62828',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  paddingTop: '20px',
+                  paddingBottom: '20px'
+                }
+              }}
+            >
+              <InputLabel>Token</InputLabel>
               <Select
                 value={selectedToken.symbol}
+                label="Token"
                 onChange={(e) => {
                   const token = COMMON_TRON_TOKENS.find(t => t.symbol === e.target.value);
                   if (token) setSelectedToken(token);
                 }}
-                label="Token"
-                sx={{
-                  color: '#c62828',
-                  fontWeight: 600,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(198, 40, 40, 0.3)',
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(198, 40, 40, 0.5)',
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#c62828',
-                  },
+                renderValue={(value) => {
+                  const token = COMMON_TRON_TOKENS.find(t => t.symbol === value);
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Typography sx={{ fontWeight: 600 }}>{token?.symbol}</Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                        {token?.name}
+                      </Typography>
+                    </Box>
+                  );
                 }}
               >
                 {COMMON_TRON_TOKENS.map((token) => (
                   <MenuItem key={token.symbol} value={token.symbol}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography sx={{ fontWeight: 600 }}>{token.symbol}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                      <Typography sx={{ flex: 1, fontWeight: 600 }}>{token.symbol}</Typography>
                       <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                         {token.name}
                       </Typography>
@@ -477,36 +528,7 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
             />
 
             {/* Error Message */}
-            {error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  mb: 2,
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#ef4444'
-                }}
-              >
-                {error}
-              </Alert>
-            )}
-
-            {/* Info Alert */}
-            <Alert 
-              severity="warning" 
-              sx={{ 
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                color: 'rgba(255, 255, 255, 0.9)',
-                '& .MuiAlert-icon': {
-                  color: '#f59e0b'
-                }
-              }}
-            >
-              <Typography variant="caption">
-                TRON transaction sending is under development. This feature will be available soon.
-              </Typography>
-            </Alert>
+            {/* Error alert removed as per request */}
           </Box>
         )}
       </DialogContent>
