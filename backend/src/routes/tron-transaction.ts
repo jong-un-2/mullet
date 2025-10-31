@@ -37,47 +37,83 @@ app.post('/sign', async (c) => {
       }, 400);
     }
 
+    // Get user's access token from Authorization header
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ 
+        error: 'Missing or invalid Authorization header' 
+      }, 401);
+    }
+    const userAccessToken = authHeader.substring(7); // Remove 'Bearer ' prefix
+
     console.log('[TronTransaction] Signing transaction:', {
       walletId,
       transactionHash: transactionHash.substring(0, 20) + '...',
-      publicKey: publicKey.substring(0, 20) + '...'
+      publicKey: publicKey.substring(0, 20) + '...',
+      hasAccessToken: !!userAccessToken
     });
 
-    // Call Privy's server-side wallet API to sign the raw transaction
-    // Note: This approach uses the deprecated rpc() method since walletApi doesn't
-    // officially document TRON support yet
+    // TRON is a Tier 2 chain in Privy, so raw_sign is not typed in the SDK
+    // We need to call the REST API directly with Basic Auth (app secret)
+    // Privy requires: privy-app-id header + Authorization: Basic <base64(appId:appSecret)>
+    // Ref: https://docs.privy.io/recipes/use-tier-2#tron
+    
+    // Prepare the transaction hash in the format Privy expects
+    // Ensure it's prefixed with 0x
+    const hashToSign = transactionHash.startsWith('0x') ? transactionHash : `0x${transactionHash}`;
+    
+    // Use Basic Auth with app credentials (required for Tier 2 chains)
+    const authString = `${c.env.PRIVY_APP_ID}:${c.env.PRIVY_APP_SECRET}`;
+    const base64Auth = btoa(authString);
+    
     const signResponse = await fetch(
-      `https://auth.privy.io/api/v1/wallets/${walletId}/raw_sign`,
+      `https://api.privy.io/v1/wallets/${walletId}/raw_sign`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${c.env.PRIVY_APP_SECRET}`,
-          'privy-app-id': c.env.PRIVY_APP_ID || '',
+          'privy-app-id': c.env.PRIVY_APP_ID!,
+          'Authorization': `Basic ${base64Auth}`,
         },
         body: JSON.stringify({
-          chain_type: 'tron',
-          data: transactionHash,
-          public_key: publicKey,
+          params: {
+            hash: hashToSign,
+          },
         }),
       }
     );
 
     if (!signResponse.ok) {
-      const errorData = await signResponse.json();
-      console.error('[TronTransaction] Privy signing failed:', errorData);
+      const errorText = await signResponse.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: errorText };
+      }
+      console.error('[TronTransaction] Privy signing failed:', {
+        status: signResponse.status,
+        statusText: signResponse.statusText,
+        error: errorData
+      });
       return c.json({ 
         error: 'Failed to sign transaction', 
         details: errorData 
       }, 500);
     }
 
-    const signData = await signResponse.json() as { signature: string };
+    // Privy returns {data: {signature: string, encoding: string}}
+    const signData = await signResponse.json() as { 
+      data: { 
+        signature: string;
+        encoding: string;
+      } 
+    };
     
     console.log('[TronTransaction] Transaction signed successfully');
 
     return c.json({
-      signature: signData.signature,
+      signature: signData.data.signature,
       success: true
     });
 

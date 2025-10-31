@@ -421,6 +421,7 @@ export async function buildAndSignTrc20Transaction(
 
     // Sign with our backend API (required for TRON as Tier 2 chain)
     // TRON doesn't support client-side raw_sign, must use server-side SDK
+    // Pass user's access token to backend for Privy API authentication
     const backendUrl = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:8787';
     const signResponse = await fetch(
       `${backendUrl}/api/tron-transaction/sign`,
@@ -428,6 +429,7 @@ export async function buildAndSignTrc20Transaction(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${_accessToken}`,
         },
         body: JSON.stringify({
           walletId,
@@ -443,15 +445,39 @@ export async function buildAndSignTrc20Transaction(
     }
 
     const signData = await signResponse.json();
-    const signature64 = signData.signature;
+    const rawSignature = signData.signature; // 64-byte signature from Privy (0x...)
 
-    // Convert 64-byte signature to 65-byte TRON signature
-    const signature65 = convertPrivySignatureToTron(signature64, txID, publicKey);
+    // Remove 0x prefix if present
+    const signature64 = rawSignature.startsWith('0x') ? rawSignature.slice(2) : rawSignature;
 
-    // Attach signature to transaction
-    txObject.signature = [signature65];
-
-    console.log('[PrivyTronService] TRC20 transaction signed successfully');
+    // TRON requires 65-byte signature with recovery ID (1b or 1c)
+    // Use ecRecover to determine the correct recovery ID
+    // Ref: https://docs.privy.io/recipes/use-tier-2#tron
+    const tronWebInstance = getTronWeb();
+    
+    // Try recovery ID '1b' first
+    txObject.signature = [signature64 + '1b'];
+    const recoveredAddress1b = tronWebInstance.trx.ecRecover(txObject);
+    
+    // If '1b' doesn't match, use '1c'
+    if (recoveredAddress1b !== fromAddress) {
+      txObject.signature = [signature64 + '1c'];
+      const recoveredAddress1c = tronWebInstance.trx.ecRecover(txObject);
+      
+      console.log('[PrivyTronService] TRC20 transaction signed (recovery ID: 1c):', {
+        txID,
+        from: fromAddress,
+        recovered: recoveredAddress1c,
+        match: recoveredAddress1c === fromAddress
+      });
+    } else {
+      console.log('[PrivyTronService] TRC20 transaction signed (recovery ID: 1b):', {
+        txID,
+        from: fromAddress,
+        recovered: recoveredAddress1b,
+        match: true
+      });
+    }
 
     return JSON.stringify(txObject);
   } catch (error) {

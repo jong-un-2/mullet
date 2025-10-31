@@ -84,7 +84,7 @@ const app = new Hono();
 
 app.post('/sign', async (c) => {
   const privy = new PrivyClient(
-    c.env.VITE_PRIVY_APP_ID,
+    c.env.PRIVY_APP_ID,
     c.env.PRIVY_APP_SECRET  // ← 服务端 secret，有完整权限
   );
 
@@ -98,7 +98,7 @@ app.post('/sign', async (c) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${c.env.PRIVY_APP_SECRET}`,  // ← 关键！
-        'privy-app-id': c.env.VITE_PRIVY_APP_ID,
+        'privy-app-id': c.env.PRIVY_APP_ID,
       },
       body: JSON.stringify({
         chain_type: 'tron',
@@ -190,7 +190,7 @@ export async function buildAndSignTrc20Transaction(
 
 ```toml
 [vars]
-VITE_PRIVY_APP_ID = "your-privy-app-id"
+PRIVY_APP_ID = "your-privy-app-id"
 # 注意：TRONGRID_API_KEY 也需要添加
 TRONGRID_API_KEY = "7bcda08c-dc0e-4aec-9645-d153d5ea258d"
 ```

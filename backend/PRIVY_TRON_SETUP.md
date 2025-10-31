@@ -63,7 +63,7 @@ The `PRIVY_APP_SECRET` is automatically available in Cloudflare Workers environm
 ```typescript
 export interface Env {
   // ... existing bindings
-  VITE_PRIVY_APP_ID?: string;
+  PRIVY_APP_ID?: string;
   PRIVY_APP_SECRET?: string; // Server-side only
 }
 ```
@@ -177,7 +177,7 @@ Retrieves the user's existing TRON wallet.
 
 ```toml
 [vars]
-VITE_PRIVY_APP_ID = "cmfw7skmh00lfjx0cg4zompxp"
+PRIVY_APP_ID = "cmfw7skmh00lfjx0cg4zompxp"
 ```
 
 ### Cloudflare Secrets (Sensitive Data)
@@ -217,7 +217,7 @@ const response = await fetch('/api/tron-wallet', {
 **Solution**: 
 1. Check if user is authenticated in Privy
 2. Ensure access token is fresh (not expired)
-3. Verify `VITE_PRIVY_APP_ID` matches in frontend and backend
+3. Verify `PRIVY_APP_ID` matches in frontend and backend
 
 ### Error: "PRIVY_APP_SECRET is not set"
 
