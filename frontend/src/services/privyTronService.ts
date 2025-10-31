@@ -361,12 +361,106 @@ export async function getTrc20Balance(
   }
 }
 
+/**
+ * Build and sign a TRC20 token transfer transaction using Privy's raw_sign API
+ * @param walletId - Privy embedded wallet ID
+ * @param fromAddress - Sender's TRON address
+ * @param toAddress - Recipient's TRON address
+ * @param amount - Amount to send (in smallest unit, e.g., 1000000 for 1 USDT with 6 decimals)
+ * @param tokenContract - TRC20 token contract address
+ * @param accessToken - Privy access token for authentication
+ * @param publicKey - Public key of the wallet
+ * @returns Signed transaction as JSON string
+ */
+export async function buildAndSignTrc20Transaction(
+  walletId: string,
+  fromAddress: string,
+  toAddress: string,
+  amount: number,
+  tokenContract: string,
+  accessToken: string,
+  publicKey: string
+): Promise<string> {
+  try {
+    const tronWebInstance = getTronWeb();
+
+    // Build TRC20 transfer transaction
+    const parameter = [
+      { type: 'address', value: toAddress },
+      { type: 'uint256', value: amount }
+    ];
+
+    const transaction = await tronWebInstance.transactionBuilder.triggerSmartContract(
+      tokenContract,
+      'transfer(address,uint256)',
+      {},
+      parameter,
+      fromAddress
+    );
+
+    if (!transaction.result || !transaction.result.result) {
+      throw new Error('Failed to build TRC20 transaction');
+    }
+
+    const txObject = transaction.transaction;
+    const txID = txObject.txID;
+
+    console.log('[PrivyTronService] TRC20 transaction built:', {
+      txID,
+      from: fromAddress,
+      to: toAddress,
+      amount,
+      contract: tokenContract
+    });
+
+    // Sign with Privy's raw_sign API
+    const signResponse = await fetch(
+      `https://auth.privy.io/api/v1/wallets/${walletId}/raw_sign`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'privy-app-id': import.meta.env.VITE_PRIVY_APP_ID,
+        },
+        body: JSON.stringify({
+          chain_type: 'tron',
+          data: txID,
+          public_key: publicKey,
+        }),
+      }
+    );
+
+    if (!signResponse.ok) {
+      const errorData = await signResponse.json();
+      throw new Error(`Privy signing failed: ${JSON.stringify(errorData)}`);
+    }
+
+    const signData = await signResponse.json();
+    const signature64 = signData.signature;
+
+    // Convert 64-byte signature to 65-byte TRON signature
+    const signature65 = convertPrivySignatureToTron(signature64, txID, publicKey);
+
+    // Attach signature to transaction
+    txObject.signature = [signature65];
+
+    console.log('[PrivyTronService] TRC20 transaction signed successfully');
+
+    return JSON.stringify(txObject);
+  } catch (error) {
+    console.error('[PrivyTronService] Failed to build and sign TRC20 transaction:', error);
+    throw error;
+  }
+}
+
 // Export all functions
 export const privyTronService = {
   getPrivyTronWallet,
   createPrivyTronWallet,
   signMessageWithPrivy,
   buildAndSignTronTransaction,
+  buildAndSignTrc20Transaction,
   broadcastTronTransaction,
   getTronBalance,
   getTrc20Balance,

@@ -22,6 +22,7 @@ import { SiSolana } from 'react-icons/si';
 import { useWalletContext } from '../contexts/WalletContext';
 import { TokenTransfer } from './TokenTransfer';
 import { EthTokenTransfer } from './EthTokenTransfer';
+import { TronTokenTransfer } from './TronTokenTransfer';
 import TronWalletButton from './TronWalletButton';
 import { useTronWallet } from '../hooks/useTronWallet';
 
@@ -126,6 +127,7 @@ const CustomUserProfile: React.FC = () => {
   // Token Transfer dialog state
   const [showTokenTransfer, setShowTokenTransfer] = useState(false);
   const [showEthTokenTransfer, setShowEthTokenTransfer] = useState(false);
+  const [showTronTokenTransfer, setShowTronTokenTransfer] = useState(false);
   const [transferMode, setTransferMode] = useState<'send' | 'receive'>('send');
 
   // External wallet states
@@ -1231,6 +1233,58 @@ const CustomUserProfile: React.FC = () => {
                       </Stack>
                     </Box>
                   )}
+
+                  {/* Send/Receive buttons for TRON embedded wallet */}
+                  {tronWalletInfo.walletType === 'privy-embedded' && (
+                    <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTransferMode('send');
+                          setShowTronTokenTransfer(true);
+                        }}
+                        sx={{
+                          borderColor: 'rgba(198, 40, 40, 0.5)',
+                          color: '#c62828',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          py: 1,
+                          '&:hover': {
+                            borderColor: '#c62828',
+                            backgroundColor: 'rgba(198, 40, 40, 0.1)'
+                          }
+                        }}
+                      >
+                        Send
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTransferMode('receive');
+                          setShowTronTokenTransfer(true);
+                        }}
+                        sx={{
+                          borderColor: 'rgba(198, 40, 40, 0.5)',
+                          color: '#c62828',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          py: 1,
+                          '&:hover': {
+                            borderColor: '#c62828',
+                            backgroundColor: 'rgba(198, 40, 40, 0.1)'
+                          }
+                        }}
+                      >
+                        Receive
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
               </>
             )}
@@ -1370,6 +1424,13 @@ const CustomUserProfile: React.FC = () => {
       <EthTokenTransfer
         open={showEthTokenTransfer}
         onClose={() => setShowEthTokenTransfer(false)}
+        mode={transferMode}
+      />
+
+      {/* TRON Token Transfer Dialog */}
+      <TronTokenTransfer
+        open={showTronTokenTransfer}
+        onClose={() => setShowTronTokenTransfer(false)}
         mode={transferMode}
       />
 
