@@ -453,16 +453,16 @@ export async function buildAndSignTrc20Transaction(
     // TRON requires 65-byte signature with recovery ID (1b or 1c)
     // Use ecRecover to determine the correct recovery ID
     // Ref: https://docs.privy.io/recipes/use-tier-2#tron
-    const tronWebInstance = getTronWeb();
+    const tronWebForRecover = getTronWeb();
     
     // Try recovery ID '1b' first
     txObject.signature = [signature64 + '1b'];
-    const recoveredAddress1b = tronWebInstance.trx.ecRecover(txObject);
+    const recoveredAddress1b = tronWebForRecover.trx.ecRecover(txObject);
     
     // If '1b' doesn't match, use '1c'
     if (recoveredAddress1b !== fromAddress) {
       txObject.signature = [signature64 + '1c'];
-      const recoveredAddress1c = tronWebInstance.trx.ecRecover(txObject);
+      const recoveredAddress1c = tronWebForRecover.trx.ecRecover(txObject);
       
       console.log('[PrivyTronService] TRC20 transaction signed (recovery ID: 1c):', {
         txID,

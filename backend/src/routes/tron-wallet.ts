@@ -53,6 +53,7 @@ app.post('/create', async (c) => {
     console.log('[TRON Wallet] Creating TRON wallet for user:', userId);
 
     // Create TRON embedded wallet using server SDK
+    // By default, when created via createWallets with userId, the user becomes the owner
     const updatedUser = await privy.createWallets({
       userId,
       wallets: [{
