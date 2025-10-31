@@ -1113,138 +1113,329 @@ export default function PoolDetail() {
                       <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>~$0.00</Typography>
                     </Box>
                     
-                    {/* Single Asset Input */}
-                    <Box sx={{ 
-                      backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)',
-                      borderRadius: 2,
-                      p: 2,
-                      mb: 1.5
-                    }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Button
-                          onClick={() => setSelectedToken(selectedToken === 'SOL' ? 'JITOSOL' : 'SOL')}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            textTransform: 'none',
-                            color: '#3b82f6',
-                            minWidth: 'auto',
-                            p: 0.5,
-                            '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
-                          }}
-                        >
-                          <Box
-                            component="img"
-                            src={selectedToken === 'SOL' ? TOKEN_ICONS.SOL : 'https://storage.googleapis.com/token-metadata/JitoSOL-256.png'}
-                            alt={selectedToken}
-                            sx={{ 
-                              width: 22, 
-                              height: 22, 
-                              borderRadius: '50%',
-                              objectFit: 'cover'
+                    {singleAssetDeposit ? (
+                      /* Single Asset Mode - Show one input with token selector */
+                      <Box sx={{ 
+                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        borderRadius: 2,
+                        p: 2,
+                        mb: 1.5
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Button
+                            onClick={() => setSelectedToken(selectedToken === 'SOL' ? 'JITOSOL' : 'SOL')}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              textTransform: 'none',
+                              color: '#3b82f6',
+                              minWidth: 'auto',
+                              p: 0.5,
+                              '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src={selectedToken === 'SOL' ? TOKEN_ICONS.SOL : 'https://storage.googleapis.com/token-metadata/JitoSOL-256.png'}
+                              alt={selectedToken}
+                              sx={{ 
+                                width: 22, 
+                                height: 22, 
+                                borderRadius: '50%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                            <Typography sx={{ color: selectedToken === 'SOL' ? '#3b82f6' : '#10b981', fontWeight: 600, fontSize: '0.95rem' }}>
+                              {selectedToken}
+                            </Typography>
+                            <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>▼</Typography>
+                          </Button>
+                          <TextField
+                            value={selectedToken === 'SOL' ? solAmount : jitosolAmount}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const maxAmount = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                              if (value === '' || (parseFloat(value) <= maxAmount && !isNaN(parseFloat(value)))) {
+                                if (selectedToken === 'SOL') {
+                                  setSolAmount(value);
+                                } else {
+                                  setJitosolAmount(value);
+                                }
+                              }
+                            }}
+                            placeholder="0"
+                            variant="standard"
+                            type="number"
+                            InputProps={{
+                              disableUnderline: true,
+                              inputProps: {
+                                style: { textAlign: 'right' }
+                              }
+                            }}
+                            sx={{
+                              width: '140px',
+                              '& .MuiInputBase-input': {
+                                color: '#ffffff',
+                                fontSize: '1.8rem',
+                                fontWeight: 600,
+                                textAlign: 'right',
+                                padding: 0,
+                              }
                             }}
                           />
-                          <Typography sx={{ color: selectedToken === 'SOL' ? '#3b82f6' : '#10b981', fontWeight: 600, fontSize: '0.95rem' }}>
-                            {selectedToken}
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography sx={{ color: '#64748b', fontSize: '0.8rem' }}>
+                            Available: {balancesLoading 
+                              ? '...' 
+                              : selectedToken === 'SOL' 
+                                ? `${solBalance.toFixed(8)} SOL`
+                                : `${jitosolBalance.toFixed(8)} JITOSOL`}
                           </Typography>
-                          <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>▼</Typography>
-                        </Button>
-                        <TextField
-                          value={selectedToken === 'SOL' ? solAmount : jitosolAmount}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const maxAmount = selectedToken === 'SOL' ? solBalance : jitosolBalance;
-                            if (value === '' || (parseFloat(value) <= maxAmount && !isNaN(parseFloat(value)))) {
-                              if (selectedToken === 'SOL') {
-                                setSolAmount(value);
-                              } else {
-                                setJitosolAmount(value);
-                              }
-                            }
-                          }}
-                          placeholder="0"
-                          variant="standard"
-                          type="number"
-                          InputProps={{
-                            disableUnderline: true,
-                            inputProps: {
-                              style: { textAlign: 'right' }
-                            }
-                          }}
-                          sx={{
-                            width: '140px',
-                            '& .MuiInputBase-input': {
-                              color: '#ffffff',
-                              fontSize: '1.8rem',
-                              fontWeight: 600,
-                              textAlign: 'right',
-                              padding: 0,
-                            }
-                          }}
-                        />
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography sx={{ color: '#64748b', fontSize: '0.8rem' }}>
-                          Available: {balancesLoading 
-                            ? '...' 
-                            : selectedToken === 'SOL' 
-                              ? `${solBalance.toFixed(8)} SOL`
-                              : `${jitosolBalance.toFixed(8)} JITOSOL`}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button 
-                            size="small" 
-                            onClick={() => {
-                              const balance = selectedToken === 'SOL' ? solBalance : jitosolBalance;
-                              const halfAmount = (balance / 2).toFixed(9);
-                              if (selectedToken === 'SOL') {
-                                setSolAmount(halfAmount);
-                              } else {
-                                setJitosolAmount(halfAmount);
-                              }
-                            }}
-                            disabled={selectedToken === 'SOL' ? solBalance === 0 : jitosolBalance === 0}
-                            sx={{ 
-                              color: '#3b82f6', 
-                              textTransform: 'none', 
-                              minWidth: 'auto', 
-                              px: 1.5,
-                              py: 0.5,
-                              fontSize: '0.85rem',
-                              fontWeight: 500
-                            }}
-                          >
-                            Half
-                          </Button>
-                          <Button 
-                            size="small"
-                            onClick={() => {
-                              const balance = selectedToken === 'SOL' ? solBalance : jitosolBalance;
-                              const maxAmount = balance.toFixed(9);
-                              if (selectedToken === 'SOL') {
-                                setSolAmount(maxAmount);
-                              } else {
-                                setJitosolAmount(maxAmount);
-                              }
-                            }}
-                            disabled={selectedToken === 'SOL' ? solBalance === 0 : jitosolBalance === 0}
-                            sx={{ 
-                              color: '#3b82f6', 
-                              textTransform: 'none', 
-                              minWidth: 'auto', 
-                              px: 1.5,
-                              py: 0.5,
-                              fontSize: '0.85rem',
-                              fontWeight: 500
-                            }}
-                          >
-                            Max
-                          </Button>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button 
+                              size="small" 
+                              onClick={() => {
+                                const balance = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                                const halfAmount = (balance / 2).toFixed(9);
+                                if (selectedToken === 'SOL') {
+                                  setSolAmount(halfAmount);
+                                } else {
+                                  setJitosolAmount(halfAmount);
+                                }
+                              }}
+                              disabled={selectedToken === 'SOL' ? solBalance === 0 : jitosolBalance === 0}
+                              sx={{ 
+                                color: '#3b82f6', 
+                                textTransform: 'none', 
+                                minWidth: 'auto', 
+                                px: 1.5,
+                                py: 0.5,
+                                fontSize: '0.85rem',
+                                fontWeight: 500
+                              }}
+                            >
+                              Half
+                            </Button>
+                            <Button 
+                              size="small"
+                              onClick={() => {
+                                const balance = selectedToken === 'SOL' ? solBalance : jitosolBalance;
+                                const maxAmount = balance.toFixed(9);
+                                if (selectedToken === 'SOL') {
+                                  setSolAmount(maxAmount);
+                                } else {
+                                  setJitosolAmount(maxAmount);
+                                }
+                              }}
+                              disabled={selectedToken === 'SOL' ? solBalance === 0 : jitosolBalance === 0}
+                              sx={{ 
+                                color: '#3b82f6', 
+                                textTransform: 'none', 
+                                minWidth: 'auto', 
+                                px: 1.5,
+                                py: 0.5,
+                                fontSize: '0.85rem',
+                                fontWeight: 500
+                              }}
+                            >
+                              Max
+                            </Button>
+                          </Box>
                         </Box>
                       </Box>
-                    </Box>
+                    ) : (
+                      /* Dual Asset Mode - Show both SOL and JITOSOL inputs */
+                      <>
+                        {/* SOL Input */}
+                        <Box sx={{ 
+                          backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          borderRadius: 2,
+                          p: 2,
+                          mb: 1.5
+                        }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box
+                                component="img"
+                                src={TOKEN_ICONS.SOL}
+                                alt="SOL"
+                                sx={{ 
+                                  width: 22, 
+                                  height: 22, 
+                                  borderRadius: '50%',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                              <Typography sx={{ color: '#3b82f6', fontWeight: 600, fontSize: '0.95rem' }}>SOL</Typography>
+                            </Box>
+                            <TextField
+                              value={solAmount}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || (parseFloat(value) <= solBalance && !isNaN(parseFloat(value)))) {
+                                  setSolAmount(value);
+                                }
+                              }}
+                              placeholder="0"
+                              variant="standard"
+                              type="number"
+                              InputProps={{
+                                disableUnderline: true,
+                                inputProps: {
+                                  style: { textAlign: 'right' }
+                                }
+                              }}
+                              sx={{
+                                width: '140px',
+                                '& .MuiInputBase-input': {
+                                  color: '#ffffff',
+                                  fontSize: '1.8rem',
+                                  fontWeight: 600,
+                                  textAlign: 'right',
+                                  padding: 0,
+                                }
+                              }}
+                            />
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography sx={{ color: '#64748b', fontSize: '0.8rem' }}>
+                              Available: {balancesLoading ? '...' : `${solBalance.toFixed(8)} SOL`}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button 
+                                size="small" 
+                                onClick={() => setSolAmount((solBalance / 2).toFixed(9))}
+                                disabled={solBalance === 0}
+                                sx={{ 
+                                  color: '#3b82f6', 
+                                  textTransform: 'none', 
+                                  minWidth: 'auto', 
+                                  px: 1.5,
+                                  py: 0.5,
+                                  fontSize: '0.85rem',
+                                  fontWeight: 500
+                                }}
+                              >
+                                Half
+                              </Button>
+                              <Button 
+                                size="small"
+                                onClick={() => setSolAmount(solBalance.toFixed(9))}
+                                disabled={solBalance === 0}
+                                sx={{ 
+                                  color: '#3b82f6', 
+                                  textTransform: 'none', 
+                                  minWidth: 'auto', 
+                                  px: 1.5,
+                                  py: 0.5,
+                                  fontSize: '0.85rem',
+                                  fontWeight: 500
+                                }}
+                              >
+                                Max
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Box>
+
+                        {/* JITOSOL Input */}
+                        <Box sx={{ 
+                          backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          borderRadius: 2,
+                          p: 2,
+                          mb: 1.5
+                        }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box
+                                component="img"
+                                src="https://storage.googleapis.com/token-metadata/JitoSOL-256.png"
+                                alt="JITOSOL"
+                                sx={{ 
+                                  width: 22, 
+                                  height: 22, 
+                                  borderRadius: '50%',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                              <Typography sx={{ color: '#10b981', fontWeight: 600, fontSize: '0.95rem' }}>JITOSOL</Typography>
+                            </Box>
+                            <TextField
+                              value={jitosolAmount}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || (parseFloat(value) <= jitosolBalance && !isNaN(parseFloat(value)))) {
+                                  setJitosolAmount(value);
+                                }
+                              }}
+                              placeholder="0"
+                              variant="standard"
+                              type="number"
+                              InputProps={{
+                                disableUnderline: true,
+                                inputProps: {
+                                  style: { textAlign: 'right' }
+                                }
+                              }}
+                              sx={{
+                                width: '140px',
+                                '& .MuiInputBase-input': {
+                                  color: '#ffffff',
+                                  fontSize: '1.8rem',
+                                  fontWeight: 600,
+                                  textAlign: 'right',
+                                  padding: 0,
+                                }
+                              }}
+                            />
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography sx={{ color: '#64748b', fontSize: '0.8rem' }}>
+                              Available: {balancesLoading ? '...' : `${jitosolBalance.toFixed(8)} JITOSOL`}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button 
+                                size="small"
+                                onClick={() => setJitosolAmount((jitosolBalance / 2).toFixed(9))}
+                                disabled={jitosolBalance === 0}
+                                sx={{ 
+                                  color: '#3b82f6', 
+                                  textTransform: 'none', 
+                                  minWidth: 'auto', 
+                                  px: 1.5,
+                                  py: 0.5,
+                                  fontSize: '0.85rem',
+                                  fontWeight: 500
+                                }}
+                              >
+                                Half
+                              </Button>
+                              <Button 
+                                size="small"
+                                onClick={() => setJitosolAmount(jitosolBalance.toFixed(9))}
+                                disabled={jitosolBalance === 0}
+                                sx={{ 
+                                  color: '#3b82f6', 
+                                  textTransform: 'none', 
+                                  minWidth: 'auto', 
+                                  px: 1.5,
+                                  py: 0.5,
+                                  fontSize: '0.85rem',
+                                  fontWeight: 500
+                                }}
+                              >
+                                Max
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Box>
+                      </>
+                    )}
 
                     {/* Single Asset checkbox */}
                     <FormControlLabel

@@ -71,6 +71,12 @@ SOLANA_CLUSTER = "mainnet-beta"
 BSC_MAINNET_RPC_URL = "https://bsc-mainnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75"
 BSC_TESTNET_RPC_URL = "https://bsc-testnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75"
 
+# Privy Configuration (for TRON wallet creation)
+VITE_PRIVY_APP_ID = "cmfw7skmh00lfjx0cg4zompxp"
+# Note: PRIVY_APP_SECRET should be set as a secret, not in vars
+# Run: wrangler secret put PRIVY_APP_SECRET
+# (Input your Privy App Secret from dashboard)
+
 # ⚠️ Sensitive information should use secrets instead of vars
 # Run this command to set secret:
 # wrangler secret put SUBGRAPH_AUTH_TOKEN
@@ -97,6 +103,7 @@ preview_id = "df3f475a32684aaf9843e876628171ca"
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "598eb138eef849c9a5682f494f20e753"  # mars-neon-db
+localConnectionString = "postgresql://localhost:5432/postgres"  # Local dev fallback
 
 # ✅ Durable Objects Configuration
 [durable_objects]

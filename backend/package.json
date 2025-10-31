@@ -80,6 +80,7 @@
     "@lifi/sdk": "^3.12.14",
     "@modelcontextprotocol/sdk": "^1.19.1",
     "@neondatabase/serverless": "^1.0.2",
+    "@privy-io/server-auth": "^1.32.5",
     "@solana/kit": "^2.3.0",
     "agents": "^0.2.9",
     "better-sqlite3": "^12.2.0",

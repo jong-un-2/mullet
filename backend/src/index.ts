@@ -16,6 +16,7 @@ import { createMarsRoutes } from './mars/routes';
 import { createNeonCommissionRoutes } from './neon/commission-routes';
 import { runIncrementalSync, getIndexerHealth } from './services/substreamsIndexer';
 import { collectVaultHistoricalData } from './services/vaultHistoricalCollector';
+import tronWalletRoutes from './routes/tron-wallet';
 
 export interface Env {
 	D1_DATABASE?: D1Database;
@@ -87,6 +88,7 @@ app.route('/cache', createCacheRoutes());
 app.route('/mars', createMarsRoutes());
 app.route('/v1/api/mars', createMarsRoutes()); // V1 API compatibility
 app.route('/api/neon', createNeonCommissionRoutes());
+app.route('/api/tron-wallet', tronWalletRoutes); // TRON wallet creation (Privy Tier 2)
 
 // Mount indexer routes (Durable Object container control)
 app.route('/indexer', createIndexerRoutes());
