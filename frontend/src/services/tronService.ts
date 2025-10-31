@@ -3,7 +3,7 @@
  * 用于处理 TRON 网络的交互，包括钱包连接、余额查询和交易
  */
 
-import TronWeb from 'tronweb';
+import { TronWeb } from 'tronweb';
 import { tronMainnet, tronNile, type TronConfig } from '../config/networkConfig';
 import { TRON_CHAIN_ID } from './marsLiFiService';
 
@@ -43,9 +43,9 @@ class TronService {
    */
   private initializeTronWeb() {
     try {
-      this.tronWeb = new (TronWeb as any)({
+      this.tronWeb = new TronWeb({
         fullHost: this.config.fullHost,
-        headers: { "TRON-PRO-API-KEY": import.meta.env.VITE_TRONGRID_API_KEY || 'df3df0ca-ae0c-4ff1-82bd-d17f2620e868' },
+        headers: { "TRON-PRO-API-KEY": import.meta.env.VITE_TRONGRID_API_KEY || '' },
       });
       console.log('✅ TronWeb initialized:', this.config.name);
     } catch (error) {

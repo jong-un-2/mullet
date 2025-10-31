@@ -14,11 +14,8 @@
  * - Transaction submission to network
  */
 
-// Import TronWeb - handle both ESM and CommonJS
-import TronWebModule from 'tronweb';
-
-// Extract the TronWeb constructor properly
-const TronWeb = (TronWebModule as any).default || TronWebModule;
+// Import TronWeb v6.x (TypeScript rewrite with named exports)
+import { TronWeb } from 'tronweb';
 
 // TRON network configuration
 const TRON_MAINNET_CONFIG = {
@@ -35,7 +32,7 @@ const getTronWeb = () => {
     return (window as any).tronWeb;
   }
   
-  // Create new TronWeb instance
+  // Create new TronWeb instance using v6.x constructor
   console.log('[PrivyTronService] Creating new TronWeb instance');
   
   return new TronWeb({
@@ -350,11 +347,20 @@ export async function getTrc20Balance(
 ): Promise<number> {
   try {
     const tronWebInstance = getTronWeb();
+    
+    // Set the default address for contract calls
+    tronWebInstance.setAddress(address);
+    
     const contract = await tronWebInstance.contract().at(tokenContract);
     const balance = await contract.balanceOf(address).call();
     const decimals = await contract.decimals().call();
     
-    return balance / Math.pow(10, decimals);
+    // Convert BigInt to number properly
+    const balanceStr = balance.toString();
+    const decimalsNum = Number(decimals.toString());
+    const balanceNum = Number(balanceStr) / Math.pow(10, decimalsNum);
+    
+    return balanceNum;
   } catch (error) {
     console.error('[PrivyTronService] Failed to get TRC20 balance:', error);
     return 0;
