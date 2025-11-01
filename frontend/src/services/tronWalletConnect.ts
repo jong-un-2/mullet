@@ -10,21 +10,21 @@
  * - 其他 WalletConnect 兼容的 TRON 钱包
  */
 
-import { TRON_CHAIN_ID } from './marsLiFiService';
+import { TRON_CHAIN_ID } from '../constants/tronConstants';
 
 /**
  * TRON WalletConnect 配置
  */
 export const TRON_WALLETCONNECT_CONFIG = {
-  // TRON Chain ID for WalletConnect
-  chainId: TRON_CHAIN_ID, // 728126428
+  // TRON Chain ID for WalletConnect (字符串标识符)
+  chainId: TRON_CHAIN_ID, // 'mainnet'
   
   // TRON 网络名称
   chainName: 'TRON',
   
   // RPC URLs
   rpcUrls: [
-    'https://api.trongrid.io',
+    'https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
     'https://api.tronstack.io',
   ],
   
@@ -89,8 +89,9 @@ export const TRON_WALLETCONNECT_WALLETS = {
 /**
  * 检查是否为 TRON WalletConnect 会话
  */
-export const isTronWalletConnect = (chainId?: number): boolean => {
-  return chainId === TRON_CHAIN_ID;
+export const isTronWalletConnect = (chainId?: number | string): boolean => {
+  const chainIdStr = String(chainId).toLowerCase();
+  return chainIdStr === TRON_CHAIN_ID || chainIdStr === 'mainnet' || chainIdStr === 'nile';
 };
 
 /**
@@ -114,7 +115,7 @@ export const isValidTronWCAddress = (address: string): boolean => {
  * 用于在 WalletConnect 中添加/切换 TRON 网络
  */
 export const getTronWCNetworkParams = () => ({
-  chainId: `0x${TRON_CHAIN_ID.toString(16)}`, // 转换为十六进制
+  chainId: TRON_CHAIN_ID, // TRON 使用字符串标识符 'mainnet'
   chainName: TRON_WALLETCONNECT_CONFIG.chainName,
   nativeCurrency: TRON_WALLETCONNECT_CONFIG.nativeCurrency,
   rpcUrls: TRON_WALLETCONNECT_CONFIG.rpcUrls,

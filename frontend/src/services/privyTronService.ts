@@ -17,10 +17,10 @@
 // Import TronWeb v6.x (TypeScript rewrite with named exports)
 import { TronWeb } from 'tronweb';
 
-// TRON network configuration
+// TRON network configuration - Using Ankr Premium RPC
 const TRON_MAINNET_CONFIG = {
-  fullHost: 'https://api.trongrid.io',
-  headers: { 'TRON-PRO-API-KEY': import.meta.env.VITE_TRONGRID_API_KEY || '' },
+  fullHost: 'https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
+  headers: {},
 };
 
 // Initialize TronWeb instance (for transaction building only)

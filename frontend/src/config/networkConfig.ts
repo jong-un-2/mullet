@@ -99,39 +99,6 @@ class NetworkConfigManager {
     };
   }
 
-  // TRON Networks
-  getTronMainnet(): TronConfig {
-    return {
-      chainId: 728126428, // LiFi TRON Chain ID
-      name: 'TRON Mainnet',
-      fullHost: import.meta.env.VITE_TRON_MAINNET_RPC || 'https://api.trongrid.io',
-      solidityNode: import.meta.env.VITE_TRON_SOLIDITY_NODE || 'https://api.trongrid.io',
-      eventServer: import.meta.env.VITE_TRON_EVENT_SERVER || 'https://api.trongrid.io',
-      blockExplorer: 'https://tronscan.org',
-      nativeCurrency: {
-        name: 'TRON',
-        symbol: 'TRX',
-        decimals: 6
-      }
-    };
-  }
-
-  getTronNile(): TronConfig {
-    return {
-      chainId: 3448148188, // Nile Testnet (custom ID)
-      name: 'TRON Nile Testnet',
-      fullHost: import.meta.env.VITE_TRON_NILE_RPC || 'https://nile.trongrid.io',
-      solidityNode: import.meta.env.VITE_TRON_NILE_SOLIDITY || 'https://nile.trongrid.io',
-      eventServer: import.meta.env.VITE_TRON_NILE_EVENT || 'https://nile.trongrid.io',
-      blockExplorer: 'https://nile.tronscan.org',
-      nativeCurrency: {
-        name: 'TRON',
-        symbol: 'TRX',
-        decimals: 6
-      }
-    };
-  }
-
   // Get network by chain ID
   getNetworkByChainId(chainId: number): NetworkConfig | null {
     switch (chainId) {
@@ -141,20 +108,6 @@ class NetworkConfigManager {
         return this.getBSCMainnet();
       case 97:
         return this.getBSCTestnet();
-      case 728126428:
-        return this.getTronMainnet() as any; // TRON uses different config structure
-      default:
-        return null;
-    }
-  }
-
-  // Get TRON network by chain ID
-  getTronNetworkByChainId(chainId: number): TronConfig | null {
-    switch (chainId) {
-      case 728126428:
-        return this.getTronMainnet();
-      case 3448148188:
-        return this.getTronNile();
       default:
         return null;
     }
@@ -182,5 +135,7 @@ export const solanaDevnet = networkConfig.getSolanaDevnet();
 export const bscMainnet = networkConfig.getBSCMainnet();
 export const bscTestnet = networkConfig.getBSCTestnet();
 export const ethereum = networkConfig.getEthereum();
-export const tronMainnet = networkConfig.getTronMainnet();
-export const tronNile = networkConfig.getTronNile();
+
+// TRON 配置在 tronPrivyConfig.ts 中定义
+// export const tronMainnet = ...
+// export const tronNile = ...

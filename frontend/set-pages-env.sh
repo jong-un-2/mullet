@@ -18,7 +18,7 @@ wrangler pages secret put VITE_PRIVY_CLIENT_ID --project-name="$PROJECT_NAME" --
 wrangler pages secret put VITE_PRIVY_APP_SECRET --project-name="$PROJECT_NAME" --env="production" <<< "4vHpFatGkatR4vGPTfGrNTAz6B4u9cC1mBZRm2MxbcY2ujqQUjasS3aDkLUxz8WjkBmugn96mo4bfCGXpVU18XVu"
 
 # Wallet Configuration
-wrangler pages secret put VITE_WALLETCONNECT_PROJECT_ID --project-name="$PROJECT_NAME" --env="production" <<< "09c1182f7b2cb58c98f0b8ed1f223d91"
+wrangler pages secret put VITE_WALLETCONNECT_PROJECT_ID --project-name="$PROJECT_NAME" --env="production" <<< "8772b8b62d811d9443e1fe15863e5f1e"
 
 # Solana RPC Configuration
 wrangler pages secret put VITE_SOLANA_MAINNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
@@ -31,14 +31,13 @@ wrangler pages secret put VITE_BSC_CHAIN_ID --project-name="$PROJECT_NAME" --env
 wrangler pages secret put VITE_BSC_MAINNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://bsc-mainnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75"
 wrangler pages secret put VITE_BSC_TESTNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://bsc-testnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75"
 
-# TRON Network Configuration
-wrangler pages secret put VITE_TRON_MAINNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://api.trongrid.io"
-wrangler pages secret put VITE_TRON_SOLIDITY_NODE --project-name="$PROJECT_NAME" --env="production" <<< "https://api.trongrid.io"
-wrangler pages secret put VITE_TRON_EVENT_SERVER --project-name="$PROJECT_NAME" --env="production" <<< "https://api.trongrid.io"
-wrangler pages secret put VITE_TRONGRID_API_KEY --project-name="$PROJECT_NAME" --env="production" <<< "7bcda08c-dc0e-4aec-9645-d153d5ea258d"
-wrangler pages secret put VITE_TRON_NILE_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://nile.trongrid.io"
-wrangler pages secret put VITE_TRON_NILE_SOLIDITY --project-name="$PROJECT_NAME" --env="production" <<< "https://nile.trongrid.io"
-wrangler pages secret put VITE_TRON_NILE_EVENT --project-name="$PROJECT_NAME" --env="production" <<< "https://nile.trongrid.io"
+# TRON Network Configuration (Ankr Premium)
+wrangler pages secret put VITE_TRON_MAINNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3"
+wrangler pages secret put VITE_TRON_SOLIDITY_NODE --project-name="$PROJECT_NAME" --env="production" <<< "https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3"
+wrangler pages secret put VITE_TRON_EVENT_SERVER --project-name="$PROJECT_NAME" --env="production" <<< "https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3"
+
+# Session Signer Configuration
+wrangler pages secret put VITE_SESSION_SIGNER_ID --project-name="$PROJECT_NAME" --env="production" <<< "ggdyrnc74cd09z2j4msxe8za"
 
 # Ethereum Configuration
 wrangler pages secret put VITE_INFURA_API_KEY --project-name="$PROJECT_NAME" --env="production" <<< "your_infura_api_key_here"

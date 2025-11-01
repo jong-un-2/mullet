@@ -4,22 +4,22 @@
  */
 
 import { tronService } from './src/services/tronService';
-import { TRON_CHAIN_ID, COMMON_TOKENS } from './src/services/marsLiFiService';
+import { TRON_CHAIN_ID, TRON_TOKENS } from './src/constants/tronConstants';
 
 console.log('🧪 TRON Integration Test Starting...\n');
 
 // 测试 1: 验证 TRON Chain ID
 console.log('Test 1: TRON Chain ID');
 console.log('✅ TRON_CHAIN_ID:', TRON_CHAIN_ID);
-console.log('Expected: 728126428');
-console.assert(TRON_CHAIN_ID === 728126428, 'TRON_CHAIN_ID mismatch!');
+console.log('Expected: mainnet (字符串标识符)');
+console.assert(TRON_CHAIN_ID === 'mainnet', 'TRON_CHAIN_ID mismatch!');
 console.log('');
 
 // 测试 2: 验证代币地址
 console.log('Test 2: TRON Token Addresses');
-console.log('✅ USDT:', COMMON_TOKENS.TRON.USDT);
-console.log('✅ USDC:', COMMON_TOKENS.TRON.USDC);
-console.assert(COMMON_TOKENS.TRON.USDT === 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 'USDT address mismatch!');
+console.log('✅ USDT:', TRON_TOKENS.USDT);
+console.log('✅ USDC:', TRON_TOKENS.USDC);
+console.assert(TRON_TOKENS.USDT === 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 'USDT address mismatch!');
 console.log('');
 
 // 测试 3: TRON 地址验证

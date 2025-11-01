@@ -163,16 +163,13 @@ app.post('/broadcast', async (c) => {
       return c.json({ error: 'Missing signedTransaction' }, 400);
     }
 
-    // Forward to TronGrid API
-    const tronGridApiKey = c.env.TRONGRID_API_KEY || '';
-    
+    // Forward to Ankr Premium RPC
     const broadcastResponse = await fetch(
-      'https://api.trongrid.io/wallet/broadcasttransaction',
+      'https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3/wallet/broadcasttransaction',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'TRON-PRO-API-KEY': tronGridApiKey
         },
         body: JSON.stringify(JSON.parse(signedTransaction))
       }

@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { privyTronService } from '../services/privyTronService';
-import { COMMON_TOKENS } from '../services/marsLiFiService';
+import { TRON_TOKENS } from '../constants/tronConstants';
 
 export interface TronWalletInfo {
   address: string;
@@ -266,9 +266,9 @@ export const useTronWallet = () => {
       try {
         const usdtBalance = await privyTronService.getTrc20Balance(
           walletInfo.address,
-          COMMON_TOKENS.TRON.USDT
+          TRON_TOKENS.USDT
         );
-        tokens[COMMON_TOKENS.TRON.USDT] = {
+        tokens[TRON_TOKENS.USDT] = {
           balance: usdtBalance,
           symbol: 'USDT',
           decimals: 6,

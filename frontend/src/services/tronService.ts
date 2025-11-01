@@ -4,8 +4,37 @@
  */
 
 import { TronWeb } from 'tronweb';
-import { tronMainnet, tronNile, type TronConfig } from '../config/networkConfig';
-import { TRON_CHAIN_ID } from './marsLiFiService';
+import { type TronConfig } from '../config/networkConfig';
+import { TRON_CHAIN_ID } from '../constants/tronConstants';
+
+// TRON 网络配置
+export const tronMainnet: TronConfig = {
+  chainId: 0, // TRON 使用字符串标识符 'mainnet'
+  name: 'TRON Mainnet',
+  fullHost: import.meta.env.VITE_TRON_MAINNET_RPC || 'https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
+  solidityNode: import.meta.env.VITE_TRON_SOLIDITY_NODE || 'https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
+  eventServer: import.meta.env.VITE_TRON_EVENT_SERVER || 'https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
+  blockExplorer: 'https://tronscan.org',
+  nativeCurrency: {
+    name: 'TRX',
+    symbol: 'TRX',
+    decimals: 6,
+  },
+};
+
+export const tronNile: TronConfig = {
+  chainId: 0, // TRON 使用字符串标识符 'nile'
+  name: 'TRON Nile Testnet',
+  fullHost: import.meta.env.VITE_TRON_NILE_RPC || 'https://nile.trongrid.io',
+  solidityNode: import.meta.env.VITE_TRON_NILE_SOLIDITY || 'https://nile.trongrid.io',
+  eventServer: import.meta.env.VITE_TRON_NILE_EVENT || 'https://nile.trongrid.io',
+  blockExplorer: 'https://nile.tronscan.org',
+  nativeCurrency: {
+    name: 'TRX',
+    symbol: 'TRX',
+    decimals: 6,
+  },
+};
 
 // TronWeb 类型定义
 type TronWebInstance = any;
@@ -351,7 +380,3 @@ export { TronService };
 
 // 导出 TRON 相关常量
 export { TRON_CHAIN_ID };
-export const TRON_NILE_CHAIN_ID = 3448148188;
-
-// 导出网络配置
-export { tronMainnet, tronNile };

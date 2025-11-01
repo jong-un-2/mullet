@@ -13,14 +13,14 @@
  * - Klever Wallet (iOS/Android)
  */
 
-import { TRON_CHAIN_ID } from '../services/marsLiFiService';
+import { TRON_CHAIN_ID } from '../constants/tronConstants';
 
 /**
  * TRON 链配置（用于 WalletConnect）
  */
 export const TRON_CUSTOM_CHAIN = {
-  // Chain ID - TRON Mainnet
-  id: TRON_CHAIN_ID, // 728126428
+  // Chain ID - TRON Mainnet (CAIP-2 标准)
+  id: TRON_CHAIN_ID, // 'mainnet'
   
   // 链名称
   name: 'TRON',
@@ -38,12 +38,12 @@ export const TRON_CUSTOM_CHAIN = {
   // RPC 节点
   rpcUrls: {
     default: {
-      http: ['https://api.trongrid.io'],
-      webSocket: ['wss://api.trongrid.io/jsonrpc'],
+      http: ['https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3'],
+      webSocket: ['wss://rpc.ankr.com/premium-ws/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3'],
     },
     public: {
       http: [
-        'https://api.trongrid.io',
+        'https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
         'https://api.tronstack.io',
         'https://rpc.ankr.com/http/tron',
       ],
@@ -66,7 +66,7 @@ export const TRON_CUSTOM_CHAIN = {
  * TRON Nile 测试网配置
  */
 export const TRON_NILE_TESTNET = {
-  id: 3448148188, // Nile Testnet Chain ID
+  id: 'nile', // Nile Testnet Chain ID
   name: 'TRON Nile Testnet',
   network: 'tron-nile',
   nativeCurrency: {
@@ -113,12 +113,12 @@ export const WALLETCONNECT_CONFIG = {
   
   // 支持的链（包括 TRON）
   chains: [
-    `tron:${TRON_CHAIN_ID}`, // TRON Mainnet
+    `tron:${TRON_CHAIN_ID}`, // TRON Mainnet (tron:mainnet)
   ],
   
   // 可选的链
   optionalChains: [
-    'tron:3448148188', // TRON Nile Testnet
+    'tron:nile', // TRON Nile Testnet
   ],
 };
 
@@ -200,11 +200,11 @@ export const TRON_CHAIN_TYPE = 'tron' as const;
 export const isTronChain = (chainId?: number | string): boolean => {
   if (!chainId) return false;
   
-  const numericChainId = typeof chainId === 'string' 
-    ? parseInt(chainId, 10) 
-    : chainId;
+  const chainIdStr = String(chainId).toLowerCase();
   
-  return numericChainId === TRON_CHAIN_ID || numericChainId === 3448148188;
+  return chainIdStr === TRON_CHAIN_ID || 
+         chainIdStr === 'nile' || 
+         chainIdStr === 'mainnet';
 };
 
 /**
