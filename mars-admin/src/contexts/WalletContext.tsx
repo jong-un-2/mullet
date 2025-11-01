@@ -12,7 +12,7 @@ interface WalletContextProviderProps {
 
 export const WalletContextProvider: FC<WalletContextProviderProps> = ({ children }) => {
   // RPC endpoint configuration - Using CLI's Helius API key
-  const endpoint = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+  const endpoint = 'https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3';
 
   // Configure supported wallets
   const wallets = useMemo(

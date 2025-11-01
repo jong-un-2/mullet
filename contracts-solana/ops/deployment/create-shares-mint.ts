@@ -19,7 +19,7 @@ async function main() {
 
   // 连接到 Solana
   const connection = new Connection(
-    "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3",
+    "https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3",
     "confirmed"
   );
 

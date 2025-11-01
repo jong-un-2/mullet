@@ -36,7 +36,7 @@ const MARS_PROGRAM_ID = new PublicKey("G1dzv2HFp5x4131GSRyo8b3BHzwsrCdSVq5YCBXoM
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 // RPC 连接
-const HELIUS_RPC_URL = process.env.HELIUS_RPC_URL || "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
+const ANKR_RPC_URL = process.env.ANKR_RPC_URL || "https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3";
 
 /**
  * 加载用户钱包
@@ -53,7 +53,7 @@ function loadWallet(): Keypair {
 async function exampleMarsJupiterLendDeposit() {
   console.log("\n=== Mars Protocol → Jupiter Lend 存款示例 ===\n");
 
-  const connection = new Connection(HELIUS_RPC_URL, "confirmed");
+  const connection = new Connection(ANKR_RPC_URL, "confirmed");
   const wallet = loadWallet();
   
   console.log("👤 用户钱包:", wallet.publicKey.toBase58());
@@ -132,7 +132,7 @@ async function exampleMarsJupiterLendDeposit() {
 async function exampleMarsJupiterLendWithdraw() {
   console.log("\n=== Mars Protocol → Jupiter Lend 取款示例 ===\n");
 
-  const connection = new Connection(HELIUS_RPC_URL, "confirmed");
+  const connection = new Connection(ANKR_RPC_URL, "confirmed");
   const wallet = loadWallet();
   
   console.log("👤 用户钱包:", wallet.publicKey.toBase58());

@@ -20,11 +20,11 @@ wrangler pages secret put VITE_PRIVY_APP_SECRET --project-name="$PROJECT_NAME" -
 # Wallet Configuration
 wrangler pages secret put VITE_WALLETCONNECT_PROJECT_ID --project-name="$PROJECT_NAME" --env="production" <<< "8772b8b62d811d9443e1fe15863e5f1e"
 
-# Solana RPC Configuration
-wrangler pages secret put VITE_SOLANA_MAINNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
-wrangler pages secret put VITE_SOLANA_MAINNET_WS --project-name="$PROJECT_NAME" --env="production" <<< "wss://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
-wrangler pages secret put VITE_SOLANA_DEVNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
-wrangler pages secret put VITE_SOLANA_DEVNET_WS --project-name="$PROJECT_NAME" --env="production" <<< "wss://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3"
+# Solana RPC Configuration (Ankr Premium)
+wrangler pages secret put VITE_SOLANA_MAINNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3"
+wrangler pages secret put VITE_SOLANA_MAINNET_WS --project-name="$PROJECT_NAME" --env="production" <<< "wss://rpc.ankr.com/solana/ws/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3"
+wrangler pages secret put VITE_SOLANA_DEVNET_RPC --project-name="$PROJECT_NAME" --env="production" <<< "https://rpc.ankr.com/solana_devnet/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3"
+wrangler pages secret put VITE_SOLANA_DEVNET_WS --project-name="$PROJECT_NAME" --env="production" <<< "wss://rpc.ankr.com/solana_devnet/ws/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3"
 
 # BSC Network Configuration
 wrangler pages secret put VITE_BSC_CHAIN_ID --project-name="$PROJECT_NAME" --env="production" <<< "56"

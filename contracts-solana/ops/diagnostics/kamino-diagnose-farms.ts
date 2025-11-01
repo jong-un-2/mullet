@@ -13,7 +13,7 @@ import { KaminoSDKHelper } from '../utils/kamino-lend-helper';
 import { HELIUS_RPC } from '../utils/constants';
 
 // 配置
-const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+const RPC_URL = 'https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3';
 const VAULT_ADDRESS = new PublicKey('A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK');
 const WALLET_PATH = './phantom-wallet.json';
 

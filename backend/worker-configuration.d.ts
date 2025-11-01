@@ -16,8 +16,8 @@ declare namespace Cloudflare {
 		JUPITER_API_BASE_URL: "https://api.jup.ag/ultra";
 		JUPITER_LITE_API_BASE_URL: "https://lite-api.jup.ag";
 		JUPITER_LEND_API_BASE_URL: "https://dev.jup.ag";
-		SOLANA_RPC_URL: "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
-		SOLANA_DEVNET_RPC_URL: "https://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
+		SOLANA_RPC_URL: "https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3";
+		SOLANA_DEVNET_RPC_URL: "https://rpc.ankr.com/solana_devnet/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3";
 		SOLANA_CLUSTER: "mainnet-beta";
 		BSC_MAINNET_RPC_URL: "https://bsc-mainnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75";
 		BSC_TESTNET_RPC_URL: "https://bsc-testnet.infura.io/v3/402b910bd7e24d2a866ac48ab3741e75";

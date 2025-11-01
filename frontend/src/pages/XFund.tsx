@@ -565,8 +565,8 @@ const XFundPage = () => {
         console.log('✅ EVM provider added');
       }
       
-      // 使用 Helius RPC 而不是公共节点，避免 403 错误
-      const customRpcUrl = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+      // 使用 Ankr Premium RPC
+      const customRpcUrl = 'https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3';
       console.log(`🔧 Configuring LiFi SDK with ${providers.length} providers...`);
       console.log('🔗 Using custom Solana RPC:', customRpcUrl);
       
@@ -830,8 +830,8 @@ const XFundPage = () => {
         getWalletAdapter: async () => walletAdapter as any
       });
 
-      // 使用 Helius RPC 而不是公共节点，避免 403 错误
-      const customRpcUrl = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+      // 使用 Ankr Premium RPC
+      const customRpcUrl = 'https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3';
       console.log('🔗 Using custom Solana RPC:', customRpcUrl);
       
       createConfig({

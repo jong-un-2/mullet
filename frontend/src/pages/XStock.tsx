@@ -675,7 +675,7 @@ const XStockPage = () => {
       });
       
       // 使用 Helius RPC 而不是公共节点，避免 403 错误
-      const customRpcUrl = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+      const customRpcUrl = 'https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3';
       console.log('🔗 Configuring LiFi SDK with custom Solana RPC:', customRpcUrl);
       
       // 初始化 LiFi SDK 同时支持 EVM 和 Solana，并配置自定义 RPC URLs

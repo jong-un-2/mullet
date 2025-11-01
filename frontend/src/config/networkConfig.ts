@@ -41,16 +41,16 @@ class NetworkConfigManager {
   getSolanaMainnet(): SolanaConfig {
     return {
       cluster: 'mainnet-beta',
-      rpcUrl: import.meta.env.VITE_SOLANA_MAINNET_RPC || 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3',
-      wsUrl: import.meta.env.VITE_SOLANA_MAINNET_WS || 'wss://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3'
+      rpcUrl: import.meta.env.VITE_SOLANA_MAINNET_RPC || 'https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
+      wsUrl: import.meta.env.VITE_SOLANA_MAINNET_WS || 'wss://rpc.ankr.com/solana/ws/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3'
     };
   }
 
   getSolanaDevnet(): SolanaConfig {
     return {
       cluster: 'devnet',
-      rpcUrl: import.meta.env.VITE_SOLANA_DEVNET_RPC || 'https://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3',
-      wsUrl: import.meta.env.VITE_SOLANA_DEVNET_WS || 'wss://devnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3'
+      rpcUrl: import.meta.env.VITE_SOLANA_DEVNET_RPC || 'https://rpc.ankr.com/solana_devnet/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
+      wsUrl: import.meta.env.VITE_SOLANA_DEVNET_WS || 'wss://rpc.ankr.com/solana_devnet/ws/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3'
     };
   }
 

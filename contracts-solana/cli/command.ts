@@ -265,7 +265,7 @@ function programCommand(name: string) {
       // mainnet-beta, testnet, devnet
       "-r, --rpc <string>",
       "Solana rpc url",
-      "https://mainnet.helius-rpc.com/?api-key=e2ed9b0c-946c-4517-b414-360729bd6a77"
+      "https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3"
     );
   // .action((cmd) => {
   //   const { env, keypair } = cmd;
@@ -276,7 +276,7 @@ function programCommand(name: string) {
   //   switch (env) {
   //     case "mainnet-beta":
   //       rpc =
-  //         "https://mainnet.helius-rpc.com/?api-key=99c6d984-537e-4569-955b-5e4703b73c0d";
+  //         "https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3";
   //       break;
   //     case "testnet":
   //       rpc = "https://api.testnet.solana.com";

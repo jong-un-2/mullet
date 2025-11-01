@@ -72,7 +72,7 @@ const U64_MAX = '18446744073709551615';
 const DEFAULT_PUBLIC_KEY = PublicKey.default;
 
 // Use Helius RPC for better reliability with Kamino SDK
-const HELIUS_RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3';
+const ANKR_RPC_URL = 'https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3';
 
 /**
  * Create Kamino RPC using Helius for better reliability
@@ -85,7 +85,7 @@ function createKaminoRpc(): Rpc<SolanaRpcApi> {
     ...DEFAULT_RPC_CONFIG,
     defaultCommitment: 'processed', // Match Kamino SDK examples
   });
-  return createRpc({ api, transport: createDefaultRpcTransport({ url: HELIUS_RPC_URL }) });
+  return createRpc({ api, transport: createDefaultRpcTransport({ url: ANKR_RPC_URL }) });
 }
 
 /**

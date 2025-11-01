@@ -25,7 +25,7 @@ export const WSOL_MINT = new PublicKey("So11111111111111111111111111111111111111
 export const USDC_VAULT_ADDRESS = new PublicKey("A2wsxhA7pF4B2UKVfXocb6TAAP9ipfPJam6oMKgDE5BK");
 
 // RPC URLs
-export const HELIUS_RPC = "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
+export const ANKR_RPC = "https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3";
 
 // 旧程序ID (已废弃，仅供参考)
 export const KAMINO_V1_PROGRAM = "Cyjb5r4P1j1YPEyUemWxMZKbTpBiyNQML1S1YpPvi9xE"; // V1已废弃

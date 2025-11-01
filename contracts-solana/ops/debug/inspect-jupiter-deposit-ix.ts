@@ -8,13 +8,13 @@ import BN from "bn.js";
 import fs from "fs";
 import path from "path";
 
-const HELIUS_RPC = "https://mainnet.helius-rpc.com/?api-key=3e4462af-f2b9-4a36-9387-a649c63273d3";
+const ANKR_RPC = "https://rpc.ankr.com/solana/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3";
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 async function main() {
   console.log("\n=== 检查 Jupiter Lend 存款指令结构 ===\n");
 
-  const connection = new Connection(HELIUS_RPC, "confirmed");
+  const connection = new Connection(ANKR_RPC, "confirmed");
   
   // 加载钱包
   const walletPath = path.join(__dirname, "../../phantom-wallet.json");
