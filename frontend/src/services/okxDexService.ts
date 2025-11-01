@@ -117,7 +117,6 @@ export interface OKXSwapResponse {
 export async function getSwapQuote(params: SwapParams): Promise<OKXQuote> {
   const {
     fromChainId,
-    toChainId,
     fromTokenAddress,
     toTokenAddress,
     amount,
