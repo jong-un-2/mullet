@@ -418,6 +418,79 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
               </Box>
             </Box>
 
+            {/* Account Resources - Energy and Bandwidth */}
+            {tronBalance?.resources && (
+              <Box sx={{
+                backgroundColor: 'rgba(198, 40, 40, 0.05)',
+                border: '1px solid rgba(198, 40, 40, 0.2)',
+                borderRadius: 2,
+                p: 2,
+                mt: 2,
+              }}>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    display: 'block',
+                    mb: 1.5,
+                    fontWeight: 600,
+                  }}
+                >
+                  Account Resources
+                </Typography>
+                
+                {/* Energy */}
+                <Box sx={{ mb: 1.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                      Energy:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#c62828', fontWeight: 600, fontFamily: 'monospace' }}>
+                      {tronBalance.resources.energy.available.toLocaleString()} / {tronBalance.resources.energy.total.toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ 
+                    height: 6, 
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                    borderRadius: 1,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ 
+                      height: '100%', 
+                      backgroundColor: '#c62828',
+                      width: `${tronBalance.resources.energy.total > 0 ? (tronBalance.resources.energy.available / tronBalance.resources.energy.total * 100) : 0}%`,
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </Box>
+                </Box>
+
+                {/* Bandwidth */}
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                      Bandwidth:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#c62828', fontWeight: 600, fontFamily: 'monospace' }}>
+                      {tronBalance.resources.bandwidth.available.toLocaleString()} / {tronBalance.resources.bandwidth.total.toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ 
+                    height: 6, 
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                    borderRadius: 1,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ 
+                      height: '100%', 
+                      backgroundColor: '#c62828',
+                      width: `${tronBalance.resources.bandwidth.total > 0 ? (tronBalance.resources.bandwidth.available / tronBalance.resources.bandwidth.total * 100) : 0}%`,
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </Box>
+                </Box>
+              </Box>
+            )}
+
             {/* Supported Tokens alert removed as per request */}
           </Box>
         ) : (

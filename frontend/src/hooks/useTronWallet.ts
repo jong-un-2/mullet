@@ -19,6 +19,10 @@ export interface TronWalletInfo {
 export interface TronBalance {
   trx: number;
   tokens: Record<string, { balance: number; symbol: string; decimals: number }>;
+  resources?: {
+    energy: { available: number; total: number; used: number };
+    bandwidth: { available: number; total: number; used: number };
+  };
 }
 
 export const useTronWallet = () => {
@@ -97,14 +101,33 @@ export const useTronWallet = () => {
             publicKey: tronAccount.publicKey,
           });
         } else {
-          console.log('[useTronWallet] No TRON wallet found at all');
+          console.log('[useTronWallet] No TRON wallet found, auto-creating...');
           setWalletInfo(null);
+          
+          // Auto-create TRON wallet on first login
+          try {
+            setIsConnecting(true);
+            console.log('[useTronWallet] Auto-creating TRON wallet via server API...');
+            const address = await privyTronService.createPrivyTronWallet(getAccessToken);
+            console.log('[useTronWallet] Auto-created TRON wallet:', address);
+            
+            setWalletInfo({
+              address,
+              connected: true,
+              walletType: 'privy-embedded',
+            });
+          } catch (err) {
+            console.error('[useTronWallet] Failed to auto-create TRON wallet:', err);
+            // Don't set error state, just log it - user can still manually create later
+          } finally {
+            setIsConnecting(false);
+          }
         }
       }
     };
 
     checkExistingWallet();
-  }, [authenticated, user, wallets]);
+  }, [authenticated, user, wallets, getAccessToken]);
 
   // Auto-fetch balance when wallet info updates
   useEffect(() => {
@@ -254,9 +277,19 @@ export const useTronWallet = () => {
         console.warn('Failed to fetch USDT balance:', err);
       }
       
+      // Get account resources (Energy and Bandwidth)
+      let resources;
+      try {
+        resources = await privyTronService.getAccountResources(walletInfo.address);
+        console.log('[useTronWallet] Account resources:', resources);
+      } catch (err) {
+        console.warn('Failed to fetch account resources:', err);
+      }
+      
       const balanceData = {
         trx: trxBalance,
         tokens,
+        resources,
       };
       
       setBalance(balanceData);

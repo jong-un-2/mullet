@@ -372,6 +372,55 @@ export async function getTrc20Balance(
 }
 
 /**
+ * Get account resources (Energy and Bandwidth)
+ * @param address - TRON address
+ * @returns Account resources including Energy and Bandwidth
+ */
+export async function getAccountResources(address: string): Promise<{
+  energy: { available: number; total: number; used: number };
+  bandwidth: { available: number; total: number; used: number };
+}> {
+  try {
+    const tronWebInstance = getTronWeb();
+    const resources = await tronWebInstance.trx.getAccountResources(address);
+    
+    // Energy resources
+    const energyLimit = resources.EnergyLimit || 0;
+    const energyUsed = resources.EnergyUsed || 0;
+    const energyAvailable = energyLimit - energyUsed;
+    
+    // Bandwidth resources (FreeBandwidth + Net resources)
+    const freeNetLimit = resources.freeNetLimit || 0;
+    const freeNetUsed = resources.freeNetUsed || 0;
+    const netLimit = resources.NetLimit || 0;
+    const netUsed = resources.NetUsed || 0;
+    
+    const totalBandwidth = freeNetLimit + netLimit;
+    const usedBandwidth = freeNetUsed + netUsed;
+    const availableBandwidth = totalBandwidth - usedBandwidth;
+    
+    return {
+      energy: {
+        available: energyAvailable,
+        total: energyLimit,
+        used: energyUsed,
+      },
+      bandwidth: {
+        available: availableBandwidth,
+        total: totalBandwidth,
+        used: usedBandwidth,
+      },
+    };
+  } catch (error) {
+    console.error('[PrivyTronService] Failed to get account resources:', error);
+    return {
+      energy: { available: 0, total: 0, used: 0 },
+      bandwidth: { available: 0, total: 0, used: 0 },
+    };
+  }
+}
+
+/**
  * Build and sign a TRC20 token transfer transaction using Privy's raw_sign API
  * @param walletId - Privy embedded wallet ID
  * @param fromAddress - Sender's TRON address
@@ -505,6 +554,7 @@ export const privyTronService = {
   broadcastTronTransaction,
   getTronBalance,
   getTrc20Balance,
+  getAccountResources,
   convertPrivySignatureToTron,
 };
 
