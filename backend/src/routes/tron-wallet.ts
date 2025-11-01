@@ -72,12 +72,27 @@ app.post('/create', async (c) => {
     }
 
     console.log('[TRON Wallet] Successfully created TRON wallet:', tronWallet.address);
+    console.log('[TRON Wallet] Full wallet object:', JSON.stringify(tronWallet, null, 2));
+    console.log('[TRON Wallet] Wallet owner info:', {
+      walletClientId: tronWallet.walletClientId,
+      walletIndex: tronWallet.walletIndex,
+      recoveryMethod: tronWallet.recoveryMethod,
+      // Check if there's any owner or authorization info
+      hasOwner: !!tronWallet.owner,
+      hasOwnerId: !!tronWallet.ownerId,
+    });
 
     return c.json({
       address: tronWallet.address,
       walletId: tronWallet.walletId || tronWallet.id,
       chainType: 'tron',
       publicKey: tronWallet.publicKey,
+      // Include debug info
+      debug: {
+        walletClientId: tronWallet.walletClientId,
+        hasOwner: !!tronWallet.owner,
+        hasOwnerId: !!tronWallet.ownerId,
+      }
     });
 
   } catch (error: any) {

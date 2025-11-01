@@ -39,6 +39,9 @@ export interface Env {
 	// Privy Configuration (for TRON Tier 2 support)
 	PRIVY_APP_ID?: string;
 	PRIVY_APP_SECRET?: string; // Set via: wrangler secret put PRIVY_APP_SECRET
+	// Session Signer for server-side wallet access
+	SESSION_SIGNER_ID?: string; // Key Quorum ID from Privy Dashboard
+	SESSION_SIGNER_PRIVATE_KEY?: string; // P-256 private key (PEM format)
 	// TRON Network Configuration
 	TRONGRID_API_KEY?: string;
 }

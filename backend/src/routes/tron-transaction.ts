@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { PrivyClient } from '@privy-io/server-auth';
+import { PrivyClient as PrivyServerClient } from '@privy-io/server-auth';
+import { PrivyClient, type AuthorizationContext } from '@privy-io/node';
 import type { Env } from '../index';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -23,12 +24,43 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-// Initialize Privy server client
-function getPrivyClient(env: Env) {
-  return new PrivyClient(
+// Initialize Privy server clients
+function getPrivyServerClient(env: Env) {
+  return new PrivyServerClient(
     env.PRIVY_APP_ID || '',
     env.PRIVY_APP_SECRET || ''
   );
+}
+
+function getPrivyNodeClient(env: Env) {
+  // Initialize Privy Node SDK client
+  return new PrivyClient({
+    appId: env.PRIVY_APP_ID || '',
+    appSecret: env.PRIVY_APP_SECRET || '',
+  });
+}
+
+function getAuthorizationContext(env: Env): AuthorizationContext {
+  // Get authorization context for Session Signer
+  if (!env.SESSION_SIGNER_PRIVATE_KEY) {
+    throw new Error('SESSION_SIGNER_PRIVATE_KEY not configured');
+  }
+  
+  console.log('[PrivyClient] Creating authorization context with Session Signer key');
+  console.log('[PrivyClient] Key format check:', {
+    hasWalletAuthPrefix: env.SESSION_SIGNER_PRIVATE_KEY.startsWith('wallet-auth:'),
+    keyLength: env.SESSION_SIGNER_PRIVATE_KEY.length,
+    firstChars: env.SESSION_SIGNER_PRIVATE_KEY.substring(0, 20) + '...'
+  });
+  
+  // Remove 'wallet-auth:' prefix if present, as the SDK expects just the base64 key
+  const privateKey = env.SESSION_SIGNER_PRIVATE_KEY.startsWith('wallet-auth:')
+    ? env.SESSION_SIGNER_PRIVATE_KEY.substring('wallet-auth:'.length)
+    : env.SESSION_SIGNER_PRIVATE_KEY;
+  
+  return {
+    authorization_private_keys: [privateKey],
+  };
 }
 
 /**
@@ -46,7 +78,8 @@ function getPrivyClient(env: Env) {
  */
 app.post('/sign', async (c) => {
   try {
-    const privy = getPrivyClient(c.env);
+    const privyServer = getPrivyServerClient(c.env);
+    const privyNode = getPrivyNodeClient(c.env);
     const { walletId, transactionHash, publicKey } = await c.req.json();
 
     // Validate inputs
@@ -72,158 +105,36 @@ app.post('/sign', async (c) => {
       hasAccessToken: !!userAccessToken
     });
 
-    // TRON is a Tier 2 chain in Privy
-    // For user-owned wallets, we need to generate authorization signature
-    // Ref: https://docs.privy.io/controls/authorization-keys/keys/create/user/request
-    
     // Verify user's access token first
-    const claims = await privy.verifyAuthToken(userAccessToken);
+    const claims = await privyServer.verifyAuthToken(userAccessToken);
     console.log('[TronTransaction] User verified:', claims.userId);
     
+    // Get authorization context for Session Signer
+    const authContext = getAuthorizationContext(c.env);
+    
     // Prepare the transaction hash in the format Privy expects
-    const hashToSign = transactionHash.startsWith('0x') ? transactionHash : `0x${transactionHash}`;
+    const rawTxHex = transactionHash.startsWith('0x') ? transactionHash : `0x${transactionHash}`;
     
-    // Step 1: Request user signing key from Privy
-    // This is required for user-owned wallets
-    const authString = `${c.env.PRIVY_APP_ID}:${c.env.PRIVY_APP_SECRET}`;
-    const base64Auth = btoa(authString);
+    console.log('[TronTransaction] Signing with Privy Node SDK (Session Signer)...');
     
-    console.log('[TronTransaction] Requesting user signing key...');
-    const userKeyResponse = await fetch(
-      'https://api.privy.io/v1/users/me/authorization_keys',
+    // Use Privy Node SDK with Session Signer
+    // Pass authorization_context to rawSign method
+    const signResponse = await privyNode.wallets().rawSign(
+      walletId,
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'privy-app-id': c.env.PRIVY_APP_ID!,
-          'Authorization': `Bearer ${userAccessToken}`, // User's access token
+        authorization_context: authContext,
+        params: {
+          hash: rawTxHex,
         },
-        body: JSON.stringify({
-          public_key_format: 'base64'
-        }),
       }
     );
 
-    if (!userKeyResponse.ok) {
-      const errorText = await userKeyResponse.text();
-      console.error('[TronTransaction] Failed to get user signing key:', errorText);
-      return c.json({ 
-        error: 'Failed to get user signing key',
-        details: errorText
-      }, 500);
-    }
-
-    const userKeyData = await userKeyResponse.json() as {
-      private_key: string;
-      public_key: string;
-      expires_at: string;
-    };
-
-    console.log('[TronTransaction] User signing key obtained, expires at:', userKeyData.expires_at);
-
-    // Step 2: Generate authorization signature
-    // We need to sign the request payload with the user's signing key
-    const requestUrl = `https://api.privy.io/v1/wallets/${walletId}/raw_sign`;
-    const requestBody = {
-      params: {
-        hash: hashToSign,
-      },
-    };
-
-    // Build signature payload according to Privy spec
-    const signaturePayload = {
-      version: 1,
-      method: 'POST',
-      url: requestUrl,
-      body: requestBody,
-      headers: {
-        'privy-app-id': c.env.PRIVY_APP_ID!,
-      },
-    };
-
-    // Canonicalize and sign the payload
-    // We'll use Web Crypto API available in Cloudflare Workers
-    const canonicalPayload = JSON.stringify(signaturePayload);
-    const encoder = new TextEncoder();
-    const payloadBytes = encoder.encode(canonicalPayload);
-
-    // Import the user's private key
-    const privateKeyPem = `-----BEGIN PRIVATE KEY-----\n${userKeyData.private_key}\n-----END PRIVATE KEY-----`;
-    const privateKeyBuffer = encoder.encode(privateKeyPem);
+    const signature = signResponse.signature; // '0x...' 64-byte ECDSA signature
     
-    // Parse PEM format and import key
-    const privateKey = await crypto.subtle.importKey(
-      'pkcs8',
-      base64ToArrayBuffer(userKeyData.private_key),
-      {
-        name: 'ECDSA',
-        namedCurve: 'P-256',
-      },
-      false,
-      ['sign']
-    );
-
-    // Sign the payload
-    const signatureBuffer = await crypto.subtle.sign(
-      {
-        name: 'ECDSA',
-        hash: 'SHA-256',
-      },
-      privateKey,
-      payloadBytes
-    );
-
-    // Convert signature to base64
-    const authorizationSignature = arrayBufferToBase64(signatureBuffer);
-
-    console.log('[TronTransaction] Authorization signature generated');
-
-    // Step 3: Call raw_sign with authorization signature
-    const signResponse = await fetch(
-      requestUrl,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'privy-app-id': c.env.PRIVY_APP_ID!,
-          'Authorization': `Basic ${base64Auth}`,
-          'privy-authorization-signature': authorizationSignature,
-        },
-        body: JSON.stringify(requestBody),
-      }
-    );
-
-    if (!signResponse.ok) {
-      const errorText = await signResponse.text();
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch {
-        errorData = { error: errorText };
-      }
-      console.error('[TronTransaction] Privy signing failed:', {
-        status: signResponse.status,
-        statusText: signResponse.statusText,
-        error: errorData
-      });
-      return c.json({ 
-        error: 'Failed to sign transaction', 
-        details: errorData 
-      }, 500);
-    }
-
-    // Privy returns {data: {signature: string, encoding: string}}
-    const signData = await signResponse.json() as { 
-      data: { 
-        signature: string;
-        encoding: string;
-      } 
-    };
-    
-    console.log('[TronTransaction] Transaction signed successfully');
+    console.log('[TronTransaction] Transaction signed successfully:', signature.substring(0, 20) + '...');
 
     return c.json({
-      signature: signData.data.signature,
+      signature,
       success: true
     });
 

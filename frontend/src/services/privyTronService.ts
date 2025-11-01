@@ -254,24 +254,28 @@ export async function buildAndSignTronTransaction(
     
     console.log('[PrivyTronService] Transaction hash:', txHash);
     
-    // Step 3: Sign using Privy's raw_sign API
+    // Step 3: Sign via backend API
+    const backendUrl = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:8787';
     const response = await fetch(
-      `https://auth.privy.io/api/v1/wallets/${walletId}/raw_sign`,
+      `${backendUrl}/api/tron-transaction/sign`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
-          'privy-app-id': import.meta.env.VITE_PRIVY_APP_ID || '',
         },
         body: JSON.stringify({
-          hash: txHash,
+          walletId,
+          transactionHash: txHash,
+          publicKey,
         }),
       }
     );
 
     if (!response.ok) {
-      throw new Error(`Privy raw_sign failed: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('[PrivyTronService] Backend signing failed:', errorText);
+      throw new Error(`Backend signing failed: ${errorText}`);
     }
 
     const data = await response.json();
@@ -375,7 +379,7 @@ export async function getTrc20Balance(
  * @param amount - Amount to send (in smallest unit, e.g., 1000000 for 1 USDT with 6 decimals)
  * @param tokenContract - TRC20 token contract address
  * @param accessToken - Privy access token for authentication
- * @param publicKey - Public key of the wallet
+ * @param publicKey - Public key of the wallet (for signature verification)
  * @returns Signed transaction as JSON string
  */
 export async function buildAndSignTrc20Transaction(
@@ -384,7 +388,7 @@ export async function buildAndSignTrc20Transaction(
   toAddress: string,
   amount: number,
   tokenContract: string,
-  _accessToken: string, // Not used - kept for API compatibility
+  accessToken: string,
   publicKey: string
 ): Promise<string> {
   try {
@@ -396,10 +400,18 @@ export async function buildAndSignTrc20Transaction(
       { type: 'uint256', value: amount }
     ];
 
+    // Set feeLimit to 10 TRX (10,000,000 SUN) for TRC20 transfer
+    // TRC20 transfer needs ~31,000-65,000 Energy
+    // Without Energy: costs ~5-15 TRX (depends on network congestion)
+    // 10 TRX feeLimit is usually sufficient
+    const options = {
+      feeLimit: 10_000_000, // 10 TRX in SUN
+    };
+
     const transaction = await tronWebInstance.transactionBuilder.triggerSmartContract(
       tokenContract,
       'transfer(address,uint256)',
-      {},
+      options,
       parameter,
       fromAddress
     );
@@ -419,49 +431,46 @@ export async function buildAndSignTrc20Transaction(
       contract: tokenContract
     });
 
-    // Sign with our backend API (required for TRON as Tier 2 chain)
-    // TRON doesn't support client-side raw_sign, must use server-side SDK
-    // Pass user's access token to backend for Privy API authentication
-    const backendUrl = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:8787';
-    const signResponse = await fetch(
-      `${backendUrl}/api/tron-transaction/sign`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${_accessToken}`,
-        },
-        body: JSON.stringify({
-          walletId,
-          transactionHash: txID,
-          publicKey,
-        }),
-      }
-    );
+    // Sign transaction through backend API (Session Signer)
+    console.log('[PrivyTronService] Signing TRC20 transaction via backend...');
+    
+    const apiEndpoint = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:8787';
+    const response = await fetch(`${apiEndpoint}/api/tron-transaction/sign`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        walletId,
+        transactionHash: txID,
+        publicKey,
+      }),
+    });
 
-    if (!signResponse.ok) {
-      const errorData = await signResponse.json();
-      throw new Error(`Transaction signing failed: ${JSON.stringify(errorData)}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[PrivyTronService] Backend signing failed:', errorText);
+      throw new Error(`Transaction signing failed: ${errorText}`);
     }
 
-    const signData = await signResponse.json();
-    const rawSignature = signData.signature; // 64-byte signature from Privy (0x...)
+    const data = await response.json();
+    const signature64 = data.signature;
 
     // Remove 0x prefix if present
-    const signature64 = rawSignature.startsWith('0x') ? rawSignature.slice(2) : rawSignature;
+    const signature64Clean = signature64.startsWith('0x') ? signature64.slice(2) : signature64;
 
     // TRON requires 65-byte signature with recovery ID (1b or 1c)
     // Use ecRecover to determine the correct recovery ID
-    // Ref: https://docs.privy.io/recipes/use-tier-2#tron
     const tronWebForRecover = getTronWeb();
     
     // Try recovery ID '1b' first
-    txObject.signature = [signature64 + '1b'];
+    txObject.signature = [signature64Clean + '1b'];
     const recoveredAddress1b = tronWebForRecover.trx.ecRecover(txObject);
     
     // If '1b' doesn't match, use '1c'
     if (recoveredAddress1b !== fromAddress) {
-      txObject.signature = [signature64 + '1c'];
+      txObject.signature = [signature64Clean + '1c'];
       const recoveredAddress1c = tronWebForRecover.trx.ecRecover(txObject);
       
       console.log('[PrivyTronService] TRC20 transaction signed (recovery ID: 1c):', {

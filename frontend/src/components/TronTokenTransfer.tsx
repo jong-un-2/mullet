@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useIdentityToken } from '@privy-io/react-auth';
 import { 
   Button, 
   TextField, 
@@ -20,16 +20,19 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
 } from '@mui/material';
 
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SendIcon from '@mui/icons-material/Send';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
+import SecurityIcon from '@mui/icons-material/Security';
 // QR code generator (no types in this project) - toDataURL is used to create an image data URL
 // @ts-ignore
 import QRCodeLib from 'qrcode';
 import { toast } from 'sonner';
 import { useTronWallet } from '../hooks/useTronWallet';
+import { useSessionSigner } from '../hooks/useSessionSigner';
 import { 
   buildAndSignTronTransaction,
   buildAndSignTrc20Transaction,
@@ -61,6 +64,12 @@ interface TronTokenTransferProps {
 export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProps) {
   const { walletInfo, balance: tronBalance } = useTronWallet();
   const { getAccessToken, user } = usePrivy();
+  const { identityToken } = useIdentityToken();
+  const { 
+    isSessionSignerAdded, 
+    isAdding: sessionSignerAdding,
+    addSessionSigner 
+  } = useSessionSigner();
   
   const [selectedToken, setSelectedToken] = useState(COMMON_TRON_TOKENS[0]);
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -172,10 +181,11 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
   setLoading(true);
 
     try {
-      // Get Privy access token
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error('Failed to get access token');
+      // Get Privy identity token (not access token) for wallet signing
+      // Identity token is required for user-owned wallet authorization
+      const userToken = identityToken || await getAccessToken();
+      if (!userToken) {
+        throw new Error('Failed to get user token');
       }
 
       // Find TRON embedded wallet from linkedAccounts
@@ -187,11 +197,20 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
         throw new Error('TRON wallet not found');
       }
 
-      const walletId = tronAccount.walletId || tronAccount.id;
+      // Log full tronAccount to debug walletId issue
+      console.log('[TronTokenTransfer] Full tronAccount object:', tronAccount);
+      console.log('[TronTokenTransfer] Available properties:', Object.keys(tronAccount));
+      
+      const walletId = tronAccount.walletId || tronAccount.id || tronAccount.address;
       const publicKey = tronAccount.publicKey || walletInfo?.publicKey;
 
       if (!publicKey) {
         throw new Error('Public key not found');
+      }
+
+      if (!walletId) {
+        console.error('[TronTokenTransfer] No wallet ID found in tronAccount:', tronAccount);
+        throw new Error('Wallet ID not found. Please try refreshing the page.');
       }
 
       console.log('[TronTokenTransfer] Preparing transaction:', {
@@ -200,6 +219,7 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
         amount,
         token: selectedToken.symbol,
         walletId,
+        publicKey: publicKey.substring(0, 10) + '...',
       });
 
       let signedTx: string;
@@ -213,7 +233,7 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
           walletAddress,
           recipientAddress,
           amountInSun,
-          accessToken,
+          userToken,
           publicKey
         );
       } else if (selectedToken.symbol === 'USDT') {
@@ -226,7 +246,7 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
           recipientAddress,
           amountInSmallestUnit,
           selectedToken.address,
-          accessToken,
+          userToken,
           publicKey
         );
       } else {
@@ -403,6 +423,51 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
         ) : (
           // Send Mode - Transaction form
           <Box>
+            {/* Session Signer Warning */}
+            {!isSessionSignerAdded && (
+              <Alert 
+                severity="warning" 
+                sx={{ 
+                  mb: 2.5,
+                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                  borderLeft: '4px solid #ff9800',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  '& .MuiAlert-icon': {
+                    color: '#ff9800'
+                  }
+                }}
+              >
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Typography variant="body2">
+                    <strong>Server Signing Not Enabled</strong>
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                    To sign transactions from this wallet, you need to authorize our server to sign on your behalf. 
+                    This is a secure delegation that allows seamless transaction signing.
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<SecurityIcon />}
+                    onClick={addSessionSigner}
+                    disabled={sessionSignerAdding}
+                    sx={{
+                      mt: 0.5,
+                      borderColor: '#ff9800',
+                      color: '#ff9800',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderColor: '#fb8c00',
+                        backgroundColor: 'rgba(255, 152, 0, 0.1)'
+                      }
+                    }}
+                  >
+                    {sessionSignerAdding ? 'Authorizing...' : 'Authorize Server Signing'}
+                  </Button>
+                </Box>
+              </Alert>
+            )}
+
             {/* Token Selection */}
             <FormControl 
               fullWidth 
@@ -550,7 +615,7 @@ export function TronTokenTransfer({ open, onClose, mode }: TronTokenTransferProp
           <Button
             variant="contained"
             onClick={handleSend}
-            disabled={loading || !recipientAddress || !amount}
+            disabled={loading || !recipientAddress || !amount || !isSessionSignerAdded}
             startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
             sx={{
               backgroundColor: '#c62828',
