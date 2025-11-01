@@ -380,3 +380,23 @@ export { TronService };
 
 // 导出 TRON 相关常量
 export { TRON_CHAIN_ID };
+
+/**
+ * 获取 TronWeb 实例（用于 OKX DEX 集成）
+ * 优先使用用户连接的钱包，否则使用默认 RPC
+ */
+export async function getTronWeb(): Promise<any> {
+  // 1. 尝试使用 TronLink 钱包的 TronWeb
+  const tronWeb = (window as any).tronWeb;
+  if (tronWeb && tronWeb.defaultAddress && tronWeb.defaultAddress.base58) {
+    console.log('[getTronWeb] 使用 TronLink 钱包的 TronWeb');
+    return tronWeb;
+  }
+
+  // 2. 使用默认的 TronWeb 实例
+  console.log('[getTronWeb] 使用默认 RPC TronWeb');
+  return new TronWeb({
+    fullHost: tronMainnet.fullHost,
+    headers: { "TRON-PRO-API-KEY": import.meta.env.VITE_TRONGRID_API_KEY || '' },
+  });
+}

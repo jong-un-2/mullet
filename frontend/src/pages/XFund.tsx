@@ -47,6 +47,8 @@ import { mainnet } from 'viem/chains';
 import { useWallets as useEvmWallets } from '@privy-io/react-auth';
 import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { useWalletContext } from '../contexts/WalletContext';
+import { TronService } from '../services/tronService';
+import { useOkxDex } from '../hooks/useOkxDex';
 
 // Register Chart.js components
 ChartJS.register(
@@ -89,6 +91,9 @@ const XFundPage = () => {
   
   // Claim rewards state
   const [isClaimingRewards, setIsClaimingRewards] = useState(false);
+  
+  // OKX DEX for TRON cross-chain operations
+  const okxDex = useOkxDex();
   
   // Multi-chain balance state
   const [tokenBalances, setTokenBalances] = useState<{[key: string]: {solana: string, evm: string, total: string}}>({});
@@ -314,31 +319,57 @@ const XFundPage = () => {
       let balance = '0';
       
       try {
-        // 根据链类型检查余额
-        // EVM 链（USDC, USDT, ETH, PYUSD on Ethereum）使用 ETH 钱包地址
-        // Solana 链使用 Solana 钱包地址
-        const walletAddress = token.chainId === SOLANA_CHAIN_ID ? userWalletAddress : ethAddress;
-        
-        if (token.chainId === SOLANA_CHAIN_ID && userWalletAddress) {
-          console.log(`🔍 Checking Solana balance for ${token.symbol}...`);
-          const solResult = await checkBalance(
-            token.address,
-            token.chainId,
-            walletAddress!,
-            token.decimals
-          );
-          balance = solResult.formatted;
-          console.log(`✅ Solana ${token.symbol}: ${balance}`);
-        } else if (token.chainId !== SOLANA_CHAIN_ID && ethAddress) {
-          console.log(`🔍 Checking EVM balance for ${token.symbol}...`);
-          const ethResult = await checkBalance(
-            token.address,
-            token.chainId,
-            walletAddress!,
-            token.decimals
-          );
-          balance = ethResult.formatted;
-          console.log(`✅ EVM ${token.symbol}: ${balance}`);
+        // TRON 代币余额查询
+        if (token.chain === 'tron') {
+          console.log(`🔍 Checking TRON balance for ${token.symbol}...`);
+          
+          // 从 Privy user 获取 TRON 地址
+          const tronAccount = user?.linkedAccounts?.find(
+            (account: any) => account.type === 'wallet' && account.walletClientType === 'privy' && account.address?.startsWith('T')
+          ) as any;
+          
+          if (tronAccount?.address) {
+            const tronService = new TronService();
+            const tronAddr = tronAccount.address as string;
+            
+            if (token.address === '' || token.symbol === 'TRX') {
+              // Native TRX
+              balance = await tronService.getTrxBalance(tronAddr);
+            } else {
+              // TRC20 代币
+              balance = await tronService.getTrc20Balance(token.address, tronAddr);
+            }
+            console.log(`✅ TRON ${token.symbol}: ${balance}`);
+          } else {
+            console.warn('⚠️ No TRON address found in Privy user');
+          }
+        } else {
+          // 根据链类型检查余额
+          // EVM 链（USDC, USDT, ETH, PYUSD on Ethereum）使用 ETH 钱包地址
+          // Solana 链使用 Solana 钱包地址
+          const walletAddress = token.chainId === SOLANA_CHAIN_ID ? userWalletAddress : ethAddress;
+          
+          if (token.chainId === SOLANA_CHAIN_ID && userWalletAddress) {
+            console.log(`🔍 Checking Solana balance for ${token.symbol}...`);
+            const solResult = await checkBalance(
+              token.address,
+              token.chainId as number,
+              walletAddress!,
+              token.decimals
+            );
+            balance = solResult.formatted;
+            console.log(`✅ Solana ${token.symbol}: ${balance}`);
+          } else if (typeof token.chainId === 'number' && ethAddress) {
+            console.log(`🔍 Checking EVM balance for ${token.symbol}...`);
+            const ethResult = await checkBalance(
+              token.address,
+              token.chainId as number,
+              walletAddress!,
+              token.decimals
+            );
+            balance = ethResult.formatted;
+            console.log(`✅ EVM ${token.symbol}: ${balance}`);
+          }
         }
       } catch (err) {
         console.warn(`⚠️ Failed to check balance for ${token.symbol}:`, err);
@@ -350,7 +381,7 @@ const XFundPage = () => {
         ...prev,
         [selectedToken]: {
           solana: token.chainId === SOLANA_CHAIN_ID ? balance : '0',
-          evm: token.chainId !== SOLANA_CHAIN_ID ? balance : '0',
+          evm: (typeof token.chainId === 'number' && token.chainId !== SOLANA_CHAIN_ID) ? balance : '0',
           total: balance
         }
       }));
@@ -375,6 +406,76 @@ const XFundPage = () => {
     const currentToken = getCurrentToken();
 
     try {
+      // TRON 代币使用 OKX DEX 跨链桥接（LiFi 不支持 TRON）
+      if (currentToken.chain === 'tron') {
+        console.log('🚀 开始 TRON → Solana 跨链存款...');
+        
+        setShowProgress(true);
+        setProgressTitle(`Depositing ${amount} ${currentToken.symbol} from TRON`);
+        setTotalTxSteps(3);
+        setCurrentTxStep(1);
+        setProgressMessage('Step 1: Checking TRX balance for gas...');
+
+        // 从 Privy user 获取 TRON 地址
+        const tronAccount = user?.linkedAccounts?.find(
+          (account: any) => account.type === 'wallet' && account.walletClientType === 'privy' && account.address?.startsWith('T')
+        ) as any;
+        
+        if (!tronAccount?.address) {
+          throw new Error('No TRON wallet connected');
+        }
+
+        if (!userWalletAddress) {
+          throw new Error('No Solana wallet connected');
+        }
+        
+        // 确保有足够的 TRX 用于手续费（至少 20 TRX）
+        const hasSufficientTrx = await okxDex.ensureTrxBalance();
+        if (!hasSufficientTrx) {
+          setCurrentTxStep(2);
+          setProgressMessage('Step 2: Refilling TRX for gas fees...');
+          // ensureTrxBalance 会自动充值，等待完成
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+
+        setCurrentTxStep(2);
+        setProgressMessage('Step 2: Bridging from TRON to Solana...');
+
+        // 桥接 TRON 代币到 Solana PYUSD
+        const toToken = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo'; // PYUSD on Solana
+        const bridgeTxHash = await okxDex.bridgeToSolana(
+          currentToken.address,
+          toToken,
+          (amount * Math.pow(10, currentToken.decimals)).toString()
+        );
+
+        console.log(`✅ Bridge transaction: ${bridgeTxHash}`);
+        setTxSignature(bridgeTxHash);
+
+        setCurrentTxStep(3);
+        setProgressMessage('Step 3: Depositing PYUSD to vault...');
+
+        // 等待桥接完成并获取 PYUSD
+        await new Promise(resolve => setTimeout(resolve, 30000)); // 等待 30 秒
+
+        // 存入 PYUSD 到 Mars Vault
+        const depositSignature = await marsContract.deposit(amount);
+        
+        if (depositSignature) {
+          console.log('✅ Deposit successful!');
+          setTxSignature(depositSignature);
+          setProgressMessage(`✅ Successfully deposited ${amount} ${currentToken.symbol} from TRON!`);
+          setDepositAmount('');
+          
+          setTimeout(() => {
+            setShowProgress(false);
+            setTxSignature(undefined);
+            forceRefreshPositions();
+          }, 6000);
+        }
+        return;
+      }
+
       // 如果选择 PYUSD on Solana，直接存款
       if (currentToken.symbol === 'PYUSD' && currentToken.chainId === SOLANA_CHAIN_ID) {
         console.log('🚀 开始 PYUSD 存款并质押到 Farm...');
@@ -752,6 +853,48 @@ const XFundPage = () => {
       setCurrentTxStep(finalStep);
       setProgressMessage(`Step ${finalStep} of ${finalStep}: Swapping PYUSD to ${currentToken.symbol}...`);
       
+      // TRON 代币使用 OKX DEX 跨链桥接（LiFi 不支持 TRON）
+      if (currentToken.chain === 'tron') {
+        console.log('🔄 Starting Solana → TRON bridge...');
+        
+        // 从 Privy user 获取 TRON 地址
+        const tronAccount = user?.linkedAccounts?.find(
+          (account: any) => account.type === 'wallet' && account.walletClientType === 'privy' && account.address?.startsWith('T')
+        ) as any;
+        
+        if (!tronAccount?.address) {
+          throw new Error('No TRON wallet connected');
+        }
+        
+        // 桥接 Solana PYUSD 到 TRON 代币
+        const fromToken = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo'; // PYUSD on Solana
+        const bridgeTxHash = await okxDex.bridgeFromSolana(
+          fromToken,
+          currentToken.address,
+          (amount * Math.pow(10, 6)).toString() // PYUSD uses 6 decimals
+        );
+        
+        console.log(`✅ Bridge transaction to TRON: ${bridgeTxHash}`);
+        setTxSignature(bridgeTxHash);
+        setProgressMessage(`✅ Successfully withdrawn and bridged to ${currentToken.symbol} on TRON!`);
+        
+        // Clear form
+        setWithdrawAmount('');
+        
+        // 触发余额和持仓刷新
+        setTimeout(async () => {
+          await forceRefreshPositions();
+        }, 2000);
+        
+        // Hide progress after 6 seconds
+        setTimeout(() => {
+          setShowProgress(false);
+          setTxSignature(undefined);
+        }, 6000);
+        
+        return;
+      }
+
       // PYUSD address on Solana (从 vault 取出的代币)
       const fromTokenAddress = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo';
       const toTokenAddress = currentToken.address;
@@ -767,10 +910,10 @@ const XFundPage = () => {
         throw new Error(`No ${currentToken.chainName} wallet connected`);
       }
       
-      // Request LiFi swap route
+      // Request LiFi swap route (仅支持 Solana 和 EVM 链)
       const routesRequest: RoutesRequest = {
         fromChainId: SOLANA_CHAIN_ID, // Solana (PYUSD 来源)
-        toChainId: currentToken.chainId, // 目标链
+        toChainId: currentToken.chainId as number, // 目标链（仅 Solana 或 EVM）
         fromTokenAddress: fromTokenAddress,
         toTokenAddress: toTokenAddress,
         fromAddress: solanaWallets[0].address, // PYUSD 在 Solana
@@ -978,8 +1121,8 @@ const XFundPage = () => {
     symbol: string; 
     name: string; 
     chainName: string;
-    chain: 'solana' | 'ethereum';
-    chainId: number;
+    chain: 'solana' | 'ethereum' | 'tron';
+    chainId: number | string;
     address: string;
     decimals: number;
     color: string;
@@ -1046,6 +1189,27 @@ const XFundPage = () => {
       decimals: 6,
       color: '#26a17b'
     },
+    // TRON 链代币
+    'USDC-TRON': {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      chainName: 'TRON',
+      chain: 'tron',
+      chainId: '195', // OKX DEX chain ID for TRON
+      address: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', // USDC TRC20
+      decimals: 6,
+      color: '#2775ca'
+    },
+    'USDT-TRON': {
+      symbol: 'USDT',
+      name: 'Tether',
+      chainName: 'TRON',
+      chain: 'tron',
+      chainId: '195', // OKX DEX chain ID for TRON
+      address: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // USDT TRC20
+      decimals: 6,
+      color: '#26a17b'
+    },
   };
 
   // 获取当前选中的代币配置
@@ -1066,6 +1230,8 @@ const XFundPage = () => {
         return token.chain === 'solana';
       } else if (primaryWallet === 'eth') {
         return token.chain === 'ethereum';
+      } else if (primaryWallet === 'tron') {
+        return token.chain === 'tron';
       }
       return true;
     });

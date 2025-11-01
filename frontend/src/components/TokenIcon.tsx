@@ -8,13 +8,13 @@ import { TOKEN_ICONS, getTokenIcon } from '../config/tokenIcons';
 
 interface TokenIconProps extends Omit<BoxProps, 'component'> {
   symbol: string;
-  chain?: 'solana' | 'ethereum';
+  chain?: 'solana' | 'ethereum' | 'tron';
   size?: number;
   showChainBadge?: boolean;
 }
 
 // 链图标 SVG 组件
-const ChainBadge = ({ chain, size = 12 }: { chain: 'solana' | 'ethereum'; size?: number }) => {
+const ChainBadge = ({ chain, size = 12 }: { chain: 'solana' | 'ethereum' | 'tron'; size?: number }) => {
   if (chain === 'ethereum') {
     return (
       <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -25,6 +25,17 @@ const ChainBadge = ({ chain, size = 12 }: { chain: 'solana' | 'ethereum'; size?:
         <path d="M16.498 27.995v-6.028L9 17.616l7.498 10.38z" fill="#fff"/>
         <path d="M16.498 20.573l7.497-4.353-7.497-3.348v7.701z" fill="#fff" fillOpacity="0.2"/>
         <path d="M9 16.22l7.498 4.353v-7.701L9 16.22z" fill="#fff" fillOpacity="0.602"/>
+      </svg>
+    );
+  }
+
+  if (chain === 'tron') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="16" fill="#FF060A"/>
+        <path d="M21.5 7.5L10 9.5L12.5 21L23.5 16.5L21.5 7.5Z" fill="#fff"/>
+        <path d="M12.5 21L10 9.5L8.5 19.5L12.5 21Z" fill="#fff" fillOpacity="0.6"/>
+        <path d="M23.5 16.5L12.5 21L20.5 23.5L23.5 16.5Z" fill="#fff" fillOpacity="0.8"/>
       </svg>
     );
   }

@@ -34,7 +34,7 @@ import { mainnet } from 'viem/chains';
 import { useWalletContext } from '../contexts/WalletContext';
 
 // 简单的链图标组件
-const ChainIcon = ({ chain, size = 20 }: { chain: 'solana' | 'ethereum'; size?: number }) => {
+const ChainIcon = ({ chain, size = 20 }: { chain: 'solana' | 'ethereum' | 'tron'; size?: number }) => {
   if (chain === 'ethereum') {
     return (
       <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -43,6 +43,17 @@ const ChainIcon = ({ chain, size = 20 }: { chain: 'solana' | 'ethereum'; size?: 
         <path d="M16.498 4L9 16.22l7.498-3.35V4z" fill="#fff"/>
         <path d="M16.498 21.968v6.027L24 17.616l-7.502 4.352z" fill="#fff" fillOpacity="0.602"/>
         <path d="M16.498 27.995v-6.028L9 17.616l7.498 10.38z" fill="#fff"/>
+      </svg>
+    );
+  }
+
+  if (chain === 'tron') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="16" fill="#FF060A"/>
+        <path d="M21.5 7.5L10 9.5L12.5 21L23.5 16.5L21.5 7.5Z" fill="#fff"/>
+        <path d="M12.5 21L10 9.5L8.5 19.5L12.5 21Z" fill="#fff" fillOpacity="0.6"/>
+        <path d="M23.5 16.5L12.5 21L20.5 23.5L23.5 16.5Z" fill="#fff" fillOpacity="0.8"/>
       </svg>
     );
   }
@@ -326,6 +337,25 @@ const PAYMENT_TOKENS = [
     address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     decimals: 6
   },
+  // TRON 链稳定币
+  { 
+    symbol: 'USDC', 
+    name: 'USD Coin', 
+    chainName: 'TRON',
+    chain: 'tron' as const,
+    chainId: '195' as any, // OKX DEX chain ID for TRON
+    address: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', // TRON USDC TRC20
+    decimals: 6
+  },
+  { 
+    symbol: 'USDT', 
+    name: 'Tether', 
+    chainName: 'TRON',
+    chain: 'tron' as const,
+    chainId: '195' as any, // OKX DEX chain ID for TRON
+    address: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // TRON USDT TRC20
+    decimals: 6
+  },
 ];
 
 const XStockPage = () => {
@@ -367,6 +397,8 @@ const XStockPage = () => {
         return token.chain === 'solana';
       } else if (primaryWallet === 'eth') {
         return token.chain === 'ethereum';
+      } else if (primaryWallet === 'tron') {
+        return token.chain === 'tron';
       }
       return true;
     });
@@ -588,6 +620,15 @@ const XStockPage = () => {
     if (inputAmount <= 0) {
       setError('Please enter a valid amount');
       return;
+    }
+
+    // TRON 支付暂时不支持（需要先桥接到 Solana）
+    if (paymentToken.chain === 'tron') {
+      setError('TRON payments coming soon! Please use Solana or Ethereum for now.');
+      return;
+      // TODO: 实现 TRON 支付逻辑
+      // 1. 使用 OKX DEX 桥接 TRON USDC/USDT 到 Solana USDC
+      // 2. 使用桥接后的 USDC 在 Solana 上购买代币化股票
     }
 
     try {

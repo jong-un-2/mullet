@@ -17,6 +17,11 @@ export const TOKEN_ICONS = {
   DAI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png',
   PYUSD_ETHEREUM: 'https://coin-images.coingecko.com/coins/images/31212/large/PYUSD_Logo_%282%29.png',
   
+  // TRON Tokens
+  TRX: 'https://coin-images.coingecko.com/coins/images/1094/large/tron-logo.png',
+  USDC_TRON: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+  USDT_TRON: 'https://coin-images.coingecko.com/coins/images/325/large/Tether.png',
+
   // Generic (可用于任何链的 USDC/USDT/PYUSD)
   USDC: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
   USDT: 'https://coin-images.coingecko.com/coins/images/325/large/Tether.png',
@@ -26,7 +31,7 @@ export const TOKEN_ICONS = {
 /**
  * 根据代币符号和链获取图标 URL
  */
-export function getTokenIcon(symbol: string, chain?: 'solana' | 'ethereum'): string {
+export function getTokenIcon(symbol: string, chain?: 'solana' | 'ethereum' | 'tron'): string {
   const key = `${symbol}_${chain?.toUpperCase()}` as keyof typeof TOKEN_ICONS;
   
   // 尝试链特定的图标
