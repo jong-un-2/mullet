@@ -400,12 +400,12 @@ export async function buildAndSignTrc20Transaction(
       { type: 'uint256', value: amount }
     ];
 
-    // Set feeLimit to 10 TRX (10,000,000 SUN) for TRC20 transfer
+    // Set feeLimit to 20 TRX (20,000,000 SUN) for TRC20 transfer
     // TRC20 transfer needs ~31,000-65,000 Energy
     // Without Energy: costs ~5-15 TRX (depends on network congestion)
-    // 10 TRX feeLimit is usually sufficient
+    // 20 TRX feeLimit provides safety buffer for energy consumption
     const options = {
-      feeLimit: 10_000_000, // 10 TRX in SUN
+      feeLimit: 20_000_000, // 20 TRX in SUN
     };
 
     const transaction = await tronWebInstance.transactionBuilder.triggerSmartContract(
