@@ -72,9 +72,9 @@ class TronService {
    */
   private initializeTronWeb() {
     try {
+      // Ankr RPC 不支持自定义 headers，直接使用 fullHost
       this.tronWeb = new TronWeb({
         fullHost: this.config.fullHost,
-        headers: { "TRON-PRO-API-KEY": import.meta.env.VITE_TRONGRID_API_KEY || '' },
       });
       console.log('✅ TronWeb initialized:', this.config.name);
     } catch (error) {
@@ -214,8 +214,16 @@ class TronService {
         throw new Error('No address or TronWeb instance available');
       }
 
+      // 设置默认地址，这样合约调用时会使用这个地址
+      this.tronWeb.setAddress(targetAddress);
+
       const contract = await this.tronWeb.contract().at(tokenAddress);
-      const balance = await contract.balanceOf(targetAddress).call();
+      
+      // 调用 balanceOf 方法时需要明确指定 from 地址
+      const balance = await contract.balanceOf(targetAddress).call({
+        from: targetAddress
+      });
+      
       const decimals = await contract.decimals().call();
 
       // Convert balance based on decimals
@@ -393,10 +401,9 @@ export async function getTronWeb(): Promise<any> {
     return tronWeb;
   }
 
-  // 2. 使用默认的 TronWeb 实例
+  // 2. 使用默认的 TronWeb 实例（Ankr RPC 不需要额外 headers）
   console.log('[getTronWeb] 使用默认 RPC TronWeb');
   return new TronWeb({
     fullHost: tronMainnet.fullHost,
-    headers: { "TRON-PRO-API-KEY": import.meta.env.VITE_TRONGRID_API_KEY || '' },
   });
 }

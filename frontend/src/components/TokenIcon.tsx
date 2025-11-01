@@ -33,9 +33,12 @@ const ChainBadge = ({ chain, size = 12 }: { chain: 'solana' | 'ethereum' | 'tron
     return (
       <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="16" cy="16" r="16" fill="#FF060A"/>
-        <path d="M21.5 7.5L10 9.5L12.5 21L23.5 16.5L21.5 7.5Z" fill="#fff"/>
-        <path d="M12.5 21L10 9.5L8.5 19.5L12.5 21Z" fill="#fff" fillOpacity="0.6"/>
-        <path d="M23.5 16.5L12.5 21L20.5 23.5L23.5 16.5Z" fill="#fff" fillOpacity="0.8"/>
+        <g transform="translate(6.5, 8)">
+          <path d="M9.5 0L0 3.5L2.5 16L19 8.5L9.5 0Z" fill="#fff"/>
+          <path d="M0 3.5L2.5 16L0 3.5Z" fill="#fff" fillOpacity="0.4"/>
+          <path d="M19 8.5L9.5 0L19 8.5Z" fill="#fff" fillOpacity="0.6"/>
+          <path d="M2.5 16L19 8.5L2.5 16Z" fill="#fff" fillOpacity="0.5"/>
+        </g>
       </svg>
     );
   }

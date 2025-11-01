@@ -96,7 +96,7 @@ const XFundPage = () => {
   const okxDex = useOkxDex();
   
   // Multi-chain balance state
-  const [tokenBalances, setTokenBalances] = useState<{[key: string]: {solana: string, evm: string, total: string}}>({});
+  const [tokenBalances, setTokenBalances] = useState<{[key: string]: {solana: string, evm: string, tron: string, total: string}}>({});
 
   // Calendar helper functions
   const getMonthName = (monthNum: string) => {
@@ -292,19 +292,26 @@ const XFundPage = () => {
 
   const vaultStats = getCurrentVaultStats();
   
-  // Get unified wallet balance for selected token (checks both Solana and EVM)
-  const getWalletBalance = (token: string) => {
+  // Get unified wallet balance for selected token (checks both Solana, EVM and TRON)
+  const getWalletBalance = (tokenSymbol?: string) => {
     if (!isWalletConnected) return '0';
     
-    // 优先返回 Solana 余额
-    const solanaBalance = getSolanaBalance(token) || '0';
+    // 如果没有传入 tokenSymbol，使用 selectedToken
+    const tokenKey = tokenSymbol ? 
+      // 查找匹配 symbol 的完整 token key (如 "USDT" -> "USDT-TRON")
+      Object.keys(tokenBalances).find(key => {
+        const config = tokenConfigs[key];
+        return config && config.symbol === tokenSymbol;
+      }) || selectedToken
+      : selectedToken;
     
     // 如果有缓存的余额数据，返回总余额
-    if (tokenBalances[token]) {
-      return tokenBalances[token].total;
+    if (tokenBalances[tokenKey]) {
+      return tokenBalances[tokenKey].total;
     }
     
-    // Fallback to Solana balance
+    // Fallback: 尝试 Solana 余额
+    const solanaBalance = getSolanaBalance(tokenSymbol || '') || '0';
     return solanaBalance;
   };
   
@@ -382,6 +389,7 @@ const XFundPage = () => {
         [selectedToken]: {
           solana: token.chainId === SOLANA_CHAIN_ID ? balance : '0',
           evm: (typeof token.chainId === 'number' && token.chainId !== SOLANA_CHAIN_ID) ? balance : '0',
+          tron: token.chain === 'tron' ? balance : '0',
           total: balance
         }
       }));
@@ -1236,6 +1244,20 @@ const XFundPage = () => {
       return true;
     });
   };
+
+  // 当主要钱包改变时，自动切换到对应链的默认代币
+  useEffect(() => {
+    const currentToken = getCurrentToken();
+    
+    // 如果当前选中的代币不属于当前钱包链，则自动切换
+    if (primaryWallet === 'sol' && currentToken.chain !== 'solana') {
+      setSelectedToken('PYUSD-Solana'); // 切换到 Solana PYUSD
+    } else if (primaryWallet === 'eth' && currentToken.chain !== 'ethereum') {
+      setSelectedToken('PYUSD-Ethereum'); // 切换到 Ethereum PYUSD
+    } else if (primaryWallet === 'tron' && currentToken.chain !== 'tron') {
+      setSelectedToken('USDT-TRON'); // 切换到 TRON USDT (TRON 没有 PYUSD)
+    }
+  }, [primaryWallet]); // 监听主要钱包变化
 
   // Chart data - using real historical data from Neon PostgreSQL
   const getChartData = () => {
@@ -2345,7 +2367,32 @@ const XFundPage = () => {
                     {getFilteredTokens().map(([key, token]) => {
                       return (
                         <MenuItem key={key} value={key} sx={{ color: 'white' }}>
-                          {token.symbol}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                bgcolor: token.color,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '12px',
+                                color: 'white',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {token.symbol[0]}
+                            </Box>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {token.symbol}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                                {token.chainName}
+                              </Typography>
+                            </Box>
+                          </Box>
                         </MenuItem>
                       );
                     })}
@@ -2366,6 +2413,12 @@ const XFundPage = () => {
                       <span>
                         {parseFloat(tokenBalances[selectedToken].solana) > 0 && '| '}
                         EVM: {tokenBalances[selectedToken].evm}
+                      </span>
+                    )}
+                    {parseFloat(tokenBalances[selectedToken].tron || '0') > 0 && (
+                      <span>
+                        {(parseFloat(tokenBalances[selectedToken].solana) > 0 || parseFloat(tokenBalances[selectedToken].evm) > 0) && ' | '}
+                        TRON: {tokenBalances[selectedToken].tron}
                       </span>
                     )}
                   </Typography>

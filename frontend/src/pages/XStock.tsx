@@ -24,6 +24,7 @@ import { TransactionProgress } from '../components/TransactionProgress';
 import { TokenIcon } from '../components/TokenIcon';
 import { marsLiFiService, SUPPORTED_CHAINS, SOLANA_CHAIN_ID } from '../services/marsLiFiService';
 import { checkBalance } from '../services/balanceService';
+import { TronService } from '../services/tronService';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
@@ -51,9 +52,12 @@ const ChainIcon = ({ chain, size = 20 }: { chain: 'solana' | 'ethereum' | 'tron'
     return (
       <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="16" cy="16" r="16" fill="#FF060A"/>
-        <path d="M21.5 7.5L10 9.5L12.5 21L23.5 16.5L21.5 7.5Z" fill="#fff"/>
-        <path d="M12.5 21L10 9.5L8.5 19.5L12.5 21Z" fill="#fff" fillOpacity="0.6"/>
-        <path d="M23.5 16.5L12.5 21L20.5 23.5L23.5 16.5Z" fill="#fff" fillOpacity="0.8"/>
+        <g transform="translate(6.5, 8)">
+          <path d="M9.5 0L0 3.5L2.5 16L19 8.5L9.5 0Z" fill="#fff"/>
+          <path d="M0 3.5L2.5 16L0 3.5Z" fill="#fff" fillOpacity="0.4"/>
+          <path d="M19 8.5L9.5 0L19 8.5Z" fill="#fff" fillOpacity="0.6"/>
+          <path d="M2.5 16L19 8.5L2.5 16Z" fill="#fff" fillOpacity="0.5"/>
+        </g>
       </svg>
     );
   }
@@ -359,7 +363,7 @@ const PAYMENT_TOKENS = [
 ];
 
 const XStockPage = () => {
-  const { authenticated } = usePrivy();
+  const { authenticated, user } = usePrivy();
   const { wallets } = useWallets(); // EVM 钱包 (用于 fromAddress)
   const { wallets: solanaWallets } = useSolanaWallets(); // Solana 钱包 (用于 toAddress)
   const { primaryWallet } = useWalletContext(); // Get primary wallet type
@@ -404,6 +408,21 @@ const XStockPage = () => {
     });
   };
 
+  // 当主要钱包改变时，自动切换到对应链的默认代币
+  useEffect(() => {
+    // 如果当前选中的代币不属于当前钱包链，则自动切换
+    if (primaryWallet === 'sol' && paymentToken.chain !== 'solana') {
+      const defaultToken = PAYMENT_TOKENS.find(t => t.chain === 'solana' && t.symbol === 'USDC');
+      if (defaultToken) setPaymentToken(defaultToken); // 切换到 Solana USDC
+    } else if (primaryWallet === 'eth' && paymentToken.chain !== 'ethereum') {
+      const defaultToken = PAYMENT_TOKENS.find(t => t.chain === 'ethereum' && t.symbol === 'USDC');
+      if (defaultToken) setPaymentToken(defaultToken); // 切换到 Ethereum USDC
+    } else if (primaryWallet === 'tron' && paymentToken.chain !== 'tron') {
+      const defaultToken = PAYMENT_TOKENS.find(t => t.chain === 'tron' && t.symbol === 'USDT');
+      if (defaultToken) setPaymentToken(defaultToken); // 切换到 TRON USDT (TRON 没有 PYUSD)
+    }
+  }, [primaryWallet]); // 监听主要钱包变化
+
   useEffect(() => {
     console.log('🔍 XStock wallet check:', {
       authenticated,
@@ -438,18 +457,50 @@ const XStockPage = () => {
   // 自动检查代币余额
   useEffect(() => {
     const checkTokenBalance = async () => {
-      // 确定使用哪个钱包地址
-      // EVM 链（USDC, USDT, ETH, PYUSD on Ethereum）使用 ETH 钱包地址
-      // Solana 链使用 Solana 钱包地址
-      const fromAddress = paymentToken.chainId === SOLANA_CHAIN_ID ? solanaAddress : userAddress;
-
-      if (!fromAddress) {
-        setTokenBalance('0');
-        return;
-      }
-
       try {
         setCheckingBalance(true);
+
+        // TRON 链特殊处理
+        if (paymentToken.chain === 'tron') {
+          // 从 Privy user 中获取 TRON 地址
+          const tronAccount = (authenticated && user?.linkedAccounts?.find(
+            (account: any) => account.type === 'wallet' && 
+            account.address?.startsWith('T')
+          ) as any);
+
+          if (!tronAccount?.address) {
+            console.log('⚠️ No TRON wallet connected');
+            setTokenBalance('0');
+            return;
+          }
+
+          const tronAddress = tronAccount.address as string;
+          console.log(`🔍 Checking TRON ${paymentToken.symbol} balance for ${tronAddress}`);
+
+          const tronService = new TronService();
+          let balance = '0';
+
+          if (paymentToken.address === '' || paymentToken.symbol === 'TRX') {
+            // 原生 TRX
+            balance = await tronService.getTrxBalance(tronAddress);
+          } else {
+            // TRC20 代币
+            balance = await tronService.getTrc20Balance(paymentToken.address, tronAddress);
+          }
+
+          setTokenBalance(balance);
+          console.log(`💰 TRON ${paymentToken.symbol} balance: ${balance}`);
+          return;
+        }
+
+        // Solana 和 EVM 链处理
+        const fromAddress = paymentToken.chainId === SOLANA_CHAIN_ID ? solanaAddress : userAddress;
+
+        if (!fromAddress) {
+          setTokenBalance('0');
+          return;
+        }
+
         const balanceResult = await checkBalance(
           paymentToken.address, 
           paymentToken.chainId, 
@@ -467,7 +518,7 @@ const XStockPage = () => {
     };
 
     checkTokenBalance();
-  }, [paymentToken, userAddress, solanaAddress]);
+  }, [paymentToken, userAddress, solanaAddress, authenticated, user]);
 
   // Auto-fetch quote when stock changes (if amount is already entered)
   useEffect(() => {

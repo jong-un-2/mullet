@@ -20,7 +20,6 @@ import { TronWeb } from 'tronweb';
 // TRON network configuration - Using Ankr Premium RPC
 const TRON_MAINNET_CONFIG = {
   fullHost: 'https://rpc.ankr.com/premium-http/tron/6399319de5985a2ee9496b8ae8590d7bba3988a6fb28d4fc80cb1fbf9f039fb3',
-  headers: {},
 };
 
 // Initialize TronWeb instance (for transaction building only)
@@ -33,11 +32,11 @@ const getTronWeb = () => {
   }
   
   // Create new TronWeb instance using v6.x constructor
+  // Ankr RPC doesn't support custom headers, so we don't include any
   console.log('[PrivyTronService] Creating new TronWeb instance');
   
   return new TronWeb({
     fullHost: TRON_MAINNET_CONFIG.fullHost,
-    headers: TRON_MAINNET_CONFIG.headers,
   });
 };
 
